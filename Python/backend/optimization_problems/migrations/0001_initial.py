@@ -17,7 +17,7 @@ class Migration(migrations.Migration):
             fields=[
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=200)),
-                ('file', models.FileField(upload_to='schedules/', validators=[django.core.validators.FileExtensionValidator(allowed_extensions=['csv', 'xlsx', 'xls'])])),
+                ('file', models.FileField(upload_to='optimization_problems/', validators=[django.core.validators.FileExtensionValidator(allowed_extensions=['csv', 'xlsx', 'xls'])])),
                 ('uploaded_at', models.DateTimeField(auto_now_add=True)),
                 ('updated_at', models.DateTimeField(auto_now=True)),
                 ('mapping_data', models.JSONField(blank=True, null=True)),

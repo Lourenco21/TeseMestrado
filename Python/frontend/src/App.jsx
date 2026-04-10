@@ -1,26 +1,26 @@
-import { BrowserRouter, Routes, Route, Link } from "react-router-dom";
-import ScheduleByClassPage from "./pages/schedules/ScheduleByClassPage.jsx";
-import ScheduleBySubjectPage from "./pages/schedules/ScheduleBySubjectPage.jsx";
-import ScheduleCompletePage from "./pages/schedules/ScheduleCompletePage.jsx";
-import UploadSchedulePage from "./pages/schedules/UploadSchedulePage";
-import ScheduleByRoomPage from "./pages/schedules/ScheduleByRoomPage.jsx";
-import ReviewScheduleMappingPage from "./pages/schedules/ReviewScheduleMappingPage";
-import SchedulesHomePage from "./pages/schedules/SchedulesHomePage";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { ProblemWizardProvider } from "./contexts/ProblemWizardContext";
+import ProblemHomePage from "./pages/problems/ProblemHomePage";
+import ProblemWizardStartPage from "./pages/problems/ProblemWizardStartPage";
+import ProblemTypeStepPage from "./pages/problems/ProblemTypeStepPage";
+import ProblemSubtypeStepPage from "./pages/problems/ProblmeSubtypeStepPage.jsx";
+import ProblemUploadStepPage from "./pages/problems/ProblemUploadStepPage.jsx";
+import ProblemMappingStepPage from "./pages/problems/ProblemMappingStepPage.jsx";
 
 export default function App() {
   return (
     <BrowserRouter>
-      <div>
+      <ProblemWizardProvider>
         <Routes>
-          <Route path="/horario/turma" element={<ScheduleByClassPage />} />
-          <Route path="/horario/cadeira" element={<ScheduleBySubjectPage />} />
-          <Route path="/horario/completo" element={<ScheduleCompletePage />} />
-          <Route path="/horario/upload" element={<UploadSchedulePage />} />
-          <Route path="/horario/sala" element={<ScheduleByRoomPage />} />
-          <Route path="/horario/upload/:scheduleId/review" element={<ReviewScheduleMappingPage />} />
-          <Route path="/" element={<SchedulesHomePage />} />
+          <Route path="/" element={<Navigate to="/problems" replace />} />
+          <Route path="/problems" element={<ProblemHomePage />} />
+          <Route path="/problems/new" element={<ProblemWizardStartPage />} />
+          <Route path="/problems/:id/type" element={<ProblemTypeStepPage />} />
+          <Route path="/problems/:id/subtype" element={<ProblemSubtypeStepPage />} />
+          <Route path="/problems/:id/upload" element={<ProblemUploadStepPage />} />
+          <Route path="/problems/:id/mapping" element={<ProblemMappingStepPage />} />
         </Routes>
-      </div>
+      </ProblemWizardProvider>
     </BrowserRouter>
   );
 }

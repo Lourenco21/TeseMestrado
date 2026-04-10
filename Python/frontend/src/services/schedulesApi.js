@@ -5,17 +5,17 @@ export async function fetchClasses() {
 }
 
 export async function fetchScheduleByClass(classId) {
-  const response = await fetch(`/api/schedules/classes/${classId}/`);
+  const response = await fetch(`/api/optimization_problems/classes/${classId}/`);
   if (!response.ok) throw new Error("Erro ao obter horário da turma");
   return response.json();
 }
 
-export async function uploadScheduleFile({ name, file }) {
+export async function uploadSchedule({ name, file }) {
   const formData = new FormData();
   formData.append("name", name);
   formData.append("file", file);
 
-  const response = await fetch("http://127.0.0.1:8000/schedules/upload/", {
+  const response = await fetch("http://127.0.0.1:8000/optimization_problems/upload/", {
     method: "POST",
     body: formData,
   });
@@ -23,7 +23,7 @@ export async function uploadScheduleFile({ name, file }) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.file?.[0] || data?.name?.[0] || "Erro no upload");
+    throw new Error(data?.error || data?.detail || "Erro ao fazer upload.");
   }
 
   return data;
@@ -31,21 +31,20 @@ export async function uploadScheduleFile({ name, file }) {
 
 export async function getScheduleMappingSuggestions(scheduleId) {
   const response = await fetch(
-    `http://127.0.0.1:8000/schedules/${scheduleId}/mapping-suggestions/`
+    `http://127.0.0.1:8000/optimization_problems/${scheduleId}/mapping-suggestions/`
   );
-
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.error || "Erro ao obter sugestões de mapping");
+    throw new Error(data?.error || "Erro ao obter sugestões de mapping.");
   }
 
   return data;
 }
 
-export async function saveScheduleMapping(scheduleId, mappings) {
+export async function saveProblemMapping(scheduleId, mappings) {
   const response = await fetch(
-    `http://127.0.0.1:8000/schedules/${scheduleId}/save-mapping/`,
+    `http://127.0.0.1:8000/optimization_problems/${scheduleId}/mapping/`,
     {
       method: "POST",
       headers: {
@@ -58,14 +57,14 @@ export async function saveScheduleMapping(scheduleId, mappings) {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data?.error || "Erro ao guardar mapping");
+    throw new Error(data?.error || "Erro ao guardar mapping.");
   }
 
   return data;
 }
 
 export async function getSchedules() {
-  const response = await fetch("http://127.0.0.1:8000/schedules/");
+  const response = await fetch("http://127.0.0.1:8000/optimization_problems/");
   const data = await response.json();
 
   if (!response.ok) {

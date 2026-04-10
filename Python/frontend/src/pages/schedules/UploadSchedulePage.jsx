@@ -1,4 +1,4 @@
-import { useState } from "react";
+/**import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { uploadScheduleFile } from "../../services/schedulesApi";
 import "../../components/schedule/ScheduleUploadReview.css";
@@ -79,4 +79,4 @@ export default function UploadSchedulePage() {
       </div>
     </div>
   );
-}
+}**/
