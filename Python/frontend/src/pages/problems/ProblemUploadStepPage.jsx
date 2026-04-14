@@ -11,6 +11,8 @@ export default function ProblemUploadStepPage() {
 
   const [scheduleName, setScheduleName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [existingSchedule, setExistingSchedule] = useState(null);
+  const [isReplacingFile, setIsReplacingFile] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [localError, setLocalError] = useState("");
 
@@ -22,6 +24,12 @@ export default function ProblemUploadStepPage() {
         if (draft?.name) {
           setScheduleName(draft.name);
         }
+
+        if (draft?.uploaded_schedule) {
+          setExistingSchedule(draft.uploaded_schedule);
+        } else {
+          setExistingSchedule(null);
+        }
       } catch (err) {
         console.error("Erro ao carregar o problem draft:", err);
       }
@@ -31,6 +39,24 @@ export default function ProblemUploadStepPage() {
   }, [id]);
 
   async function handleContinue() {
+    if (existingSchedule && !isReplacingFile) {
+      try {
+        setLocalError("");
+
+        await saveDraft({
+          status: "file_uploaded",
+          current_step: 4,
+        });
+
+        navigate(`/problems/${id}/mapping`);
+      } catch (err) {
+        console.error("Erro ao avançar para o mapping:", err);
+        setLocalError(err.message || "Não foi possível continuar.");
+      }
+
+      return;
+    }
+
     if (!selectedFile) {
       setLocalError("Seleciona um ficheiro antes de continuar.");
       return;
@@ -45,11 +71,16 @@ export default function ProblemUploadStepPage() {
         file: selectedFile,
       });
 
-      await saveDraft({
+      const updatedDraft = await saveDraft({
         uploaded_schedule: uploadedSchedule.id,
         status: "file_uploaded",
         current_step: 4,
+        mapping_data: {},
       });
+
+      setExistingSchedule(uploadedSchedule);
+      setIsReplacingFile(false);
+      setSelectedFile(null);
 
       navigate(`/problems/${id}/mapping`);
     } catch (err) {
@@ -64,10 +95,22 @@ export default function ProblemUploadStepPage() {
     navigate(`/problems/${id}/subtype`);
   }
 
+  function handleStartReplacing() {
+    setIsReplacingFile(true);
+    setSelectedFile(null);
+    setLocalError("");
+  }
+
+  function handleCancelReplacing() {
+    setIsReplacingFile(false);
+    setSelectedFile(null);
+    setLocalError("");
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Step 3 de 7</p>
+        <p style={styles.step}>Passo 3 de 7</p>
         <h1 style={styles.title}>Carregar ficheiro de dados</h1>
         <p style={styles.description}>
           Faz upload do ficheiro que vai servir de base para este problema de
@@ -96,47 +139,110 @@ export default function ProblemUploadStepPage() {
               onChange={(e) => setScheduleName(e.target.value)}
               placeholder="Ex.: Horário LEI 2025/2026"
               style={styles.input}
+              disabled={!!existingSchedule && !isReplacingFile}
             />
           </div>
 
-          <div style={styles.field}>
-            <label htmlFor="scheduleFile" style={styles.label}>
-              Ficheiro
-            </label>
-            <input
-              id="scheduleFile"
-              type="file"
-              accept=".csv,.xlsx,.xls"
-              onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              style={styles.inputFile}
-            />
-            <p style={styles.helperText}>
-              Formatos suportados: CSV, XLSX e XLS.
-            </p>
-          </div>
+          {existingSchedule && !isReplacingFile ? (
+            <div style={styles.existingFileBox}>
+              <div style={styles.existingFileHeader}>
+                <div>
+                  <p style={styles.existingFileTitle}>Ficheiro já carregado</p>
+                  <p style={styles.existingFileName}>
+                    {existingSchedule.name || "Ficheiro sem nome"}
+                  </p>
+                </div>
 
-          {selectedFile ? (
-            <div style={styles.fileInfo}>
-              <p style={styles.fileName}>{selectedFile.name}</p>
-              <p style={styles.fileMeta}>
-                {(selectedFile.size / 1024).toFixed(1)} KB
+                <span style={styles.badgeSuccess}>Associado ao problema</span>
+              </div>
+
+              <p style={styles.helperText}>
+                Este problema já tem um ficheiro carregado. Podes continuar para
+                o mapping ou substituir o ficheiro atual.
               </p>
+
+              <div style={styles.replaceActions}>
+                <button
+                  type="button"
+                  onClick={handleStartReplacing}
+                  style={styles.replaceButton}
+                >
+                  Substituir ficheiro
+                </button>
+              </div>
             </div>
-          ) : null}
+          ) : (
+            <>
+              <div style={styles.field}>
+                <label htmlFor="scheduleFile" style={styles.label}>
+                  Ficheiro
+                </label>
+                <input
+                  id="scheduleFile"
+                  type="file"
+                  accept=".csv,.xlsx,.xls"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                  style={styles.inputFile}
+                />
+                <p style={styles.helperText}>
+                  Formatos suportados: CSV, XLSX e XLS.
+                </p>
+              </div>
+
+              {selectedFile ? (
+                <div style={styles.fileInfo}>
+                  <p style={styles.fileName}>{selectedFile.name}</p>
+                  <p style={styles.fileMeta}>
+                    {(selectedFile.size / 1024).toFixed(1)} KB
+                  </p>
+                </div>
+              ) : null}
+
+              {existingSchedule && isReplacingFile ? (
+                <div style={styles.warningBox}>
+                  <p style={styles.warningTitle}>Modo de substituição ativo</p>
+                  <p style={styles.warningText}>
+                    Vais substituir o ficheiro atualmente associado a este problema.
+                  </p>
+
+                  <button
+                    type="button"
+                    onClick={handleCancelReplacing}
+                    style={styles.cancelReplaceButton}
+                  >
+                    Cancelar substituição
+                  </button>
+                </div>
+              ) : null}
+            </>
+          )}
         </div>
 
         <div style={styles.actions}>
-          <button type="button" onClick={handleBack} style={styles.secondaryButton}>
+          <button
+            type="button"
+            onClick={handleBack}
+            style={styles.secondaryButton}
+          >
             Voltar
           </button>
 
           <button
             type="button"
             onClick={handleContinue}
-            disabled={!selectedFile || saving || uploading}
+            disabled={
+              saving ||
+              uploading ||
+              (!existingSchedule && !selectedFile) ||
+              (isReplacingFile && !selectedFile)
+            }
             style={styles.primaryButton}
           >
-            {uploading || saving ? "A guardar..." : "Continuar"}
+            {uploading || saving
+              ? "A guardar..."
+              : existingSchedule && !isReplacingFile
+              ? "Continuar para mapping"
+              : "Guardar e continuar"}
           </button>
         </div>
       </div>
@@ -250,6 +356,87 @@ const styles = {
     margin: 0,
     fontSize: "14px",
     color: "#667085",
+  },
+  existingFileBox: {
+    padding: "20px",
+    borderRadius: "14px",
+    backgroundColor: "#f0fdf4",
+    border: "1px solid #bbf7d0",
+  },
+  existingFileHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "16px",
+    flexWrap: "wrap",
+    marginBottom: "12px",
+  },
+  existingFileTitle: {
+    margin: 0,
+    marginBottom: "6px",
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#166534",
+    textTransform: "uppercase",
+  },
+  existingFileName: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#101828",
+  },
+  badgeSuccess: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    backgroundColor: "#dcfce7",
+    color: "#166534",
+    fontSize: "12px",
+    fontWeight: 700,
+  },
+  replaceActions: {
+    marginTop: "16px",
+  },
+  replaceButton: {
+    padding: "10px 16px",
+    borderRadius: "10px",
+    border: "1px solid #86efac",
+    backgroundColor: "#ffffff",
+    color: "#166534",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
+  },
+  warningBox: {
+    marginTop: "20px",
+    padding: "16px",
+    borderRadius: "12px",
+    backgroundColor: "#fffbeb",
+    border: "1px solid #fde68a",
+  },
+  warningTitle: {
+    margin: 0,
+    marginBottom: "8px",
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#92400e",
+  },
+  warningText: {
+    margin: 0,
+    marginBottom: "12px",
+    fontSize: "14px",
+    color: "#92400e",
+  },
+  cancelReplaceButton: {
+    padding: "8px 14px",
+    borderRadius: "10px",
+    border: "1px solid #fcd34d",
+    backgroundColor: "#ffffff",
+    color: "#92400e",
+    fontSize: "14px",
+    fontWeight: 600,
+    cursor: "pointer",
   },
   error: {
     marginBottom: "16px",

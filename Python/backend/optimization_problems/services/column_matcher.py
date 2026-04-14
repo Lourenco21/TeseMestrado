@@ -41,7 +41,7 @@ def best_fuzzy_match(field_candidates, source_columns):
     return best_column, round(best_score, 3)
 
 
-def match_canonical_fields_to_source_columns(source_columns, schema_fields, strong_threshold=0.75, weak_threshold=0.55):
+def match_canonical_fields_to_source_columns(source_columns, schema_fields, strong_threshold=0.8, medium_threshold=0.65, weak_threshold=0.50):
     matches = []
 
     for field in schema_fields:
@@ -54,6 +54,8 @@ def match_canonical_fields_to_source_columns(source_columns, schema_fields, stro
 
         if confidence >= strong_threshold:
             match_type = "strong"
+        elif confidence >= medium_threshold:
+            match_type = "medium"
         elif confidence >= weak_threshold:
             match_type = "weak"
         else:

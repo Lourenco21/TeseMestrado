@@ -30,8 +30,30 @@ export default function ProblemHomePage() {
     navigate("/problems/new");
   }
 
-  function handleOpenProblem(problemId) {
-    navigate(`/problems/${problemId}/type`);
+  function routeForStep(step, problemId) {
+    switch (step) {
+      case 1:
+        return `/problems/${problemId}/type`;
+      case 2:
+        return `/problems/${problemId}/subtype`;
+      case 3:
+        return `/problems/${problemId}/upload`;
+      case 4:
+        return `/problems/${problemId}/mapping`;
+      case 5:
+        return `/problems/${problemId}/objectives`;
+      case 6:
+        return `/problems/${problemId}/constraints`;
+      case 7:
+        return `/problems/${problemId}/review`;
+      default:
+        return `/problems/${problemId}/type`;
+    }
+  }
+
+  function handleOpenProblem(problem) {
+    const step = problem.current_step || 1;
+    navigate(routeForStep(step, problem.id));
   }
 
   return (
@@ -95,7 +117,7 @@ export default function ProblemHomePage() {
 
               <button
                 type="button"
-                onClick={() => handleOpenProblem(problem.id)}
+                onClick={() => handleOpenProblem(problem)}
                 style={styles.secondaryButton}
               >
                 Abrir problema

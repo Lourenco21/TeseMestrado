@@ -17,28 +17,40 @@ export default function ProblemMappingStepPage() {
   const [localError, setLocalError] = useState("");
 
   useEffect(() => {
-    async function loadData() {
-      try {
-        setPageLoading(true);
-        setLocalError("");
+  async function loadData() {
+    try {
+      setPageLoading(true);
+      setLocalError("");
 
-        const draft = await loadDraft(id);
+      const draft = await loadDraft(id);
+
+      if (draft.mapping_data?.mapping && Object.keys(draft.mapping_data.mapping).length > 0) {
+        console.log("A carregar mapping salvo:", draft.mapping_data);
+        setSelectedMappings(draft.mapping_data.mapping);
+        setManualChanges(draft.mapping_data.manual_changes || {});
+
+        // Para schema e matches, ainda precisa da API (ou guarda-os também)
         const result = await getProblemMappingSuggestions(id);
-
+        setSchema(result.schema);
+        setMatches(result.matches || []);
+      } else {
+        console.log("A gerar nova sugestão de mapping...");
+        const result = await getProblemMappingSuggestions(id);
         setSchema(result.schema);
         setMatches(result.matches || []);
         setSelectedMappings(result.selected_mappings || {});
         setManualChanges({});
-      } catch (err) {
-        console.error("Erro ao carregar mapping:", err);
-        setLocalError(err.message || "Não foi possível carregar o mapping.");
-      } finally {
-        setPageLoading(false);
       }
+    } catch (err) {
+      console.error("Erro ao carregar mapping:", err);
+      setLocalError(err.message || "Não foi possível carregar o mapping.");
+    } finally {
+      setPageLoading(false);
     }
+  }
 
-    loadData();
-  }, [id]);
+  loadData();
+}, [id]);
 
   const sourceColumnUsage = useMemo(() => {
     const usage = {};
@@ -51,6 +63,11 @@ export default function ProblemMappingStepPage() {
 
     return usage;
   }, [selectedMappings]);
+
+  const isMappingSaved = useMemo(() => {
+    const mapping = problemDraft?.mapping_data?.mapping;
+    return mapping && Object.keys(mapping).length > 0;
+  }, [problemDraft]);
 
   const requiredFields = useMemo(() => {
     return (schema?.fields || []).filter((field) => field.required);
@@ -92,7 +109,7 @@ export default function ProblemMappingStepPage() {
 
   function getConfidenceClass(confidence) {
     if (confidence >= 0.8) return styles.confidenceStrong;
-    if (confidence >= 0.55) return styles.confidenceWeak;
+    if (confidence >= 0.65) return styles.confidenceWeak;
     return styles.confidenceLow;
   }
 
@@ -106,8 +123,8 @@ export default function ProblemMappingStepPage() {
       await saveDraft({
         status: "mapping_completed",
         current_step: 5,
-        wizard_data: {
-          ...(problemDraft?.wizard_data || {}),
+        mapping_data: {
+          ...(problemDraft?.mapping_data || {}),
           mapping: selectedMappings,
         },
       });
@@ -136,7 +153,7 @@ export default function ProblemMappingStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Step 4 de 7</p>
+        <p style={styles.step}>Passo 4 de 7</p>
         <h1 style={styles.title}>Confirmar mapping do ficheiro</h1>
         <p style={styles.description}>
           Associa cada variável do schema à coluna correspondente no ficheiro carregado.
@@ -223,21 +240,38 @@ export default function ProblemMappingStepPage() {
                     </div>
 
                     <div style={styles.confidenceCell}>
-                      {isManual ? (
-                        <span style={styles.manualLabel}>Revisto pelo utilizador</span>
+                      {isMappingSaved ? (
+                          selectedMappings[field.key] ? (
+                              <span style={styles.manualLabel}>Revisto pelo utilizador</span>
+                          ) : (
+                              <span style={styles.manualLabel}>Nenhuma coluna selecionada</span>
+                          )
                       ) : (
-                        <>
-                          <span style={{ ...styles.confidenceValue, ...getConfidenceClass(confidence) }}>
-                            {(confidence * 100).toFixed(0)}%
-                          </span>
-                          <span style={styles.matchType}>
-                            {match?.match_type === "strong"
-                              ? "Sugestão forte"
-                              : match?.match_type === "weak"
-                              ? "Sugestão fraca"
-                              : "Sem sugestão"}
-                          </span>
-                        </>
+                          <>
+                            {isManual ? (
+                                <span style={styles.manualLabel}>Revisto pelo utilizador</span>
+                            ) : (
+                                <>
+                                <span
+                                    style={{
+                                      ...styles.confidenceValue,
+                                      ...getConfidenceClass(confidence),
+                                    }}
+                                >
+                                  {(confidence * 100).toFixed(0)}%
+                                </span>
+                                                        <span style={styles.matchType}>
+                                  {match?.match_type === "strong"
+                                      ? "Sugestão forte"
+                                      : match?.match_type === "medium"
+                                          ? "Sugestão mediana"
+                                          : match?.match_type === "weak"
+                                              ? "Sugestão fraca"
+                                              : "Sem sugestão"}
+                                </span>
+                                </>
+                            )}
+                          </>
                       )}
                     </div>
                   </div>
@@ -253,15 +287,15 @@ export default function ProblemMappingStepPage() {
           </button>
 
           <button
-            type="button"
-            onClick={handleContinue}
-            disabled={
-              pageLoading ||
-              saving ||
-              missingRequiredFields.length > 0 ||
-              duplicatedFields.length > 0
-            }
-            style={styles.primaryButton}
+              type="button"
+              onClick={handleContinue}
+              disabled={
+                  pageLoading ||
+                  saving ||
+                  missingRequiredFields.length > 0 ||
+                  duplicatedFields.length > 0
+              }
+              style={styles.primaryButton}
           >
             {saving ? "A guardar..." : "Continuar"}
           </button>
@@ -436,7 +470,7 @@ const styles = {
     color: "#067647",
   },
   confidenceWeak: {
-    color: "#b54708",
+    color: "#a38824",
   },
   confidenceLow: {
     color: "#b42318",

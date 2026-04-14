@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { problemFamilies } from "../../data/problemCatalog";
 import { useProblemWizard } from "../../contexts/ProblemWizardContext";
+import { getProblemCatalog } from "../../services/problemsApi";
 
 export default function ProblemTypeStepPage() {
   const { id } = useParams();
@@ -9,29 +9,43 @@ export default function ProblemTypeStepPage() {
   const { problemDraft, loadDraft, saveDraft, loading, saving, error } =
     useProblemWizard();
 
+  const [problemFamilies, setProblemFamilies] = useState([]);
   const [selectedFamily, setSelectedFamily] = useState("");
+  const [localError, setLocalError] = useState("");
 
   useEffect(() => {
-    async function fetchDraft() {
+    async function fetchData() {
       try {
-        const draft = await loadDraft(id);
+        setLocalError("");
+
+        const [draft, catalog] = await Promise.all([
+          loadDraft(id),
+          getProblemCatalog(),
+        ]);
+
         setSelectedFamily(draft.problem_family || "");
+        setProblemFamilies(catalog.problem_families || []);
       } catch (err) {
-        console.error("Erro ao carregar o problem draft:", err);
+        console.error("Erro ao carregar dados da página de tipo:", err);
+        setLocalError(err.message || "Não foi possível carregar os tipos de problema.");
       }
     }
 
-    fetchDraft();
+    fetchData();
   }, [id]);
 
   async function handleContinue() {
     if (!selectedFamily) {
+      setLocalError("Seleciona uma família antes de continuar.");
       return;
     }
 
     try {
+      setLocalError("");
+
       await saveDraft({
         problem_family: selectedFamily,
+        problem_subtype: "",
         status: "problem_family_selected",
         current_step: 2,
         last_completed_step: 1,
@@ -40,7 +54,22 @@ export default function ProblemTypeStepPage() {
       navigate(`/problems/${id}/subtype`);
     } catch (err) {
       console.error("Erro ao guardar família do problema:", err);
+      setLocalError(err.message || "Não foi possível guardar a família.");
     }
+  }
+
+  function handleBack() {
+    navigate("/problems");
+  }
+
+  if (loading && !problemDraft) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <p style={styles.message}>A carregar problema...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -59,10 +88,10 @@ export default function ProblemTypeStepPage() {
           </div>
         ) : null}
 
-        {loading ? <p style={styles.message}>A carregar problema...</p> : null}
         {error ? <p style={styles.error}>{error}</p> : null}
+        {localError ? <p style={styles.error}>{localError}</p> : null}
 
-        {!loading ? (
+        {problemFamilies.length > 0 ? (
           <div style={styles.grid}>
             {problemFamilies.map((family) => {
               const isSelected = selectedFamily === family.id;
@@ -78,17 +107,21 @@ export default function ProblemTypeStepPage() {
                   }}
                 >
                   <h2 style={styles.cardTitle}>{family.label}</h2>
-                  <p style={styles.cardDescription}>{family.description}</p>
+                  <p style={styles.cardDescription}>
+                    {family.description || "Sem descrição disponível."}
+                  </p>
                 </button>
               );
             })}
           </div>
-        ) : null}
+        ) : (
+          <p style={styles.message}>Não existem tipos de problema disponíveis.</p>
+        )}
 
         <div style={styles.actions}>
           <button
             type="button"
-            onClick={() => navigate("/problems")}
+            onClick={handleBack}
             style={styles.secondaryButton}
           >
             Voltar

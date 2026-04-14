@@ -4,7 +4,8 @@ from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from .problem_schemas import get_problem_schema
+from .problem_schemas import get_problem_schema, PROBLEM_SCHEMAS
+from .problem_schemas.problem_catalog import PROBLEM_FAMILIES, CONSTRAINT_LIBRARY, OBJECTIVE_LIBRARY
 from .serializers import ScheduleSerializer, ScheduleListSerializer, ProblemDraftSerializer
 from .models import Schedule, ProblemDraft
 from .services.file_reader import read_schedule_file, extract_columns_and_preview
@@ -48,7 +49,7 @@ class ProblemMappingSuggestionsView(APIView):
                 {"error": "Problem draft has no uploaded schedule."},
                 status=status.HTTP_400_BAD_REQUEST
             )
-
+        
         schema = get_problem_schema(problem_draft.problem_subtype)
         if not schema:
             return Response(
@@ -171,3 +172,12 @@ class ProblemDraftListCreateView(generics.ListCreateAPIView):
 class ProblemDraftDetailView(generics.RetrieveUpdateDestroyAPIView):
     queryset = ProblemDraft.objects.all()
     serializer_class = ProblemDraftSerializer
+
+
+class ProblemCatalogView(APIView):
+    def get(self, request, *args, **kwargs):
+        return Response({
+            "problem_families": PROBLEM_FAMILIES,
+            "objective_library": OBJECTIVE_LIBRARY,
+            "constraint_library": CONSTRAINT_LIBRARY,
+        })

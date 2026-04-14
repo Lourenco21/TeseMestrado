@@ -43,7 +43,9 @@ class ProblemDraft(models.Model):
     problem_family = models.CharField(max_length=100, blank=True, default="")
     problem_subtype = models.CharField(max_length=100, blank=True, default="")
 
-    wizard_data = models.JSONField(default=dict, blank=True)
+    mapping_data = models.JSONField(default=dict, blank=True)
+    selected_objectives = models.JSONField(default=list, blank=True)
+    selected_constraints = models.JSONField(default=list, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

@@ -77,3 +77,8 @@ export async function getProblemMappingSuggestions(problemId) {
 
   return data;
 }
+
+export async function getProblemCatalog() {
+  const response = await fetch("http://127.0.0.1:8000/optimization_problems/catalog/");
+  return handleResponse(response);
+}

@@ -56,7 +56,9 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
             "uploaded_schedule",
             "uploaded_schedule_name",
             "uploaded_schedule_file",
-            "wizard_data",
+            "mapping_data",
+            "selected_objectives",
+            "selected_constraints",
             "created_at",
             "updated_at",
         ]
