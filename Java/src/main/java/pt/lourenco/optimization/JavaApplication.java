@@ -1,4 +1,4 @@
-package pt.lourenco.optimizer;
+package pt.lourenco.optimization;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;

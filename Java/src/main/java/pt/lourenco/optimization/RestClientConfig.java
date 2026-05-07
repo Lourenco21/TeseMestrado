@@ -1,4 +1,4 @@
-package pt.lourenco.optimizer;
+package pt.lourenco.optimization;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;

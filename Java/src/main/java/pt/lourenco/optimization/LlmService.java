@@ -1,4 +1,4 @@
-package pt.lourenco.optimizer;
+package pt.lourenco.optimization;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -6,7 +6,6 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.Clock;
 import java.util.HashMap;
 import java.util.Map;
 
