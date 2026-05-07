@@ -6,7 +6,7 @@ from django.utils.timezone import now
 # Create your models here.
 class Schedule(models.Model):
     name = models.CharField(max_length=200)
-    file = models.FileField(upload_to='optimization_problems/',
+    file = models.FileField(upload_to='optimization_problems/schedules/',
                             validators=[FileExtensionValidator(allowed_extensions=['csv', 'xlsx', 'xls'])])
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -40,10 +40,20 @@ class ProblemDraft(models.Model):
         related_name="problem_drafts"
     )
 
+    uploaded_rooms_file = models.ForeignKey(
+        "optimization_problems.RoomDataFile",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="problem_drafts"
+    )
+
     problem_family = models.CharField(max_length=100, blank=True, default="")
     problem_subtype = models.CharField(max_length=100, blank=True, default="")
 
     mapping_data = models.JSONField(default=dict, blank=True)
+    rooms_mapping_data = models.JSONField(default=dict, blank=True)
+
     selected_objectives = models.JSONField(default=list, blank=True)
     selected_constraints = models.JSONField(default=list, blank=True)
 
@@ -52,3 +62,16 @@ class ProblemDraft(models.Model):
 
     def __str__(self):
         return self.name or f"Problem Draft #{self.pk}"
+
+
+class RoomDataFile(models.Model):
+    name = models.CharField(max_length=200)
+    file = models.FileField(
+        upload_to="optimization_problems/rooms.py/",
+        validators=[FileExtensionValidator(allowed_extensions=["csv", "xlsx", "xls"])]
+    )
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return self.name

@@ -45,6 +45,10 @@ export default function ProblemHomePage() {
       case 6:
         return `/problems/${problemId}/constraints`;
       case 7:
+        return `/problems/${problemId}/rooms-upload`;
+      case 8:
+        return `/problems/${problemId}/rooms-mapping`;
+      case 9:
         return `/problems/${problemId}/review`;
       default:
         return `/problems/${problemId}/type`;

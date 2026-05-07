@@ -53,21 +53,40 @@ CONSTRAINT_LIBRARY = {
             "id": "no_teacher_overlap",
             "label": "Professor não pode estar em dois lugares ao mesmo tempo",
             "hard": True,
+            "requires_additional_data": False,
+            "additional_data_requirements": [],
         },
         {
             "id": "no_room_overlap",
             "label": "Sala não pode ter duas aulas ao mesmo tempo",
             "hard": True,
+            "requires_additional_data": False,
+            "additional_data_requirements": [],
         },
         {
             "id": "room_capacity",
             "label": "Capacidade da sala",
             "hard": True,
+            "requires_additional_data": True,
+            "additional_data_requirements": [
+                {
+                    "id": "capacity",
+                }
+            ],
         },
         {
             "id": "teacher_availability",
             "label": "Disponibilidade do professor",
             "hard": True,
+            "requires_additional_data": True,
+            "additional_data_requirements": [
+                {
+                    "id": "disponibilidade_professor",
+                    "label": "Disponibilidade do professor",
+                    "entity": "professor",
+                    "accepted_sources": ["mesmo_ficheiro", "ficheiro_separado"],
+                }
+            ],
         },
     ],
     "scheduling": [
@@ -75,11 +94,22 @@ CONSTRAINT_LIBRARY = {
             "id": "resource_availability",
             "label": "Disponibilidade do recurso",
             "hard": True,
+            "requires_additional_data": True,
+            "additional_data_requirements": [
+                {
+                    "id": "disponibilidade_recurso",
+                    "label": "Disponibilidade do recurso",
+                    "entity": "recurso",
+                    "accepted_sources": ["mesmo_ficheiro", "ficheiro_separado"],
+                }
+            ],
         },
         {
             "id": "precedence",
             "label": "Respeitar precedências",
             "hard": True,
+            "requires_additional_data": False,
+            "additional_data_requirements": [],
         },
     ],
     "allocation": [
@@ -87,11 +117,15 @@ CONSTRAINT_LIBRARY = {
             "id": "unique_assignment",
             "label": "Atribuição única",
             "hard": True,
+            "requires_additional_data": False,
+            "additional_data_requirements": [],
         },
         {
             "id": "capacity_limit",
             "label": "Limite de capacidade",
             "hard": True,
+            "requires_additional_data": False,
+            "additional_data_requirements": [],
         },
     ],
 }

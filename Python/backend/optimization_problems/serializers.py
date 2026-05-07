@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Schedule, ProblemDraft
+from .models import Schedule, ProblemDraft, RoomDataFile
 
 
 class ScheduleSerializer(serializers.ModelSerializer):
@@ -22,7 +22,6 @@ class ScheduleListSerializer(serializers.ModelSerializer):
             "file_name",
             "uploaded_at",
             "updated_at",
-            "has_mapping",
         ]
 
     def get_file_name(self, obj):
@@ -30,8 +29,12 @@ class ScheduleListSerializer(serializers.ModelSerializer):
             return obj.file.name.split("/")[-1]
         return ""
 
-    def get_has_mapping(self, obj):
-        return bool(obj.mapping_data and obj.mapping_data.get("mappings"))
+
+class RoomDataFileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = RoomDataFile
+        fields = ["id", "name", "file", "uploaded_at", "updated_at"]
+        read_only_fields = ["id", "uploaded_at", "updated_at"]
 
 
 class ProblemDraftSerializer(serializers.ModelSerializer):
@@ -41,6 +44,15 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
     )
     uploaded_schedule_file = serializers.FileField(
         source="uploaded_schedule.file",
+        read_only=True
+    )
+
+    uploaded_rooms_file_name = serializers.CharField(
+        source="uploaded_rooms_file.name",
+        read_only=True
+    )
+    uploaded_rooms_file_file = serializers.FileField(
+        source="uploaded_rooms_file.file",
         read_only=True
     )
 
@@ -56,7 +68,11 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
             "uploaded_schedule",
             "uploaded_schedule_name",
             "uploaded_schedule_file",
+            "uploaded_rooms_file",
+            "uploaded_rooms_file_name",
+            "uploaded_rooms_file_file",
             "mapping_data",
+            "rooms_mapping_data",
             "selected_objectives",
             "selected_constraints",
             "created_at",
@@ -68,4 +84,6 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
             "updated_at",
             "uploaded_schedule_name",
             "uploaded_schedule_file",
+            "uploaded_rooms_file_name",
+            "uploaded_rooms_file_file",
         ]

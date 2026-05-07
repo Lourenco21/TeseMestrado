@@ -1,56 +1,78 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useProblemWizard } from "../../contexts/ProblemWizardContext";
-import { uploadSchedule } from "../../services/schedulesApi";
+import { uploadRoomsFile } from "../../services/roomsApi";
 
-export default function ProblemUploadStepPage() {
+export default function ProblemRoomsUploadStepPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { problemDraft, loadDraft, saveDraft, loading, saving, error } =
     useProblemWizard();
 
-  const [scheduleName, setScheduleName] = useState("");
+  const [fileName, setFileName] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
-  const [existingSchedule, setExistingSchedule] = useState(null);
+  const [existingRoomsFile, setExistingRoomsFile] = useState(null);
   const [isReplacingFile, setIsReplacingFile] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [localError, setLocalError] = useState("");
 
+  const initializedRef = useRef(false);
+
   useEffect(() => {
-    async function fetchDraft() {
+    initializedRef.current = false;
+  }, [id]);
+
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+
+    let cancelled = false;
+
+    async function fetchDraftOnce() {
       try {
         const draft = await loadDraft(id);
 
+        if (cancelled || !draft) return;
+
         if (draft?.name) {
-          setScheduleName(draft.name);
+          setFileName(draft.name);
         }
 
-        if (draft?.uploaded_schedule) {
-          setExistingSchedule(draft.uploaded_schedule);
+        if (draft?.uploaded_rooms_file) {
+          setExistingRoomsFile({
+            id: draft.uploaded_rooms_file,
+            name: draft.uploaded_rooms_file_name || "",
+            file: draft.uploaded_rooms_file_url || "",
+          });
         } else {
-          setExistingSchedule(null);
+          setExistingRoomsFile(null);
         }
       } catch (err) {
-        console.error("Erro ao carregar o problem draft:", err);
+        if (!cancelled) {
+          console.error("Erro ao carregar o problem draft:", err);
+          setLocalError(err.message || "Não foi possível carregar o problema.");
+        }
       }
     }
 
-    fetchDraft();
+    fetchDraftOnce();
+
+    return () => {
+      cancelled = true;
+    };
+
+    // Carregar apenas quando o id muda.
+    // Não dependemos de loadDraft para evitar reexecuções em loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   async function handleContinue() {
-    if (existingSchedule && !isReplacingFile) {
+    if (existingRoomsFile && !isReplacingFile) {
       try {
         setLocalError("");
-
-        await saveDraft({
-          status: "file_uploaded",
-          current_step: 4,
-        });
-
-        navigate(`/problems/${id}/mapping`);
+        navigate(`/problems/${id}/rooms-mapping`);
       } catch (err) {
-        console.error("Erro ao avançar para o mapping:", err);
+        console.error("Erro ao avançar para o mapping das salas:", err);
         setLocalError(err.message || "Não foi possível continuar.");
       }
 
@@ -66,33 +88,33 @@ export default function ProblemUploadStepPage() {
       setUploading(true);
       setLocalError("");
 
-      const uploadedSchedule = await uploadSchedule({
-        name: scheduleName.trim() || selectedFile.name,
+      const uploadedRoomsFile = await uploadRoomsFile({
+        name: fileName.trim() || selectedFile.name,
         file: selectedFile,
       });
 
-      const updatedDraft = await saveDraft({
-        uploaded_schedule: uploadedSchedule.id,
-        status: "file_uploaded",
-        current_step: 4,
-        mapping_data: {},
+      await saveDraft({
+        uploaded_rooms_file: uploadedRoomsFile.id,
+        rooms_mapping_data: {},
+        current_step: 8,
+        last_completed_step: 7,
       });
 
-      setExistingSchedule(uploadedSchedule);
+      setExistingRoomsFile(uploadedRoomsFile);
       setIsReplacingFile(false);
       setSelectedFile(null);
 
-      navigate(`/problems/${id}/mapping`);
+      navigate(`/problems/${id}/rooms-mapping`);
     } catch (err) {
-      console.error("Erro ao fazer upload do ficheiro:", err);
-      setLocalError(err.message || "Não foi possível fazer upload do ficheiro.");
+      console.error("Erro ao fazer upload do ficheiro de salas:", err);
+      setLocalError(err.message || "Não foi possível fazer upload do ficheiro de salas.");
     } finally {
       setUploading(false);
     }
   }
 
   function handleBack() {
-    navigate(`/problems/${id}/subtype`);
+    navigate(`/problems/${id}/mapping`);
   }
 
   function handleStartReplacing() {
@@ -107,14 +129,23 @@ export default function ProblemUploadStepPage() {
     setLocalError("");
   }
 
+  if (loading && !problemDraft) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <p style={styles.message}>A carregar problema...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 3 de 8</p>
-        <h1 style={styles.title}>Carregar ficheiro de dados</h1>
+        <p style={styles.step}>Passo 4 de 7</p>
+        <h1 style={styles.title}>Carregar ficheiro adicional de salas</h1>
         <p style={styles.description}>
-          Faz upload do ficheiro que vai servir de base para este problema de
-          otimização.
+          Faz upload do ficheiro com as características das salas que vais ligar ao horário.
         </p>
 
         {problemDraft?.name ? (
@@ -129,27 +160,27 @@ export default function ProblemUploadStepPage() {
 
         <div style={styles.formCard}>
           <div style={styles.field}>
-            <label htmlFor="scheduleName" style={styles.label}>
+            <label htmlFor="fileName" style={styles.label}>
               Nome do ficheiro / conjunto de dados
             </label>
             <input
-              id="scheduleName"
+              id="fileName"
               type="text"
-              value={scheduleName}
-              onChange={(e) => setScheduleName(e.target.value)}
-              placeholder="Ex.: Horário LEI 2025/2026"
+              value={fileName}
+              onChange={(e) => setFileName(e.target.value)}
+              placeholder="Ex.: Características das salas 2025/2026"
               style={styles.input}
-              disabled={!!existingSchedule && !isReplacingFile}
+              disabled={!!existingRoomsFile && !isReplacingFile}
             />
           </div>
 
-          {existingSchedule && !isReplacingFile ? (
+          {existingRoomsFile && !isReplacingFile ? (
             <div style={styles.existingFileBox}>
               <div style={styles.existingFileHeader}>
                 <div>
                   <p style={styles.existingFileTitle}>Ficheiro já carregado</p>
                   <p style={styles.existingFileName}>
-                    {existingSchedule.name || "Ficheiro sem nome"}
+                    {existingRoomsFile.name || "Ficheiro sem nome"}
                   </p>
                 </div>
 
@@ -157,8 +188,8 @@ export default function ProblemUploadStepPage() {
               </div>
 
               <p style={styles.helperText}>
-                Este problema já tem um ficheiro carregado. Podes continuar para
-                o mapping ou substituir o ficheiro atual.
+                Este problema já tem um ficheiro adicional associado. Podes continuar para o mapping
+                ou substituir o ficheiro atual.
               </p>
 
               <div style={styles.replaceActions}>
@@ -174,11 +205,11 @@ export default function ProblemUploadStepPage() {
           ) : (
             <>
               <div style={styles.field}>
-                <label htmlFor="scheduleFile" style={styles.label}>
+                <label htmlFor="roomsFile" style={styles.label}>
                   Ficheiro
                 </label>
                 <input
-                  id="scheduleFile"
+                  id="roomsFile"
                   type="file"
                   accept=".csv,.xlsx,.xls"
                   onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
@@ -198,7 +229,7 @@ export default function ProblemUploadStepPage() {
                 </div>
               ) : null}
 
-              {existingSchedule && isReplacingFile ? (
+              {existingRoomsFile && isReplacingFile ? (
                 <div style={styles.warningBox}>
                   <p style={styles.warningTitle}>Modo de substituição ativo</p>
                   <p style={styles.warningText}>
@@ -233,14 +264,17 @@ export default function ProblemUploadStepPage() {
             disabled={
               saving ||
               uploading ||
-              (!existingSchedule && !selectedFile) ||
+              (!existingRoomsFile && !selectedFile) ||
               (isReplacingFile && !selectedFile)
             }
-            style={styles.primaryButton}
+            style={{
+              ...styles.primaryButton,
+              ...(saving || uploading ? styles.primaryButtonDisabled : {}),
+            }}
           >
             {uploading || saving
               ? "A guardar..."
-              : existingSchedule && !isReplacingFile
+              : existingRoomsFile && !isReplacingFile
               ? "Continuar para mapping"
               : "Guardar e continuar"}
           </button>

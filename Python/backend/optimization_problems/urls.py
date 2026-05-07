@@ -1,12 +1,17 @@
 from django.urls import path
-from .views import ScheduleUploadView, ProblemMappingSuggestionsView, ScheduleMappingSaveView, ScheduleListView, \
-    ProblemDraftListCreateView, ProblemDraftDetailView, ProblemCatalogView
+from .views import ScheduleUploadView, ProblemMappingSuggestionsView, ScheduleListView, \
+    ProblemDraftListCreateView, ProblemDraftDetailView, ProblemCatalogView, RoomDataFileUploadView, \
+    ProblemRoomsFilePreviewView, ProblemRoomsMappingSaveView, ProblemRoomsMappingSuggestionsView, ProblemSendToJavaView
 
 urlpatterns = [
     path("", ProblemDraftListCreateView.as_view(), name="problem-draft-list-create"),
     path("<int:pk>/", ProblemDraftDetailView.as_view(), name="problem-draft-detail"),
     path('upload/', ScheduleUploadView.as_view(), name='schedule-upload'),
     path("<int:problem_id>/mapping-suggestions/", ProblemMappingSuggestionsView.as_view(), name="problem-mapping-suggestions"),
-    path("<int:schedule_id>/save-mapping/", ScheduleMappingSaveView.as_view(), name="schedule-save-mapping"),
     path("catalog/", ProblemCatalogView.as_view(), name="problem-catalog"),
+    path("rooms/upload/", RoomDataFileUploadView.as_view(), name="rooms-upload"),
+    path("<int:problem_id>/preview/", ProblemRoomsFilePreviewView.as_view(), name="problem-rooms-preview"),
+    path("<int:problem_id>/rooms-mapping-save/", ProblemRoomsMappingSaveView.as_view(), name="problem-rooms-mapping-save"),
+    path("<int:problem_id>/rooms-mapping-suggestions/", ProblemRoomsMappingSuggestionsView.as_view(), name="problem-rooms-mapping-suggestions"),
+    path("<int:problem_id>/send-to-java/", ProblemSendToJavaView.as_view(), name="problem-send-to-java",),
 ]

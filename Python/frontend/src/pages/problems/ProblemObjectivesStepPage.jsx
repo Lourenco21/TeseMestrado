@@ -154,7 +154,7 @@ export default function ProblemObjectivesStepPage() {
     <div style={styles.page}>
       <div style={styles.container}>
         <div style={styles.header}>
-          <p style={styles.step}>Passo 5 de 7</p>
+          <p style={styles.step}>Passo 5 de 8</p>
           <h1 style={styles.title}>Selecionar objetivos</h1>
           <p style={styles.description}>
             Escolhe os objetivos a otimizar e define, para cada um, se o algoritmo

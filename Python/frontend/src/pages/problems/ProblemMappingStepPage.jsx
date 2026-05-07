@@ -153,7 +153,7 @@ export default function ProblemMappingStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 4 de 7</p>
+        <p style={styles.step}>Passo 4 de 8</p>
         <h1 style={styles.title}>Confirmar mapping do ficheiro</h1>
         <p style={styles.description}>
           Associa cada variável do schema à coluna correspondente no ficheiro carregado.
@@ -186,7 +186,9 @@ export default function ProblemMappingStepPage() {
               <div style={styles.tableHeader}>
                 <div style={styles.headerCell}>Variável</div>
                 <div style={styles.headerCell}>Coluna do ficheiro</div>
-                <div style={styles.headerCell}>Confiança</div>
+                {isMappingSaved ? (<div style={styles.headerCell}>Estado</div>) : (
+                    <div style={styles.headerCell}>Confiança</div>)}
+
               </div>
 
               {(schema?.fields || []).map((field) => {

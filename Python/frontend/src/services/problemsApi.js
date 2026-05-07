@@ -48,23 +48,6 @@ export async function updateProblemDraft(problemId, payload) {
   return handleResponse(response);
 }
 
-export async function deleteProblemDraft(problemId) {
-  const response = await fetch(`${API_BASE_URL}${problemId}/`, {
-    method: "DELETE",
-  });
-
-  if (!response.ok) {
-    const data = await response.json().catch(() => null);
-    const errorMessage =
-      data?.detail ||
-      data?.message ||
-      "Não foi possível apagar o problema.";
-    throw new Error(errorMessage);
-  }
-
-  return true;
-}
-
 export async function getProblemMappingSuggestions(problemId) {
   const response = await fetch(
     `http://127.0.0.1:8000/optimization_problems/${problemId}/mapping-suggestions/`
@@ -82,3 +65,30 @@ export async function getProblemCatalog() {
   const response = await fetch("http://127.0.0.1:8000/optimization_problems/catalog/");
   return handleResponse(response);
 }
+
+export async function sendProblemToJava(problemId) {
+  const response = await fetch(
+    `http://127.0.0.1:8000/optimization_problems/${problemId}/send-to-java/`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.error || "Erro ao enviar problema para Java.");
+  }
+
+  return data;
+}
+
+
+
+
+
+
+

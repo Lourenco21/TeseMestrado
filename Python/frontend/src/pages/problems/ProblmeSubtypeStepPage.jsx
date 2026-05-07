@@ -81,7 +81,7 @@ export default function ProblemSubtypeStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Step 2 de 7</p>
+        <p style={styles.step}>Passo 2 de 8</p>
         <h1 style={styles.title}>Selecionar subtipo de problema</h1>
         <p style={styles.description}>
           Escolhe o subtipo que melhor representa o caso concreto que queres modelar.

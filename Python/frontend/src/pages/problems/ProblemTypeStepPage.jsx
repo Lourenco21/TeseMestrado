@@ -75,7 +75,7 @@ export default function ProblemTypeStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Step 1 de 7</p>
+        <p style={styles.step}>Passo 1 de 8</p>
         <h1 style={styles.title}>Selecionar tipo de problema</h1>
         <p style={styles.description}>
           Escolhe a família que melhor representa o problema que queres modelar.
