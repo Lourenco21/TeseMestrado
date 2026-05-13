@@ -3,25 +3,29 @@ package pt.lourenco.optimization.utils;
 import java.util.List;
 import java.util.Map;
 
-
 public class JSONGetters {
 
-    private Long problem_id;
+    private Integer problem_id;
     private String name;
     private String problem_type;
     private String problem_subtype;
-    private Long schedule_file_id;
-    private Long rooms_file_id;
+
+    private Integer schedule_file_id;
+    private Integer schedule_file_row_count;
+
+    private Integer rooms_file_id;
+    private Integer rooms_file_row_count;
+
     private Map<String, Object> mapping_data;
     private Map<String, Object> rooms_mapping_data;
     private List<Object> objectives;
     private List<Object> constraints;
 
-    public Long getProblem_id() {
+    public Integer getProblem_id() {
         return problem_id;
     }
 
-    public void setProblem_id(Long problem_id) {
+    public void setProblem_id(Integer problem_id) {
         this.problem_id = problem_id;
     }
 
@@ -49,20 +53,36 @@ public class JSONGetters {
         this.problem_subtype = problem_subtype;
     }
 
-    public Long getSchedule_file_id() {
+    public Integer getSchedule_file_id() {
         return schedule_file_id;
     }
 
-    public void setSchedule_file_id(Long schedule_file_id) {
+    public void setSchedule_file_id(Integer schedule_file_id) {
         this.schedule_file_id = schedule_file_id;
     }
 
-    public Long getRooms_file_id() {
+    public Integer getSchedule_file_row_count() {
+        return schedule_file_row_count;
+    }
+
+    public void setSchedule_file_row_count(Integer schedule_file_row_count) {
+        this.schedule_file_row_count = schedule_file_row_count;
+    }
+
+    public Integer getRooms_file_id() {
         return rooms_file_id;
     }
 
-    public void setRooms_file_id(Long rooms_file_id) {
+    public void setRooms_file_id(Integer rooms_file_id) {
         this.rooms_file_id = rooms_file_id;
+    }
+
+    public Integer getRooms_file_row_count() {
+        return rooms_file_row_count;
+    }
+
+    public void setRooms_file_row_count(Integer rooms_file_row_count) {
+        this.rooms_file_row_count = rooms_file_row_count;
     }
 
     public Map<String, Object> getMapping_data() {
@@ -85,6 +105,10 @@ public class JSONGetters {
         return objectives;
     }
 
+    public int getObjectivesCount(){
+        return objectives.size();
+    }
+
     public void setObjectives(List<Object> objectives) {
         this.objectives = objectives;
     }
@@ -93,8 +117,11 @@ public class JSONGetters {
         return constraints;
     }
 
+    public int getConstraintCount(){
+        return constraints.size();
+    }
+
     public void setConstraints(List<Object> constraints) {
         this.constraints = constraints;
     }
-
 }

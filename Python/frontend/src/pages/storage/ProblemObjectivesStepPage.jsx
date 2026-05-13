@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { useProblemWizard } from "../../contexts/ProblemWizardContext";
-import { getProblemCatalog } from "../../services/problemsApi";
+import { useProblemWizard } from "../../contexts/ProblemWizardContext.jsx";
+import { getProblemCatalog } from "../../services/problemsApi.js";
 
 export default function ProblemObjectivesStepPage() {
   const { id } = useParams();

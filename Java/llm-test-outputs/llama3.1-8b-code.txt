@@ -1,0 +1,144 @@
+Modelo: llama3.1:8b
+Prompt Type: code
+Última escrita: 2026-05-12 00:32:32
+HTTP Status: 200
+Duração (ms): 23704
+Erro: nenhum
+
+===== RESPOSTA =====
+{
+  "Code": "
+public static JsonNode runNsgaii(JsonNode dataset, JsonNode variables, JsonNode objectives, JsonNode constraints, JsonNode parameters) {
+  // Problem configuration
+  int numberOfVariables = variables.get("numberOfVariables").asInt();
+  int valuesVariableCanAssume = variables.get("valuesVariableCanAssume").asInt();
+
+  // Objective configuration
+  int numberOfObjectives = objectives.get("numberOfObjectives").asInt();
+
+  // Constraint configuration
+  int numberOfConstraints = constraints.get("numberOfConstraints").asInt();
+
+  // NSGA-II configuration
+  int populationSize = parameters.get("populationSize").asInt();
+  int maxEvaluations = parameters.get("maxEvaluations").asInt();
+  double crossoverProbability = parameters.get("crossoverProbability").asDouble();
+  double mutationProbability = parameters.get("mutationProbability").asDouble();
+  double etaC = parameters.get("etaC").asDouble();
+  double etaM = parameters.get("etaM").asDouble();
+
+  // Create the problem
+  UniversityCourseTimetablingProblem problem = new UniversityCourseTimetablingProblem(dataset, numberOfVariables, valuesVariableCanAssume);
+
+  // Create the NSGA-II
+  NSGAII nsga2 = new NSGAII(populationSize, maxEvaluations, crossoverProbability, mutationProbability, etaC, etaM);
+
+  // Configure the NSGA-II
+  nsga2.setNumberOfObjectives(numberOfObjectives);
+  nsga2.setNumberOfConstraints(numberOfConstraints);
+
+  // Run the NSGA-II
+  SolutionSet solutions = nsga2.run(problem);
+
+  // Convert the solutions to JsonNode
+  JsonNode solutionsJson = JsonUtil.convertSolutionsToJsonNode(solutions);
+
+  return solutionsJson;
+}
+
+// Helper class for University Course Timetabling Problem
+class UniversityCourseTimetablingProblem extends Problem {
+  // Constructor
+  public UniversityCourseTimetablingProblem(JsonNode dataset, int numberOfVariables, int valuesVariableCanAssume) {
+    // Initialize the problem
+    // ...
+  }
+
+  // Getters and setters
+  public int getNumberOfVariables() {
+    return numberOfVariables;
+  }
+
+  public void setNumberOfVariables(int numberOfVariables) {
+    this.numberOfVariables = numberOfVariables;
+  }
+
+  // ...
+}
+
+// Helper class for NSGA-II
+class NSGAII extends Algorithm {
+  // Constructor
+  public NSGAII(int populationSize, int maxEvaluations, double crossoverProbability, double mutationProbability, double etaC, double etaM) {
+    // Initialize the NSGA-II
+    // ...
+  }
+
+  // Getters and setters
+  public int getPopulationSize() {
+    return populationSize;
+  }
+
+  public void setPopulationSize(int populationSize) {
+    this.populationSize = populationSize;
+  }
+
+  // ...
+}
+
+// Helper class for Solution Set
+class SolutionSet {
+  // Constructor
+  public SolutionSet(List<Solution> solutions) {
+    // Initialize the solution set
+    // ...
+  }
+
+  // Getters and setters
+  public List<Solution> getSolutions() {
+    return solutions;
+  }
+
+  public void setSolutions(List<Solution> solutions) {
+    this.solutions = solutions;
+  }
+
+  // ...
+}
+
+// Helper class for Solution
+class Solution {
+  // Constructor
+  public Solution(List<Double> variables) {
+    // Initialize the solution
+    // ...
+  }
+
+  // Getters and setters
+  public List<Double> getVariables() {
+    return variables;
+  }
+
+  public void setVariables(List<Double> variables) {
+    this.variables = variables;
+  }
+
+  // ...
+}
+
+// Helper class for JsonUtil
+class JsonUtil {
+  // Method to convert solutions to JsonNode
+  public static JsonNode convertSolutionsToJsonNode(SolutionSet solutions) {
+    // Convert the solutions to JsonNode
+    // ...
+    return solutionsJson;
+  }
+
+  // ...
+}",
+  "Justification": ""
+}
+
+===== RAW RESPONSE =====
+{"model":"llama3.1:8b","created_at":"2026-05-11T23:32:32.1646439Z","message":{"role":"assistant","content":"{\r\n  \"Code\": \"\r\npublic static JsonNode runNsgaii(JsonNode dataset, JsonNode variables, JsonNode objectives, JsonNode constraints, JsonNode parameters) {\r\n  // Problem configuration\r\n  int numberOfVariables = variables.get(\"numberOfVariables\").asInt();\r\n  int valuesVariableCanAssume = variables.get(\"valuesVariableCanAssume\").asInt();\r\n\r\n  // Objective configuration\r\n  int numberOfObjectives = objectives.get(\"numberOfObjectives\").asInt();\r\n\r\n  // Constraint configuration\r\n  int numberOfConstraints = constraints.get(\"numberOfConstraints\").asInt();\r\n\r\n  // NSGA-II configuration\r\n  int populationSize = parameters.get(\"populationSize\").asInt();\r\n  int maxEvaluations = parameters.get(\"maxEvaluations\").asInt();\r\n  double crossoverProbability = parameters.get(\"crossoverProbability\").asDouble();\r\n  double mutationProbability = parameters.get(\"mutationProbability\").asDouble();\r\n  double etaC = parameters.get(\"etaC\").asDouble();\r\n  double etaM = parameters.get(\"etaM\").asDouble();\r\n\r\n  // Create the problem\r\n  UniversityCourseTimetablingProblem problem = new UniversityCourseTimetablingProblem(dataset, numberOfVariables, valuesVariableCanAssume);\r\n\r\n  // Create the NSGA-II\r\n  NSGAII nsga2 = new NSGAII(populationSize, maxEvaluations, crossoverProbability, mutationProbability, etaC, etaM);\r\n\r\n  // Configure the NSGA-II\r\n  nsga2.setNumberOfObjectives(numberOfObjectives);\r\n  nsga2.setNumberOfConstraints(numberOfConstraints);\r\n\r\n  // Run the NSGA-II\r\n  SolutionSet solutions = nsga2.run(problem);\r\n\r\n  // Convert the solutions to JsonNode\r\n  JsonNode solutionsJson = JsonUtil.convertSolutionsToJsonNode(solutions);\r\n\r\n  return solutionsJson;\r\n}\r\n\r\n// Helper class for University Course Timetabling Problem\r\nclass UniversityCourseTimetablingProblem extends Problem {\r\n  // Constructor\r\n  public UniversityCourseTimetablingProblem(JsonNode dataset, int numberOfVariables, int valuesVariableCanAssume) {\r\n    // Initialize the problem\r\n    // ...\r\n  }\r\n\r\n  // Getters and setters\r\n  public int getNumberOfVariables() {\r\n    return numberOfVariables;\r\n  }\r\n\r\n  public void setNumberOfVariables(int numberOfVariables) {\r\n    this.numberOfVariables = numberOfVariables;\r\n  }\r\n\r\n  // ...\r\n}\r\n\r\n// Helper class for NSGA-II\r\nclass NSGAII extends Algorithm {\r\n  // Constructor\r\n  public NSGAII(int populationSize, int maxEvaluations, double crossoverProbability, double mutationProbability, double etaC, double etaM) {\r\n    // Initialize the NSGA-II\r\n    // ...\r\n  }\r\n\r\n  // Getters and setters\r\n  public int getPopulationSize() {\r\n    return populationSize;\r\n  }\r\n\r\n  public void setPopulationSize(int populationSize) {\r\n    this.populationSize = populationSize;\r\n  }\r\n\r\n  // ...\r\n}\r\n\r\n// Helper class for Solution Set\r\nclass SolutionSet {\r\n  // Constructor\r\n  public SolutionSet(List\u003cSolution\u003e solutions) {\r\n    // Initialize the solution set\r\n    // ...\r\n  }\r\n\r\n  // Getters and setters\r\n  public List\u003cSolution\u003e getSolutions() {\r\n    return solutions;\r\n  }\r\n\r\n  public void setSolutions(List\u003cSolution\u003e solutions) {\r\n    this.solutions = solutions;\r\n  }\r\n\r\n  // ...\r\n}\r\n\r\n// Helper class for Solution\r\nclass Solution {\r\n  // Constructor\r\n  public Solution(List\u003cDouble\u003e variables) {\r\n    // Initialize the solution\r\n    // ...\r\n  }\r\n\r\n  // Getters and setters\r\n  public List\u003cDouble\u003e getVariables() {\r\n    return variables;\r\n  }\r\n\r\n  public void setVariables(List\u003cDouble\u003e variables) {\r\n    this.variables = variables;\r\n  }\r\n\r\n  // ...\r\n}\r\n\r\n// Helper class for JsonUtil\r\nclass JsonUtil {\r\n  // Method to convert solutions to JsonNode\r\n  public static JsonNode convertSolutionsToJsonNode(SolutionSet solutions) {\r\n    // Convert the solutions to JsonNode\r\n    // ...\r\n    return solutionsJson;\r\n  }\r\n\r\n  // ...\r\n}\",\n  \"Justification\": \"\"\r\n}"},"done":true,"done_reason":"stop","total_duration":23571482400,"load_duration":11394782800,"prompt_eval_count":511,"prompt_eval_duration":362271800,"eval_count":823,"eval_duration":11457467300}

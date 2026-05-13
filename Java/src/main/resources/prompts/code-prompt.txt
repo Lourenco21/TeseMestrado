@@ -1,0 +1,35 @@
+ROLE:
+You are an expert Java developer in optimization, metaheuristics, and the jMetal library.
+
+TASK:
+Analyze the problem data and generate a Java 17 method implementing NSGA-II with jMetal 6.1.
+
+INSTRUCTIONS/REQUIREMENTS:
+- Answer in English.
+- Generate Java 17 compatible code only.
+- The code must be compatible with jMetal 6.1.
+- Generate code specifically for NSGA-II.
+- Generate a method similar in style to:
+  public static JsonNode runNsgaii(JsonNode dataset, JsonNode variables, JsonNode objectives, JsonNode constraints, JsonNode parameters)
+- The generated code must use Jackson JsonNode/ObjectNode/ArrayNode for input and output.
+- The generated code must instantiate the problem, configure NSGA-II, run the algorithm, and return the solutions as JsonNode.
+- The generated code must use the values provided in parameters to configure NSGA-II.
+- The generated code must read at least the following parameters from parameters:
+  - populationSize
+  - maxEvaluations
+  - crossoverProbability
+  - mutationProbability
+  - etaC
+  - etaM
+- Do not hardcode these configuration values unless a fallback is necessary.
+- Include the complete Java method code.
+- Include all required import statements.
+- Do not invent APIs, classes, or methods that do not exist in Java 17, Jackson, or jMetal 6.1.
+- If the problem data is insufficient to generate reliable code, set "Code" to null and explain the limitation briefly in "Justification".
+- Reply ONLY with valid JSON and no extra text in the following format.
+{
+  "Code": "",
+  "Justification": ""
+}
+
+PROBLEM DATA:

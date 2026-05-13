@@ -49,7 +49,7 @@ export default function ProblemHomePage() {
       case 8:
         return `/problems/${problemId}/rooms-mapping`;
       case 9:
-        return `/problems/${problemId}/review`;
+        return `/problems/${problemId}/detail`;
       default:
         return `/problems/${problemId}/type`;
     }

@@ -1,4 +1,6 @@
+import csv
 import os
+from openpyxl import load_workbook
 
 import pandas as pd
 import requests
@@ -98,15 +100,18 @@ class ProblemMappingSuggestionsView(APIView):
                 "target_field": match["target_field"],
                 "target_label": match["target_label"],
                 "description": next(
-                    (field.get("description", "") for field in schema["fields"] if field["key"] == match["target_field"]),
+                    (field.get("description", "") for field in schema["fields"] if
+                     field["key"] == match["target_field"]),
                     ""
                 ),
                 "required": next(
-                    (field.get("required", False) for field in schema["fields"] if field["key"] == match["target_field"]),
+                    (field.get("required", False) for field in schema["fields"] if
+                     field["key"] == match["target_field"]),
                     False
                 ),
                 "data_type": next(
-                    (field.get("data_type", "string") for field in schema["fields"] if field["key"] == match["target_field"]),
+                    (field.get("data_type", "string") for field in schema["fields"] if
+                     field["key"] == match["target_field"]),
                     "string"
                 ),
                 "aliases": next(
@@ -290,15 +295,18 @@ class ProblemRoomsMappingSuggestionsView(APIView):
                 "target_field": match["target_field"],
                 "target_label": match["target_label"],
                 "description": next(
-                    (field.get("description", "") for field in schema["fields"] if field["key"] == match["target_field"]),
+                    (field.get("description", "") for field in schema["fields"] if
+                     field["key"] == match["target_field"]),
                     ""
                 ),
                 "required": next(
-                    (field.get("required", False) for field in schema["fields"] if field["key"] == match["target_field"]),
+                    (field.get("required", False) for field in schema["fields"] if
+                     field["key"] == match["target_field"]),
                     False
                 ),
                 "data_type": next(
-                    (field.get("data_type", "string") for field in schema["fields"] if field["key"] == match["target_field"]),
+                    (field.get("data_type", "string") for field in schema["fields"] if
+                     field["key"] == match["target_field"]),
                     "string"
                 ),
                 "aliases": next(
@@ -535,6 +543,7 @@ class ProblemRoomsMappingSaveView(APIView):
             "rooms_mapping_data": problem_draft.rooms_mapping_data,
         })
 
+
 class ProblemSendToJavaView(APIView):
     JAVA_BACKEND_URL = "http://localhost:8080/api/problems/run"
 
@@ -547,13 +556,20 @@ class ProblemSendToJavaView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
+        schedule_row_count = get_file_row_count(
+            problem_draft.uploaded_schedule.file if problem_draft.uploaded_schedule else None)
+        rooms_row_count = get_file_row_count(
+            problem_draft.uploaded_rooms_file.file if problem_draft.uploaded_rooms_file else None)
+
         payload = {
             "problem_id": problem_draft.id,
             "name": problem_draft.name,
             "problem_type": problem_draft.problem_family,
             "problem_subtype": problem_draft.problem_subtype,
             "schedule_file_id": problem_draft.uploaded_schedule_id,
+            "schedule_file_row_count": schedule_row_count,
             "rooms_file_id": problem_draft.uploaded_rooms_file_id or {},
+            "rooms_file_row_count": rooms_row_count or {},
             "mapping_data": problem_draft.mapping_data or {},
             "rooms_mapping_data": problem_draft.rooms_mapping_data or {},
             "objectives": problem_draft.selected_objectives or [],
@@ -621,3 +637,26 @@ class ProblemSendToJavaView(APIView):
             },
             status=status.HTTP_200_OK
         )
+
+
+def get_file_row_count(file_field):
+    if not file_field:
+        return None
+
+    file_path = file_field.path
+    extension = os.path.splitext(file_path)[1].lower()
+
+    if extension == ".csv":
+        with open(file_path, "r", encoding="utf-8-sig", newline="") as f:
+            reader = csv.reader(f)
+            row_count = sum(1 for row in reader if any(cell.strip() for cell in row)) - 1
+        return row_count
+
+    if extension in [".xlsx", ".xlsm"]:
+        workbook = load_workbook(filename=file_path, read_only=True, data_only=True)
+        sheet = workbook.active
+        row_count = sheet.max_row - 1
+        workbook.close()
+        return row_count
+
+    return None

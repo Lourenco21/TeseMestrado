@@ -6,8 +6,8 @@ import ProblemTypeStepPage from "./pages/problems/ProblemTypeStepPage";
 import ProblemSubtypeStepPage from "./pages/problems/ProblmeSubtypeStepPage.jsx";
 import ProblemUploadStepPage from "./pages/problems/ProblemUploadStepPage.jsx";
 import ProblemMappingStepPage from "./pages/problems/ProblemMappingStepPage.jsx";
-import ProblemObjectivesStepPage from "./pages/problems/ProblemObjectivesStepPage.jsx";
-import ProblemConstraintsStepPage from "./pages/problems/ProblemConstraintsStepPage.jsx";
+//import ProblemObjectivesStepPage from "./pages/storage/ProblemObjectivesStepPage.jsx";
+//import ProblemConstraintsStepPage from "./pages/storage/ProblemConstraintsStepPage.jsx";
 import ProblemRoomsUploadStepPage from "./pages/problems/ProblemRoomsUploadStepPage.jsx";
 import ProblemRoomsMappingStepPage from "./pages/problems/ProblemRoomsMappingStepPage.jsx";
 import ProblemDetailPage from "./pages/problems/ProblemDetailPage.jsx";
@@ -24,7 +24,7 @@ export default function App() {
           <Route path="/problems/:id/subtype" element={<ProblemSubtypeStepPage />} />
           <Route path="/problems/:id/upload" element={<ProblemUploadStepPage />} />
           <Route path="/problems/:id/mapping" element={<ProblemMappingStepPage />} />
-          <Route path="/problems/:id/objectives" element={<ProblemObjectivesStepPage />} />
+          {/*<Route path="/problems/:id/objectives" element={<ProblemObjectivesStepPage />} />*/}
           <Route path="/problems/:id/constraints" element={<ProblemConstraintsStepPage />} />
           <Route path="/problems/:id/rooms-upload" element={<ProblemRoomsUploadStepPage />} />
           <Route path="/problems/:id/rooms-mapping" element={<ProblemRoomsMappingStepPage />} />

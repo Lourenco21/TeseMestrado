@@ -4,22 +4,27 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 public class ResultWriter {
 
     private final Path outputDirectory;
+    private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("dd-MM-yyyy HH:mm:ss");
 
     public ResultWriter(String outputDirectory) {
         this.outputDirectory = Path.of(outputDirectory);
         createDirectoryIfNeeded();
     }
 
-    public void writeResult(LlmResponse response) {
+    public void writeResult(LlmResponse response, String promptType) {
         String safeModelName = response.getModel().replace(":", "-");
-        Path outputFile = outputDirectory.resolve(safeModelName + ".txt");
+        Path outputFile = outputDirectory.resolve(safeModelName + "-" + promptType + ".txt");
 
         StringBuilder content = new StringBuilder();
         content.append("Modelo: ").append(response.getModel()).append(System.lineSeparator());
+        content.append("Prompt Type: ").append(promptType).append(System.lineSeparator());
+        content.append("Última escrita: ").append(LocalDateTime.now().format(FORMATTER)).append(System.lineSeparator());
         content.append("HTTP Status: ").append(response.getHttpStatusCode()).append(System.lineSeparator());
         content.append("Duração (ms): ").append(response.getDurationMs()).append(System.lineSeparator());
         content.append("Erro: ").append(response.getError() == null ? "nenhum" : response.getError()).append(System.lineSeparator());
@@ -31,6 +36,7 @@ public class ResultWriter {
         content.append(response.getRawResponse() == null ? "" : response.getRawResponse()).append(System.lineSeparator());
 
         try {
+            Files.deleteIfExists(outputFile);
             Files.writeString(outputFile, content.toString(), StandardCharsets.UTF_8);
         } catch (IOException e) {
             throw new RuntimeException("Erro ao escrever resultado do modelo " + response.getModel(), e);
