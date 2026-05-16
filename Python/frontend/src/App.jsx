@@ -11,6 +11,7 @@ import ProblemMappingStepPage from "./pages/problems/ProblemMappingStepPage.jsx"
 import ProblemRoomsUploadStepPage from "./pages/problems/ProblemRoomsUploadStepPage.jsx";
 import ProblemRoomsMappingStepPage from "./pages/problems/ProblemRoomsMappingStepPage.jsx";
 import ProblemDetailPage from "./pages/problems/ProblemDetailPage.jsx";
+import ProblemConstraintsStepPage from "./pages/problems/ProblemConstraintsStepPage.jsx";
 
 export default function App() {
   return (

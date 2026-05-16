@@ -9,6 +9,13 @@ public class JSONGetters {
     private String name;
     private String problem_type;
     private String problem_subtype;
+    private Map<String, Object> mapping_data;
+    private Map<String, Object> rooms_mapping_data;
+    private List<Object> objectives;
+    private List<Object> constraints;
+
+    private String resolution_scope;
+    private String repeated_instance_strategy;
 
     private Integer schedule_file_id;
     private Integer schedule_file_row_count;
@@ -16,10 +23,8 @@ public class JSONGetters {
     private Integer rooms_file_id;
     private Integer rooms_file_row_count;
 
-    private Map<String, Object> mapping_data;
-    private Map<String, Object> rooms_mapping_data;
-    private List<Object> objectives;
-    private List<Object> constraints;
+    private Map<String, Object> constraints_summary;
+    private Map<String, Object> instance_characteristics;
 
     public Integer getProblem_id() {
         return problem_id;
@@ -53,56 +58,52 @@ public class JSONGetters {
         this.problem_subtype = problem_subtype;
     }
 
-    public Integer getSchedule_file_id() {
-        return schedule_file_id;
+    public String getResolution_scope() {
+        return resolution_scope;
     }
 
-    public void setSchedule_file_id(Integer schedule_file_id) {
-        this.schedule_file_id = schedule_file_id;
+    public void setResolution_scope(String resolution_scope) {
+        this.resolution_scope = resolution_scope;
+    }
+
+    public String getRepeated_instance_strategy() {
+        return repeated_instance_strategy;
+    }
+
+    public void setRepeated_instance_strategy(String repeated_instance_strategy) {
+        this.repeated_instance_strategy = repeated_instance_strategy;
+    }
+
+    public Map<String, Object> getConstraints_summary() {
+        return constraints_summary;
+    }
+
+    public void setConstraints_summary(Map<String, Object> constraints_summary) {
+        this.constraints_summary = constraints_summary;
+    }
+
+    public Map<String, Object> getInstance_characteristics() {
+        return instance_characteristics;
+    }
+
+    public void setInstance_characteristics(Map<String, Object> instance_characteristics) {
+        this.instance_characteristics = instance_characteristics;
+    }
+
+    public Integer getSchedule_file_id() {
+        return schedule_file_id;
     }
 
     public Integer getSchedule_file_row_count() {
         return schedule_file_row_count;
     }
 
-    public void setSchedule_file_row_count(Integer schedule_file_row_count) {
-        this.schedule_file_row_count = schedule_file_row_count;
-    }
-
     public Integer getRooms_file_id() {
         return rooms_file_id;
     }
 
-    public void setRooms_file_id(Integer rooms_file_id) {
-        this.rooms_file_id = rooms_file_id;
-    }
-
     public Integer getRooms_file_row_count() {
         return rooms_file_row_count;
-    }
-
-    public void setRooms_file_row_count(Integer rooms_file_row_count) {
-        this.rooms_file_row_count = rooms_file_row_count;
-    }
-
-    public Map<String, Object> getMapping_data() {
-        return mapping_data;
-    }
-
-    public void setMapping_data(Map<String, Object> mapping_data) {
-        this.mapping_data = mapping_data;
-    }
-
-    public Map<String, Object> getRooms_mapping_data() {
-        return rooms_mapping_data;
-    }
-
-    public void setRooms_mapping_data(Map<String, Object> rooms_mapping_data) {
-        this.rooms_mapping_data = rooms_mapping_data;
-    }
-
-    public List<Object> getObjectives() {
-        return objectives;
     }
 
     public int getObjectivesCount(){
@@ -121,7 +122,16 @@ public class JSONGetters {
         return constraints.size();
     }
 
-    public void setConstraints(List<Object> constraints) {
-        this.constraints = constraints;
+    public Map<String, Object> getMapping_data() {
+        return mapping_data;
     }
+
+    public Map<String, Object> getRooms_mapping_data() {
+        return rooms_mapping_data;
+    }
+
+    public List<Object> getObjectives() {
+        return objectives;
+    }
+
 }

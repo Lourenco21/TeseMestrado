@@ -1,22 +1,12 @@
 Modelo: qwen2.5-coder:7b
 Prompt Type: parameters
-Última escrita: 12-05-2026 12:24:55
-HTTP Status: 200
-Duração (ms): 12886
-Erro: nenhum
+Última escrita: 14-05-2026 17:44:44
+HTTP Status: 500
+Duração (ms): 2
+Erro: Erro de I/O ao comunicar com o Ollama: null
 
 ===== RESPOSTA =====
-```json
-{
-  "populationSize": 100,
-  "maxEvaluations": 2000,
-  "crossoverProbability": 0.9,
-  "mutationProbability": 0.1,
-  "etaC": 20.0,
-  "etaM": 20.0,
-  "Justification": "The selected parameter values are based on common guidelines for NSGA-II with SBX crossover and Polynomial Mutation. Population size and max evaluations are chosen to balance exploration and exploitation within limited computational resources. Crossover and mutation probabilities are set to typical values for these operators. The eta parameters for both crossover and mutation are set to 20, which are generally effective for continuous search spaces. Constraints are handled through the soft nature of the objectives, but specific handling of constraints in NSGA-II would require more specific tuning based on the problem's characteristics."
-}
-```
+
 
 ===== RAW RESPONSE =====
-{"model":"qwen2.5-coder:7b","created_at":"2026-05-12T11:24:55.2124854Z","message":{"role":"assistant","content":"```json\n{\n  \"populationSize\": 100,\n  \"maxEvaluations\": 2000,\n  \"crossoverProbability\": 0.9,\n  \"mutationProbability\": 0.1,\n  \"etaC\": 20.0,\n  \"etaM\": 20.0,\n  \"Justification\": \"The selected parameter values are based on common guidelines for NSGA-II with SBX crossover and Polynomial Mutation. Population size and max evaluations are chosen to balance exploration and exploitation within limited computational resources. Crossover and mutation probabilities are set to typical values for these operators. The eta parameters for both crossover and mutation are set to 20, which are generally effective for continuous search spaces. Constraints are handled through the soft nature of the objectives, but specific handling of constraints in NSGA-II would require more specific tuning based on the problem's characteristics.\"\n}\n```"},"done":true,"done_reason":"stop","total_duration":12883250400,"load_duration":9512769800,"prompt_eval_count":501,"prompt_eval_duration":474406200,"eval_count":187,"eval_duration":2776848900}
+

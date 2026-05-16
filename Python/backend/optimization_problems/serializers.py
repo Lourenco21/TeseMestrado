@@ -73,7 +73,6 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
             "uploaded_rooms_file_file",
             "mapping_data",
             "rooms_mapping_data",
-            "selected_objectives",
             "selected_constraints",
             "created_at",
             "updated_at",

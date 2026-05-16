@@ -66,28 +66,58 @@ export async function getProblemCatalog() {
   return handleResponse(response);
 }
 
-export async function sendProblemToJava(problemId) {
-  const response = await fetch(
-    `http://127.0.0.1:8000/optimization_problems/${problemId}/send-to-java/`,
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    }
-  );
+export async function sendProblemToJava(problemId, executionConfig = {}) {
+  const response = await fetch(`http://127.0.0.1:8000/optimization_problems/${problemId}/send-to-java/`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(executionConfig),
+  });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.error || "Erro ao enviar problema para Java.");
+    throw new Error(data.error || "Não foi possível enviar o problema para Java.");
   }
 
   return data;
 }
 
+export async function requestProblemAlgorithms(problemId, executionConfig = {}) {
+  const response = await fetch(
+    `http://127.0.0.1:8000/optimization_problems/${problemId}/request-algorithms/`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(executionConfig),
+    }
+  );
 
+  const contentType = response.headers.get("content-type") || "";
 
+  let data;
+  if (contentType.includes("application/json")) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    throw new Error(
+      `Resposta não JSON recebida do backend. Status ${response.status}. Conteúdo inicial: ${text.slice(0, 120)}`
+    );
+  }
+
+  if (!response.ok) {
+    const message = [data.error, data.details]
+      .filter(Boolean)
+      .join(" | ");
+
+    throw new Error(message || "Não foi possível pedir algoritmos.");
+  }
+
+  return data;
+}
 
 
 

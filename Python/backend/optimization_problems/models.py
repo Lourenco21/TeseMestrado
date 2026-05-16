@@ -54,7 +54,6 @@ class ProblemDraft(models.Model):
     mapping_data = models.JSONField(default=dict, blank=True)
     rooms_mapping_data = models.JSONField(default=dict, blank=True)
 
-    selected_objectives = models.JSONField(default=list, blank=True)
     selected_constraints = models.JSONField(default=list, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)

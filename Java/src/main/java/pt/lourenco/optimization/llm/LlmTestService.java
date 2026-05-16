@@ -20,10 +20,11 @@ public class LlmTestService {
         String algorithm = "algorithm";
         String code = "code";
         String parameters = "parameters";
+        String algorithms_list = "algorithms-list";
 
         List<String> models = List.of(
                 "llama3.1:8b",
-                "deepseek-r1:8b",
+                //"deepseek-r1:8b",
                 "qwen2.5-coder:7b"
         );
 
@@ -33,7 +34,7 @@ public class LlmTestService {
             System.out.println("A testar modelo: " + model);
 
             LlmResponse response = ollamaClient.chat(model, prompt);
-            resultWriter.writeResult(response, /**algorithm code **/parameters);
+            resultWriter.writeResult(response, algorithms_list /**algorithm code parameters**/);
             results.add(response);
 
             if (response.hasError()) {

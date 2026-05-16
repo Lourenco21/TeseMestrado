@@ -50,43 +50,34 @@ OBJECTIVE_LIBRARY = {
 CONSTRAINT_LIBRARY = {
     "timetabling": [
         {
-            "id": "no_teacher_overlap",
-            "label": "Professor não pode estar em dois lugares ao mesmo tempo",
-            "hard": True,
-            "requires_additional_data": False,
-            "additional_data_requirements": [],
+            "id": "room_capacity_sufficiency",
+            "label": "Capacidade da sala suficiente",
+            "description": "A sala atribuída deve ter capacidade igual ou superior ao número de estudantes inscritos."
         },
         {
-            "id": "no_room_overlap",
+            "id": "room_exclusivity",
             "label": "Sala não pode ter duas aulas ao mesmo tempo",
-            "hard": True,
-            "requires_additional_data": False,
-            "additional_data_requirements": [],
+            "description": "Duas aulas que decorram no mesmo intervalo temporal não podem ser atribuídas à mesma sala."
         },
         {
-            "id": "room_capacity",
-            "label": "Capacidade da sala",
-            "hard": True,
-            "requires_additional_data": True,
-            "additional_data_requirements": [
-                {
-                    "id": "capacity",
-                }
-            ],
+            "id": "capacity_waste",
+            "label": "Minimizar desperdício de capacidade",
+            "description": "Deve ser reduzido o número de lugares sobrantes nas salas atribuídas, promovendo uma utilização mais eficiente do espaço."
         },
         {
-            "id": "teacher_availability",
-            "label": "Disponibilidade do professor",
-            "hard": True,
-            "requires_additional_data": True,
-            "additional_data_requirements": [
-                {
-                    "id": "disponibilidade_professor",
-                    "label": "Disponibilidade do professor",
-                    "entity": "professor",
-                    "accepted_sources": ["mesmo_ficheiro", "ficheiro_separado"],
-                }
-            ],
+            "id": "room_feature_mismatch",
+            "label": "Adequação das características da sala",
+            "description": "Atribuições a salas sem as características necessárias para a aula, como laboratório informático ou equipamento específico, devem ser penalizadas."
+        },
+{
+            "id": "consecutive_room_change",
+            "label": "Evitar mudança de sala em aulas consecutivas",
+            "description": "Mudanças desnecessárias de sala entre aulas seguidas da mesma unidade curricular devem ser desencorajadas."
+        },
+        {
+            "id": "student_relocation",
+            "label": "Minimizar deslocação dos estudantes",
+            "description": "Deve ser reduzida a deslocação entre edifícios ou salas em aulas consecutivas do mesmo contexto académico."
         },
     ],
     "scheduling": [

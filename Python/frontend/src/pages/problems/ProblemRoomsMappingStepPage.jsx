@@ -537,7 +537,7 @@ export default function ProblemRoomsMappingStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 8 de 8</p>
+        <p style={styles.step}>Passo 7 de 7</p>
         <h1 style={styles.title}>Mapping do ficheiro de salas</h1>
         <p style={styles.description}>
           Associa as colunas do ficheiro de salas aos campos necessários e define

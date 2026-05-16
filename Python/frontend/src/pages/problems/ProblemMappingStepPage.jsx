@@ -129,7 +129,7 @@ export default function ProblemMappingStepPage() {
         },
       });
 
-      navigate(`/problems/${id}/objectives`);
+      navigate(`/problems/${id}/constraints`);
     } catch (err) {
       console.error("Erro ao guardar mapping:", err);
       setLocalError(err.message || "Não foi possível guardar o mapping.");
@@ -153,7 +153,7 @@ export default function ProblemMappingStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 4 de 8</p>
+        <p style={styles.step}>Passo 4 de 7</p>
         <h1 style={styles.title}>Confirmar mapping do ficheiro</h1>
         <p style={styles.description}>
           Associa cada variável do schema à coluna correspondente no ficheiro carregado.
