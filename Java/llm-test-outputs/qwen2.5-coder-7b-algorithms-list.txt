@@ -1,42 +1,12 @@
 Modelo: qwen2.5-coder:7b
 Prompt Type: algorithms-list
-Última escrita: 14-05-2026 21:44:25
-HTTP Status: 200
-Duração (ms): 28740
-Erro: nenhum
+Última escrita: 20-05-2026 19:43:26
+HTTP Status: 404
+Duração (ms): 11
+Erro: Erro HTTP na chamada ao Ollama.
 
 ===== RESPOSTA =====
-```json
-{
-  "algorithms": [
-    {
-      "name": "NSGA-II",
-      "key_points": [
-        {"point": "NSGA-II is a popular multi-objective optimization algorithm that can handle problems with multiple conflicting objectives."},
-        {"point": "It is known for its ability to maintain a diverse set of solutions, making it suitable for problems with multiple soft constraints."},
-        {"point": "NSGA-II is efficient in finding a good set of solutions in a reasonable amount of computational time."}
-      ]
-    },
-    {
-      "name": "MOEA/D",
-      "key_points": [
-        {"point": "MOEA/D is a decomposition-based multi-objective optimization algorithm that can efficiently handle large and complex problems."},
-        {"point": "It decomposes the multi-objective problem into a set of single-objective subproblems, making it well-suited for problems with a large number of variables."},
-        {"point": "MOEA/D is known for its ability to find a high-quality set of Pareto-optimal solutions."}
-      ]
-    },
-    {
-      "name": "RVEA",
-      "key_points": [
-        {"point": "RVEA is a reference vector evolutionary algorithm that is designed to handle problems with multiple objectives."},
-        {"point": "It uses a set of reference vectors to guide the search and is particularly effective in generating a well-distributed set of Pareto-optimal solutions."},
-        {"point": "RVEA is computationally efficient and can handle large-scale problems."}
-      ]
-    }
-  ],
-  "justification": "The problem involves a large number of classes (26,020) and multiple constraints, including both hard and soft objectives. NSGA-II, MOEA/D, and RVEA are well-suited for such problems due to their ability to handle multiple objectives, maintain diversity, and efficiently explore the solution space. These algorithms are part of the jMetal Java library and can be effectively used to find a set of Pareto-optimal solutions for the university course timetabling problem."
-}
-```
+
 
 ===== RAW RESPONSE =====
-{"model":"qwen2.5-coder:7b","created_at":"2026-05-14T20:44:25.956677Z","message":{"role":"assistant","content":"```json\n{\n  \"algorithms\": [\n    {\n      \"name\": \"NSGA-II\",\n      \"key_points\": [\n        {\"point\": \"NSGA-II is a popular multi-objective optimization algorithm that can handle problems with multiple conflicting objectives.\"},\n        {\"point\": \"It is known for its ability to maintain a diverse set of solutions, making it suitable for problems with multiple soft constraints.\"},\n        {\"point\": \"NSGA-II is efficient in finding a good set of solutions in a reasonable amount of computational time.\"}\n      ]\n    },\n    {\n      \"name\": \"MOEA/D\",\n      \"key_points\": [\n        {\"point\": \"MOEA/D is a decomposition-based multi-objective optimization algorithm that can efficiently handle large and complex problems.\"},\n        {\"point\": \"It decomposes the multi-objective problem into a set of single-objective subproblems, making it well-suited for problems with a large number of variables.\"},\n        {\"point\": \"MOEA/D is known for its ability to find a high-quality set of Pareto-optimal solutions.\"}\n      ]\n    },\n    {\n      \"name\": \"RVEA\",\n      \"key_points\": [\n        {\"point\": \"RVEA is a reference vector evolutionary algorithm that is designed to handle problems with multiple objectives.\"},\n        {\"point\": \"It uses a set of reference vectors to guide the search and is particularly effective in generating a well-distributed set of Pareto-optimal solutions.\"},\n        {\"point\": \"RVEA is computationally efficient and can handle large-scale problems.\"}\n      ]\n    }\n  ],\n  \"justification\": \"The problem involves a large number of classes (26,020) and multiple constraints, including both hard and soft objectives. NSGA-II, MOEA/D, and RVEA are well-suited for such problems due to their ability to handle multiple objectives, maintain diversity, and efficiently explore the solution space. These algorithms are part of the jMetal Java library and can be effectively used to find a set of Pareto-optimal solutions for the university course timetabling problem.\"\n}\n```"},"done":true,"done_reason":"stop","total_duration":28737067200,"load_duration":9681776000,"prompt_eval_count":484,"prompt_eval_duration":636495500,"eval_count":431,"eval_duration":18194060700}
+{"error":"model 'qwen2.5-coder:7b' not found"}

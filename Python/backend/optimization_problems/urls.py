@@ -2,7 +2,7 @@ from django.urls import path
 from .views import ScheduleUploadView, ProblemMappingSuggestionsView, ScheduleListView, \
     ProblemDraftListCreateView, ProblemDraftDetailView, ProblemCatalogView, RoomDataFileUploadView, \
     ProblemRoomsFilePreviewView, ProblemRoomsMappingSaveView, ProblemRoomsMappingSuggestionsView, ProblemSendToJavaView, \
-    ProblemRequestAlgorithmsView
+    ProblemRequestAlgorithmsView, ProblemExecuteView, FilesForJavaView
 
 urlpatterns = [
     path("", ProblemDraftListCreateView.as_view(), name="problem-draft-list-create"),
@@ -16,4 +16,6 @@ urlpatterns = [
     path("<int:problem_id>/rooms-mapping-suggestions/", ProblemRoomsMappingSuggestionsView.as_view(), name="problem-rooms-mapping-suggestions"),
     path("<int:problem_id>/send-to-java/", ProblemSendToJavaView.as_view(), name="problem-send-to-java",),
     path("<int:problem_id>/request-algorithms/",ProblemRequestAlgorithmsView.as_view(),name="problem-request-algorithms",),
+    path("<int:problem_id>/execute/", ProblemExecuteView.as_view(), name="problem-execute",),
+    path("<int:problem_id>/files-for-java/",FilesForJavaView.as_view(),name="problem-data-for-java",),
 ]

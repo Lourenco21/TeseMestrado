@@ -355,7 +355,7 @@ export default function ProblemRoomsMappingStepPage() {
       }
     }
 
-    if (characteristics.format === "multiple_flag_columns") {
+    if (characteristics.format === "multiple_columns") {
       if (!characteristics.config?.selected_columns?.length) {
         errors.push("Seleciona pelo menos uma coluna de características.");
       }
@@ -366,7 +366,7 @@ export default function ProblemRoomsMappingStepPage() {
       }
     }
 
-    if (characteristics.format === "range_flag_columns") {
+    if (characteristics.format === "range_columns") {
       if (!characteristics.config?.start_column) {
         errors.push("Seleciona a coluna inicial do intervalo.");
       }
@@ -767,12 +767,12 @@ export default function ProblemRoomsMappingStepPage() {
                     desc: "Todas as características vêm numa única coluna e estão separadas por um delimitador.",
                   },
                   {
-                    key: "multiple_flag_columns",
+                    key: "multiple_columns",
                     title: "Várias colunas",
                     desc: "Cada coluna representa uma característica.",
                   },
                   {
-                    key: "range_flag_columns",
+                    key: "range_columns",
                     title: "Intervalo de colunas",
                     desc: "As características ocupam um intervalo contínuo de colunas.",
                   },
@@ -847,7 +847,7 @@ export default function ProblemRoomsMappingStepPage() {
                     </div>
                   ) : null}
 
-                  {characteristics.format === "multiple_flag_columns" ? (
+                  {characteristics.format === "multiple_columns" ? (
                     <>
                       <MultiCheckboxDropdown
                         label="Colunas das características"
@@ -872,7 +872,7 @@ export default function ProblemRoomsMappingStepPage() {
                     </>
                   ) : null}
 
-                  {characteristics.format === "range_flag_columns" ? (
+                  {characteristics.format === "range_columns" ? (
                     <>
                       <div style={styles.linkGrid}>
                         <div style={styles.field}>

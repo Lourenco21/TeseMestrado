@@ -1,8 +1,8 @@
 Modelo: llama3.1:8b
 Prompt Type: algorithms-list
-Última escrita: 14-05-2026 21:43:57
+Última escrita: 20-05-2026 19:43:26
 HTTP Status: 200
-Duração (ms): 24158
+Duração (ms): 13210
 Erro: nenhum
 
 ===== RESPOSTA =====
@@ -10,39 +10,23 @@ Erro: nenhum
 "algorithms":[
 {
 "name":"NSGA-II",
-"key_points":[
-{"point":"Multi-objective optimization"},
-{"point":"Suitable for large instances"},
-{"point":"Handles constraints"},
-{"point":"Easy to implement"}]
+"key_points":[{"point":"Multi-objective optimization"}, {"point":"Population size: 100-500"}, {"point":"Number of generations: 50-200"}]
 },
 {
-"name":"NSGA-III",
-"key_points":[
-{"point":"Multi-objective optimization"},
-{"point":"Suitable for large instances"},
-{"point":"Handles constraints"},
-{"point":"More efficient than NSGA-II"}]
-},
-{
-"name":"MOEA/D",
-"key_points":[
-{"point":"Multi-objective optimization"},
-{"point":"Suitable for small to medium instances"},
-{"point":"Handles constraints"},
-{"point":"Easy to implement"}]
-},
-{
-"name":"PESA-II",
-"key_points":[
-{"point":"Multi-objective optimization"},
-{"point":"Suitable for large instances"},
-{"point":"Handles constraints"},
-{"point":"Handles constraints in a 2D space"}]
-}],
-"justification":
-"Given the problem characteristics, NSGA-II and NSGA-III are the most suitable algorithms. Both are multi-objective optimization algorithms that can handle constraints, which is essential for this problem. Additionally, both algorithms are suitable for large instances, which is the case for this problem (26020 classes). NSGA-III is more efficient than NSGA-II, so it might be a better choice if computational time is a concern. MOEA/D and PESA-II are also considered, but they are more suitable for smaller instances and may not perform as well for this large instance."
+"name":"MOEA/D-DE",
+"key_points":[{"point":"Single-objective and multi-objective optimization"}, {"point":"Population size: 20-100"}, {"point":"Number of neighbors: 10-30"}]
 }
+],
+"justification":"
+Given the characteristics of the problem, we selected two algorithms from the jMetal library. The first one is NSGA-II, a well-known and widely used multi-objective optimization algorithm that can efficiently handle the multiple objectives present in this timetabling problem.
+
+The second algorithm chosen is MOEA/D-DE, which is suitable for both single-objective and multi-objective problems. This algorithm's characteristics allow it to adapt to different problem sizes, making it a good choice given the large number of classes (26020) and partitions (1458) in this instance.
+
+Both algorithms are capable of handling the hard constraints room_capacity_sufficiency and room_exclusivity, which have high importance. They can also handle the soft constraints capacity_waste, room_feature_mismatch, student_relocation, and consecutive_room_change, which have varying levels of importance.
+
+The resolution scope start_half_hour and repeated instance strategy reuse_solution do not directly affect the choice of algorithm but are essential in the problem formulation.
+
+Overall, these two algorithms should be suitable for solving this university course timetabling problem."
 
 ===== RAW RESPONSE =====
-{"model":"llama3.1:8b","created_at":"2026-05-14T20:43:57.2146595Z","message":{"role":"assistant","content":"{\r\n\"algorithms\":[\r\n{\r\n\"name\":\"NSGA-II\",\r\n\"key_points\":[\r\n{\"point\":\"Multi-objective optimization\"},\r\n{\"point\":\"Suitable for large instances\"},\r\n{\"point\":\"Handles constraints\"},\r\n{\"point\":\"Easy to implement\"}]\r\n},\r\n{\r\n\"name\":\"NSGA-III\",\r\n\"key_points\":[\r\n{\"point\":\"Multi-objective optimization\"},\r\n{\"point\":\"Suitable for large instances\"},\r\n{\"point\":\"Handles constraints\"},\r\n{\"point\":\"More efficient than NSGA-II\"}]\r\n},\r\n{\r\n\"name\":\"MOEA/D\",\r\n\"key_points\":[\r\n{\"point\":\"Multi-objective optimization\"},\r\n{\"point\":\"Suitable for small to medium instances\"},\r\n{\"point\":\"Handles constraints\"},\r\n{\"point\":\"Easy to implement\"}]\r\n},\r\n{\r\n\"name\":\"PESA-II\",\r\n\"key_points\":[\r\n{\"point\":\"Multi-objective optimization\"},\r\n{\"point\":\"Suitable for large instances\"},\r\n{\"point\":\"Handles constraints\"},\r\n{\"point\":\"Handles constraints in a 2D space\"}]\r\n}],\r\n\"justification\":\r\n\"Given the problem characteristics, NSGA-II and NSGA-III are the most suitable algorithms. Both are multi-objective optimization algorithms that can handle constraints, which is essential for this problem. Additionally, both algorithms are suitable for large instances, which is the case for this problem (26020 classes). NSGA-III is more efficient than NSGA-II, so it might be a better choice if computational time is a concern. MOEA/D and PESA-II are also considered, but they are more suitable for smaller instances and may not perform as well for this large instance.\"\r\n}"},"done":true,"done_reason":"stop","total_duration":24153219600,"load_duration":9693115300,"prompt_eval_count":457,"prompt_eval_duration":610887500,"eval_count":318,"eval_duration":13691843300}
+{"model":"llama3.1:8b","created_at":"2026-05-20T18:43:26.893165Z","message":{"role":"assistant","content":"{\r\n\"algorithms\":[\r\n{\r\n\"name\":\"NSGA-II\",\r\n\"key_points\":[{\"point\":\"Multi-objective optimization\"}, {\"point\":\"Population size: 100-500\"}, {\"point\":\"Number of generations: 50-200\"}]\r\n},\r\n{\r\n\"name\":\"MOEA/D-DE\",\r\n\"key_points\":[{\"point\":\"Single-objective and multi-objective optimization\"}, {\"point\":\"Population size: 20-100\"}, {\"point\":\"Number of neighbors: 10-30\"}]\r\n}\r\n],\r\n\"justification\":\"\nGiven the characteristics of the problem, we selected two algorithms from the jMetal library. The first one is NSGA-II, a well-known and widely used multi-objective optimization algorithm that can efficiently handle the multiple objectives present in this timetabling problem.\n\nThe second algorithm chosen is MOEA/D-DE, which is suitable for both single-objective and multi-objective problems. This algorithm's characteristics allow it to adapt to different problem sizes, making it a good choice given the large number of classes (26020) and partitions (1458) in this instance.\n\nBoth algorithms are capable of handling the hard constraints room_capacity_sufficiency and room_exclusivity, which have high importance. They can also handle the soft constraints capacity_waste, room_feature_mismatch, student_relocation, and consecutive_room_change, which have varying levels of importance.\n\nThe resolution scope start_half_hour and repeated instance strategy reuse_solution do not directly affect the choice of algorithm but are essential in the problem formulation.\n\nOverall, these two algorithms should be suitable for solving this university course timetabling problem.\""},"done":true,"done_reason":"stop","total_duration":13205116500,"load_duration":8210346200,"prompt_eval_count":457,"prompt_eval_duration":385084200,"eval_count":322,"eval_duration":4266028900}

@@ -66,7 +66,7 @@ class ProblemDraft(models.Model):
 class RoomDataFile(models.Model):
     name = models.CharField(max_length=200)
     file = models.FileField(
-        upload_to="optimization_problems/rooms.py/",
+        upload_to="optimization_problems/rooms/",
         validators=[FileExtensionValidator(allowed_extensions=["csv", "xlsx", "xls"])]
     )
     uploaded_at = models.DateTimeField(auto_now_add=True)

@@ -1,0 +1,4 @@
+django:
+  api:
+    base-url: http://127.0.0.1:8000
+    problem-data-path: /optimization_problems/{problemId}/files-for-java/

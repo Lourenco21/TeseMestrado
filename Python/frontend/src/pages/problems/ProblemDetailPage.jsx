@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {requestProblemAlgorithms} from "../../services/problemsApi";
+import {
+  requestProblemAlgorithms,
+  executeProblemWithAlgorithm,
+} from "../../services/problemsApi";
 
 const RESOLUTION_OPTIONS = [
   {
@@ -46,7 +49,6 @@ function getRepeatedInstanceOptions(resolutionScope) {
             "Volta a gerar a solução em cada semana, mesmo quando o padrão é idêntico.",
         },
       ];
-
     case "day":
       return [
         {
@@ -62,7 +64,6 @@ function getRepeatedInstanceOptions(resolutionScope) {
             "Volta a gerar a solução em cada dia, mesmo quando o padrão é idêntico.",
         },
       ];
-
     case "start_half_hour":
       return [
         {
@@ -78,7 +79,6 @@ function getRepeatedInstanceOptions(resolutionScope) {
             "Volta a gerar a solução para cada bloco de meia hora, mesmo quando o padrão é idêntico.",
         },
       ];
-
     default:
       return [];
   }
@@ -98,12 +98,11 @@ function getRepeatedStrategySectionTitle(resolutionScope) {
 }
 
 function extractAlgorithms(result) {
-  const javaResponse = result?.java_response || {};
   const candidates = [
-    javaResponse?.recommended_algorithms,
-    javaResponse?.algorithms,
-    result?.recommended_algorithms,
     result?.algorithms,
+    result?.recommended_algorithms,
+    result?.java_response?.algorithms,
+    result?.java_response?.recommended_algorithms,
   ];
 
   for (const candidate of candidates) {
@@ -123,16 +122,82 @@ function formatAlgorithmParameters(parameters) {
   return Object.entries(parameters);
 }
 
+function extractKeyPoints(algorithm) {
+  const candidates = [
+    algorithm?.key_points,
+    algorithm?.keyPoints,
+    algorithm?.points,
+  ];
+
+  for (const candidate of candidates) {
+    if (Array.isArray(candidate)) {
+      return candidate;
+    }
+  }
+
+  return [];
+}
+
+function extractAlgorithmName(algorithm) {
+  return algorithm?.name || algorithm?.algorithm_name || "";
+}
+
+function CollapsibleSection({
+  title,
+  subtitle,
+  badge,
+  isCollapsed,
+  onToggle,
+  children,
+}) {
+  return (
+    <div style={styles.collapsibleCard}>
+      <button
+        type="button"
+        onClick={onToggle}
+        style={styles.collapsibleHeader}
+        aria-expanded={!isCollapsed}
+      >
+        <div style={styles.collapsibleHeaderLeft}>
+          <div>
+            <h2 style={styles.collapsibleTitle}>{title}</h2>
+            {subtitle ? (
+              <p style={styles.collapsibleSubtitle}>{subtitle}</p>
+            ) : null}
+          </div>
+        </div>
+
+        <div style={styles.collapsibleHeaderRight}>
+          {badge ? <span style={styles.collapsibleBadge}>{badge}</span> : null}
+          <span style={styles.chevron}>{isCollapsed ? "◂" : "▾"}</span>
+        </div>
+      </button>
+
+      {!isCollapsed ? <div style={styles.collapsibleBody}>{children}</div> : null}
+    </div>
+  );
+}
+
 export default function ProblemSendToJavaPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [sending, setSending] = useState(false);
+  const [executing, setExecuting] = useState(false);
   const [localError, setLocalError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [executionMessage, setExecutionMessage] = useState("");
   const [responseData, setResponseData] = useState(null);
+  const [executionResponseData, setExecutionResponseData] = useState(null);
   const [resolutionScope, setResolutionScope] = useState("");
   const [repeatedInstanceStrategy, setRepeatedInstanceStrategy] = useState("");
+  const [selectedAlgorithmIndex, setSelectedAlgorithmIndex] = useState(null);
+  const [collapsedSections, setCollapsedSections] = useState({
+    requestConfig: false,
+    algorithms: false,
+    execution: false,
+  });
+  const [expandedAlgorithms, setExpandedAlgorithms] = useState({});
 
   const requiresRepeatedStrategy = useMemo(() => {
     return ["week", "day", "start_half_hour"].includes(resolutionScope);
@@ -150,15 +215,61 @@ export default function ProblemSendToJavaPage() {
     return extractAlgorithms(responseData);
   }, [responseData]);
 
+  const manuallySelectedAlgorithm = useMemo(() => {
+    if (
+      selectedAlgorithmIndex === null ||
+      selectedAlgorithmIndex < 0 ||
+      selectedAlgorithmIndex >= recommendedAlgorithms.length
+    ) {
+      return null;
+    }
+
+    return recommendedAlgorithms[selectedAlgorithmIndex];
+  }, [recommendedAlgorithms, selectedAlgorithmIndex]);
+
+  const defaultRecommendedAlgorithm = useMemo(() => {
+    return recommendedAlgorithms.length > 0 ? recommendedAlgorithms[0] : null;
+  }, [recommendedAlgorithms]);
+
+  const effectiveSelectedAlgorithm = useMemo(() => {
+    return manuallySelectedAlgorithm || defaultRecommendedAlgorithm;
+  }, [manuallySelectedAlgorithm, defaultRecommendedAlgorithm]);
+
+  const effectiveSelectedAlgorithmName = useMemo(() => {
+    return extractAlgorithmName(effectiveSelectedAlgorithm);
+  }, [effectiveSelectedAlgorithm]);
+
+  function toggleSection(sectionKey) {
+    setCollapsedSections((prev) => ({
+      ...prev,
+      [sectionKey]: !prev[sectionKey],
+    }));
+  }
+  function toggleSelectedAlgorithm(index) {
+    setSelectedAlgorithmIndex((prev) => (prev === index ? null : index));
+    setLocalError("");
+    setExecutionMessage("");
+    setExecutionResponseData(null);
+  }
+
+  function resetAlgorithmResults() {
+    setResponseData(null);
+    setExecutionResponseData(null);
+    setSelectedAlgorithmIndex(null);
+    setExpandedAlgorithms({});
+    setSuccessMessage("");
+    setExecutionMessage("");
+  }
+
   async function handleSend() {
     if (!resolutionScope) {
-      setLocalError("Seleciona primeiro como queres tentar resolver o problema.");
+      setLocalError("Selecione primeiro como quer tentar resolver o problema.");
       return;
     }
 
     if (requiresRepeatedStrategy && !repeatedInstanceStrategy) {
       setLocalError(
-        "Indica o que fazer quando existirem semanas, dias ou blocos equivalentes."
+        "Indique o que fazer quando existirem semanas, dias ou blocos equivalentes."
       );
       return;
     }
@@ -167,6 +278,10 @@ export default function ProblemSendToJavaPage() {
       setSending(true);
       setLocalError("");
       setSuccessMessage("");
+      setExecutionMessage("");
+      setExecutionResponseData(null);
+      setSelectedAlgorithmIndex(null);
+      setExpandedAlgorithms({});
       setResponseData(null);
 
       const data = await requestProblemAlgorithms(id, {
@@ -175,11 +290,14 @@ export default function ProblemSendToJavaPage() {
           ? repeatedInstanceStrategy
           : null,
       });
-      console.log(data.java_response.algorithms);
-      console.log(data.java_response.justification);
 
       setSuccessMessage("Recomendação de algoritmos recebida com sucesso.");
       setResponseData(data);
+      setCollapsedSections((prev) => ({
+        ...prev,
+        algorithms: false,
+        execution: false,
+      }));
     } catch (err) {
       console.error("Erro ao enviar para Java:", err);
       setLocalError(
@@ -190,17 +308,70 @@ export default function ProblemSendToJavaPage() {
     }
   }
 
+  async function handleExecute() {
+    if (!resolutionScope) {
+      setLocalError("Selecione primeiro o nível de resolução.");
+      return;
+    }
+
+    if (requiresRepeatedStrategy && !repeatedInstanceStrategy) {
+      setLocalError(
+        "Indique o tratamento das instâncias equivalentes antes de executar."
+      );
+      return;
+    }
+
+    if (!effectiveSelectedAlgorithmName) {
+      setLocalError("Não foi possível determinar um algoritmo para executar.");
+      return;
+    }
+
+    try {
+      setExecuting(true);
+      setLocalError("");
+      setExecutionMessage("");
+      setExecutionResponseData(null);
+
+      const data = await executeProblemWithAlgorithm(id, {
+        resolution_scope: resolutionScope,
+        repeated_instance_strategy: requiresRepeatedStrategy
+          ? repeatedInstanceStrategy
+          : null,
+        selected_algorithm: effectiveSelectedAlgorithmName,
+      });
+
+      setExecutionMessage("Execução enviada com sucesso para o backend Java.");
+      setExecutionResponseData(data);
+      setCollapsedSections((prev) => ({
+        ...prev,
+        execution: false,
+      }));
+    } catch (err) {
+      console.error("Erro ao executar problema:", err);
+      setLocalError(
+        err.message || "Não foi possível enviar a execução do problema."
+      );
+    } finally {
+      setExecuting(false);
+    }
+  }
+
   return (
     <div style={styles.page}>
       <div style={styles.container}>
         <p style={styles.step}>Execução</p>
-        <h1 style={styles.title}>Recomendar algoritmos</h1>
+        <h1 style={styles.title}>Recomendar e executar algoritmo</h1>
         <p style={styles.description}>
-          Configura a forma de execução do problema e pede ao backend Java uma
-          lista dos algoritmos mais adequados para o resolver.
+          Configura a forma de resolução do problema, pede ao backend Java uma
+          recomendação de algoritmos e seleciona depois o algoritmo a executar.
         </p>
 
-        <div style={styles.card}>
+        <CollapsibleSection
+          title="Configuração do pedido"
+          subtitle="Define o nível de resolução e, quando necessário, o tratamento de instâncias equivalentes."
+          isCollapsed={collapsedSections.requestConfig}
+          onToggle={() => toggleSection("requestConfig")}
+        >
           <div style={styles.section}>
             <p style={styles.sectionTitle}>Nível de resolução</p>
             <div style={styles.optionGrid}>
@@ -214,8 +385,7 @@ export default function ProblemSendToJavaPage() {
                     onClick={() => {
                       setResolutionScope(option.value);
                       setLocalError("");
-                      setSuccessMessage("");
-                      setResponseData(null);
+                      resetAlgorithmResults();
 
                       if (option.value === "semester") {
                         setRepeatedInstanceStrategy("");
@@ -250,8 +420,7 @@ export default function ProblemSendToJavaPage() {
                       onClick={() => {
                         setRepeatedInstanceStrategy(option.value);
                         setLocalError("");
-                        setSuccessMessage("");
-                        setResponseData(null);
+                        resetAlgorithmResults();
                       }}
                       style={{
                         ...styles.optionCard,
@@ -293,66 +462,133 @@ export default function ProblemSendToJavaPage() {
 
           {localError ? <p style={styles.error}>{localError}</p> : null}
           {successMessage ? <p style={styles.success}>{successMessage}</p> : null}
-        </div>
+        </CollapsibleSection>
 
         {responseData ? (
-          <div style={styles.resultsSection}>
-            <div style={styles.resultsHeader}>
-              <h2 style={styles.resultsTitle}>Algoritmos recomendados</h2>
-              <span style={styles.resultsBadge}>
-                {recommendedAlgorithms.length} encontrados
-              </span>
-            </div>
-
+          <CollapsibleSection
+            title="Algoritmos recomendados"
+            subtitle="Lista compacta de candidatos sugeridos pelo backend."
+            badge={`${recommendedAlgorithms.length} encontrados`}
+            isCollapsed={collapsedSections.algorithms}
+            onToggle={() => toggleSection("algorithms")}
+          >
             {recommendedAlgorithms.length > 0 ? (
-              <div style={styles.algorithmList}>
+              <div style={styles.algorithmGrid}>
                 {recommendedAlgorithms.map((algorithm, index) => {
+                  const keyPoints = extractKeyPoints(algorithm);
                   const parameters = formatAlgorithmParameters(
                     algorithm.parameters || algorithm.configuration
                   );
+                  const expanded = !!expandedAlgorithms[index];
+                  const previewPoints = keyPoints.slice(0, 4);
+                  const hiddenCount = Math.max(keyPoints.length - 4, 0);
+                  const algorithmName = extractAlgorithmName(algorithm);
+                  const isManuallySelected = selectedAlgorithmIndex === index;
+                  const isDefaultRecommended =
+                    selectedAlgorithmIndex === null && index === 0;
 
                   return (
                     <div
-                      key={`${algorithm.name || "algorithm"}-${index}`}
-                      style={styles.algorithmCard}
+                      key={`${algorithmName || "algorithm"}-${index}`}
+                      style={{
+                        ...styles.algorithmCompactCard,
+                        ...(isManuallySelected
+                          ? styles.algorithmCompactCardSelected
+                          : {}),
+                      }}
                     >
-                      <div style={styles.algorithmHeader}>
-                        <div>
-                          <h3 style={styles.algorithmName}>
-                            {algorithm.name || algorithm.algorithm_name || "Sem nome"}
+                      <div style={styles.algorithmCompactHeader}>
+                        <div style={styles.algorithmCompactTitleWrap}>
+                          <span style={styles.rankBadge}>#{index + 1}</span>
+                          <h3 style={styles.algorithmCompactName}>
+                            {algorithmName || "Sem nome"}
                           </h3>
-                          <p style={styles.algorithmFamily}>
-                            {algorithm.family ||
-                              algorithm.algorithm_family ||
-                              "Família não indicada"}
-                          </p>
+                          {isDefaultRecommended ? (
+                            <span style={styles.recommendedBadge}>
+                              Recomendado
+                            </span>
+                          ) : null}
                         </div>
 
-                        <span style={styles.rankBadge}>#{index + 1}</span>
+                        <div style={styles.algorithmHeaderActions}>
+                          <button
+                            type="button"
+                            onClick={() => toggleSelectedAlgorithm(index)}
+                            style={{
+                              ...styles.selectButton,
+                              ...(isManuallySelected
+                                ? styles.selectButtonActive
+                                : {}),
+                            }}
+                          >
+                            {isManuallySelected
+                              ? "Remover seleção"
+                              : "Escolher"}
+                          </button>
+
+                          
+                        </div>
                       </div>
 
-                      <p style={styles.algorithmReason}>
-                        {algorithm.reason ||
-                          algorithm.justification ||
-                          algorithm.algorithm_reason ||
-                          "Sem justificação disponível."}
-                      </p>
+                      <div style={styles.tagsRow}>
+                        {previewPoints.map((item, pointIndex) => (
+                          <span
+                            key={`${algorithmName || "algorithm"}-preview-${pointIndex}`}
+                            style={styles.keyTag}
+                          >
+                            {typeof item === "string"
+                              ? item
+                              : item?.point || "Ponto"}
+                          </span>
+                        ))}
 
-                      {parameters.length > 0 ? (
-                        <div style={styles.parametersBlock}>
-                          <p style={styles.parametersTitle}>Parâmetros sugeridos</p>
-                          <div style={styles.parametersGrid}>
-                            {parameters.map(([key, value]) => (
-                              <div key={key} style={styles.parameterItem}>
-                                <span style={styles.parameterKey}>{key}</span>
-                                <span style={styles.parameterValue}>
-                                  {typeof value === "object"
-                                    ? JSON.stringify(value)
-                                    : String(value)}
-                                </span>
+                        {!expanded && hiddenCount > 0 ? (
+                          <span style={styles.moreTag}>+{hiddenCount}</span>
+                        ) : null}
+                      </div>
+
+                      {expanded ? (
+                        <div style={styles.algorithmExpandedBlock}>
+                          {keyPoints.length > 0 ? (
+                            <div style={styles.expandedSection}>
+                              <p style={styles.expandedSectionTitle}>Pontos-chave</p>
+                              <div style={styles.keyPointsListCompact}>
+                                {keyPoints.map((item, pointIndex) => (
+                                  <div
+                                    key={`${algorithmName || "algorithm"}-point-${pointIndex}`}
+                                    style={styles.keyPointCompactItem}
+                                  >
+                                    <span style={styles.keyPointBullet}>•</span>
+                                    <span style={styles.keyPointText}>
+                                      {typeof item === "string"
+                                        ? item
+                                        : item?.point || "Ponto não disponível"}
+                                    </span>
+                                  </div>
+                                ))}
                               </div>
-                            ))}
-                          </div>
+                            </div>
+                          ) : null}
+
+                          {parameters.length > 0 ? (
+                            <div style={styles.expandedSection}>
+                              <p style={styles.expandedSectionTitle}>
+                                Parâmetros sugeridos
+                              </p>
+                              <div style={styles.parametersGrid}>
+                                {parameters.map(([key, value]) => (
+                                  <div key={key} style={styles.parameterItem}>
+                                    <span style={styles.parameterKey}>{key}</span>
+                                    <span style={styles.parameterValue}>
+                                      {typeof value === "object"
+                                        ? JSON.stringify(value)
+                                        : String(value)}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
                         </div>
                       ) : null}
                     </div>
@@ -370,7 +606,71 @@ export default function ProblemSendToJavaPage() {
                 </p>
               </div>
             )}
-          </div>
+          </CollapsibleSection>
+        ) : null}
+
+        {responseData && recommendedAlgorithms.length > 0 ? (
+          <CollapsibleSection
+            title="Execução"
+            subtitle="Seleciona um dos algoritmos recomendados e envia a execução final."
+            badge={
+              effectiveSelectedAlgorithmName
+                ? effectiveSelectedAlgorithmName
+                : "Sem algoritmo disponível"
+            }
+            isCollapsed={collapsedSections.execution}
+            onToggle={() => toggleSection("execution")}
+          >
+            <div style={styles.executionPanel}>
+              <div style={styles.executionSummaryCard}>
+                <p style={styles.executionSummaryLabel}>Algoritmo a executar</p>
+                <p style={styles.executionSummaryValue}>
+                  {effectiveSelectedAlgorithmName || "Ainda não disponível"}
+                </p>
+                <p style={styles.executionSummaryHint}>
+                  Se não escolheres manualmente um algoritmo, será usado
+                  automaticamente o primeiro algoritmo recomendado.
+                </p>
+              </div>
+
+              <div style={styles.actions}>
+                <button
+                  type="button"
+                  onClick={() => navigate(`/problems/${id}`)}
+                  style={styles.secondaryButton}
+                >
+                  Voltar ao problema
+                </button>
+
+                <button
+                  type="button"
+                  onClick={handleExecute}
+                  disabled={executing || !effectiveSelectedAlgorithmName}
+                  style={{
+                    ...styles.executeButton,
+                    ...((executing || !effectiveSelectedAlgorithmName)
+                      ? styles.primaryButtonDisabled
+                      : {}),
+                  }}
+                >
+                  {executing ? "A executar..." : "Executar algoritmo"}
+                </button>
+              </div>
+
+              {executionMessage ? (
+                <p style={styles.success}>{executionMessage}</p>
+              ) : null}
+
+              {executionResponseData ? (
+                <div style={styles.executionResponseBox}>
+                  <p style={styles.executionResponseTitle}>Resposta da execução</p>
+                  <pre style={styles.responsePre}>
+                    {JSON.stringify(executionResponseData, null, 2)}
+                  </pre>
+                </div>
+              ) : null}
+            </div>
+          </CollapsibleSection>
         ) : null}
       </div>
     </div>
@@ -408,13 +708,76 @@ const styles = {
     color: "#475467",
     maxWidth: "760px",
   },
-  card: {
+  collapsibleCard: {
     backgroundColor: "#ffffff",
     border: "1px solid #eaecf0",
     borderRadius: "16px",
     padding: "24px",
     boxShadow: "0 4px 16px rgba(16, 24, 40, 0.06)",
     marginBottom: "24px",
+  },
+  collapsibleHeader: {
+    width: "100%",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "16px",
+    background: "transparent",
+    border: "none",
+    padding: 0,
+    cursor: "pointer",
+    textAlign: "left",
+  },
+  collapsibleHeaderLeft: {
+    flex: 1,
+    minWidth: 0,
+  },
+  collapsibleHeaderRight: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    flexShrink: 0,
+  },
+  collapsibleTitle: {
+    margin: 0,
+    fontSize: "22px",
+    fontWeight: 700,
+    color: "#101828",
+  },
+  collapsibleSubtitle: {
+    margin: "6px 0 0 0",
+    fontSize: "14px",
+    lineHeight: 1.6,
+    color: "#667085",
+    maxWidth: "720px",
+  },
+  collapsibleBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "8px 12px",
+    borderRadius: "999px",
+    backgroundColor: "#eef2ff",
+    color: "#4338ca",
+    fontSize: "13px",
+    fontWeight: 700,
+  },
+  chevron: {
+    width: "32px",
+    height: "32px",
+    borderRadius: "999px",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#f2f4f7",
+    color: "#475467",
+    fontSize: "18px",
+    fontWeight: 700,
+    lineHeight: 1,
+  },
+  collapsibleBody: {
+    marginTop: "20px",
+    paddingTop: "20px",
+    borderTop: "1px solid #eaecf0",
   },
   section: {
     marginBottom: "24px",
@@ -484,6 +847,16 @@ const styles = {
     fontWeight: 700,
     cursor: "pointer",
   },
+  executeButton: {
+    padding: "12px 18px",
+    borderRadius: "10px",
+    border: "none",
+    backgroundColor: "#067647",
+    color: "#ffffff",
+    fontSize: "15px",
+    fontWeight: 700,
+    cursor: "pointer",
+  },
   primaryButtonDisabled: {
     opacity: 0.7,
     cursor: "not-allowed",
@@ -508,99 +881,175 @@ const styles = {
     color: "#067647",
     fontSize: "14px",
   },
-  resultsSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
+  algorithmGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "14px",
   },
-  resultsHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "12px",
-    flexWrap: "wrap",
-  },
-  resultsTitle: {
-    margin: 0,
-    fontSize: "28px",
-    color: "#101828",
-  },
-  resultsBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "8px 12px",
-    borderRadius: "999px",
-    backgroundColor: "#eef2ff",
-    color: "#4338ca",
-    fontSize: "13px",
-    fontWeight: 700,
-  },
-  algorithmList: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-  algorithmCard: {
+  algorithmCompactCard: {
     backgroundColor: "#ffffff",
     border: "1px solid #eaecf0",
     borderRadius: "16px",
-    padding: "20px",
-    boxShadow: "0 4px 16px rgba(16, 24, 40, 0.05)",
+    padding: "16px",
+    boxShadow: "0 4px 14px rgba(16, 24, 40, 0.04)",
+    display: "flex",
+    flexDirection: "column",
+    gap: "14px",
   },
-  algorithmHeader: {
+  algorithmCompactCardSelected: {
+    borderColor: "#175cd3",
+    backgroundColor: "#f5f9ff",
+    boxShadow: "0 0 0 1px #175cd3 inset",
+  },
+  algorithmCompactHeader: {
     display: "flex",
     justifyContent: "space-between",
-    alignItems: "flex-start",
+    alignItems: "center",
     gap: "12px",
-    flexWrap: "wrap",
-    marginBottom: "12px",
   },
-  algorithmName: {
+  algorithmCompactTitleWrap: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    minWidth: 0,
+    flexWrap: "wrap",
+  },
+  algorithmCompactName: {
     margin: 0,
-    fontSize: "20px",
+    fontSize: "18px",
     fontWeight: 700,
     color: "#101828",
+    lineHeight: 1.3,
   },
-  algorithmFamily: {
-    margin: 0,
-    marginTop: "4px",
-    fontSize: "14px",
-    color: "#667085",
+  algorithmHeaderActions: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    flexWrap: "wrap",
+    justifyContent: "flex-end",
+  },
+  detailsButton: {
+    border: "1px solid #d0d5dd",
+    backgroundColor: "#ffffff",
+    color: "#344054",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "13px",
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  selectButton: {
+    border: "1px solid #175cd3",
+    backgroundColor: "#ffffff",
+    color: "#175cd3",
+    borderRadius: "999px",
+    padding: "8px 12px",
+    fontSize: "13px",
+    fontWeight: 700,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+  },
+  selectButtonActive: {
+    backgroundColor: "#175cd3",
+    color: "#ffffff",
+  },
+  recommendedBadge: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "6px 10px",
+    borderRadius: "999px",
+    backgroundColor: "#eef2ff",
+    color: "#4338ca",
+    fontSize: "12px",
+    fontWeight: 700,
+    whiteSpace: "nowrap",
   },
   rankBadge: {
     display: "inline-flex",
     alignItems: "center",
     justifyContent: "center",
-    minWidth: "36px",
-    height: "36px",
-    padding: "0 12px",
+    minWidth: "34px",
+    height: "34px",
+    padding: "0 10px",
     borderRadius: "999px",
     backgroundColor: "#dbeafe",
     color: "#1d4ed8",
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: 700,
+    flexShrink: 0,
   },
-  algorithmReason: {
-    margin: 0,
-    fontSize: "15px",
-    lineHeight: 1.7,
-    color: "#475467",
+  tagsRow: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "8px",
   },
-  parametersBlock: {
-    marginTop: "16px",
-    paddingTop: "16px",
+  keyTag: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "7px 10px",
+    borderRadius: "999px",
+    backgroundColor: "#f2f4f7",
+    color: "#344054",
+    fontSize: "12px",
+    fontWeight: 600,
+    lineHeight: 1.3,
+  },
+  moreTag: {
+    display: "inline-flex",
+    alignItems: "center",
+    padding: "7px 10px",
+    borderRadius: "999px",
+    backgroundColor: "#eef2ff",
+    color: "#4338ca",
+    fontSize: "12px",
+    fontWeight: 700,
+    lineHeight: 1.3,
+  },
+  algorithmExpandedBlock: {
+    paddingTop: "14px",
     borderTop: "1px solid #eaecf0",
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
   },
-  parametersTitle: {
+  expandedSection: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "10px",
+  },
+  expandedSectionTitle: {
     margin: 0,
-    marginBottom: "12px",
-    fontSize: "14px",
+    fontSize: "13px",
     fontWeight: 700,
     color: "#101828",
+    textTransform: "uppercase",
+    letterSpacing: "0.03em",
+  },
+  keyPointsListCompact: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  keyPointCompactItem: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "8px",
+  },
+  keyPointBullet: {
+    color: "#175cd3",
+    fontSize: "16px",
+    lineHeight: 1.4,
+    fontWeight: 700,
+  },
+  keyPointText: {
+    fontSize: "14px",
+    lineHeight: 1.6,
+    color: "#475467",
   },
   parametersGrid: {
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
     gap: "10px",
   },
   parameterItem: {
@@ -642,5 +1091,61 @@ const styles = {
     fontSize: "14px",
     lineHeight: 1.6,
     color: "#667085",
+  },
+  executionPanel: {
+    display: "flex",
+    flexDirection: "column",
+    gap: "18px",
+  },
+  executionSummaryCard: {
+    padding: "18px",
+    borderRadius: "14px",
+    backgroundColor: "#f8fafc",
+    border: "1px solid #eaecf0",
+  },
+  executionSummaryLabel: {
+    margin: 0,
+    marginBottom: "8px",
+    fontSize: "13px",
+    fontWeight: 700,
+    color: "#667085",
+    textTransform: "uppercase",
+    letterSpacing: "0.04em",
+  },
+  executionSummaryValue: {
+    margin: 0,
+    marginBottom: "8px",
+    fontSize: "20px",
+    fontWeight: 700,
+    color: "#101828",
+  },
+  executionSummaryHint: {
+    margin: 0,
+    fontSize: "14px",
+    lineHeight: 1.6,
+    color: "#475467",
+  },
+  executionResponseBox: {
+    padding: "16px",
+    borderRadius: "14px",
+    backgroundColor: "#0f172a",
+    color: "#e2e8f0",
+    overflowX: "auto",
+  },
+  executionResponseTitle: {
+    margin: 0,
+    marginBottom: "12px",
+    fontSize: "14px",
+    fontWeight: 700,
+    color: "#cbd5e1",
+  },
+  responsePre: {
+    margin: 0,
+    fontSize: "13px",
+    lineHeight: 1.6,
+    whiteSpace: "pre-wrap",
+    wordBreak: "break-word",
+    fontFamily:
+      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace",
   },
 };

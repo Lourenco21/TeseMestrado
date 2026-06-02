@@ -3,6 +3,7 @@ import os
 import traceback
 from datetime import datetime, time
 
+from django.shortcuts import get_object_or_404
 from openpyxl import load_workbook
 
 import pandas as pd
@@ -412,8 +413,8 @@ class ProblemRoomsMappingSaveView(APIView):
 
         valid_formats = [
             "single_column_list",
-            "multiple_flag_columns",
-            "range_flag_columns",
+            "multiple_columns",
+            "range_columns",
         ]
         if char_format not in valid_formats:
             return Response(
@@ -768,11 +769,11 @@ class ProblemRequestAlgorithmsView(APIView):
             )
 
         try:
-            df = self._load_schedule_dataframe(problem_draft.uploaded_schedule.file.path)
+            df = load_schedule_dataframe(problem_draft.uploaded_schedule.file.path)
             mapping = (problem_draft.mapping_data or {}).get("mapping", {}) or {}
 
-            analysis = self._analyze_schedule_dataframe(df, mapping, resolution_scope)
-            constraints_summary = self._build_constraints_summary(
+            analysis = analyze_schedule_dataframe(df, mapping, resolution_scope)
+            constraints_summary = build_constraints_summary(
                 problem_draft.selected_constraints or []
             )
 
@@ -804,7 +805,7 @@ class ProblemRequestAlgorithmsView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=60,
+                timeout=(10,600),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -841,310 +842,576 @@ class ProblemRequestAlgorithmsView(APIView):
             status=status.HTTP_200_OK
         )
 
-    def _load_schedule_dataframe(self, file_path):
-        lower_path = file_path.lower()
 
-        if lower_path.endswith(".csv"):
-            attempts = [
-                {"encoding": "utf-8", "sep": ","},
-                {"encoding": "utf-8-sig", "sep": ","},
-                {"encoding": "latin1", "sep": ","},
-                {"encoding": "utf-8", "sep": ";"},
-                {"encoding": "utf-8-sig", "sep": ";"},
-                {"encoding": "latin1", "sep": ";"},
-            ]
 
-            last_error = None
+class ProblemExecuteView(APIView):
+    JAVA_BACKEND_URL = "http://localhost:8080/api/problems/execute"
 
-            for attempt in attempts:
-                try:
-                    df = pd.read_csv(
-                        file_path,
-                        encoding=attempt["encoding"],
-                        sep=attempt["sep"],
-                        engine="python",
-                    )
-                    if df.shape[1] > 1:
-                        return df
-                except Exception as exc:
-                    last_error = exc
+    VALID_RESOLUTION_SCOPES = {
+        "semester",
+        "week",
+        "day",
+        "start_half_hour",
+    }
 
-            raise ValueError(f"Não foi possível ler o CSV. Último erro: {last_error}")
+    VALID_REPEATED_INSTANCE_STRATEGIES = {
+        "reuse_solution",
+        "generate_new",
+    }
 
-        if lower_path.endswith(".xlsx"):
-            try:
-                return pd.read_excel(file_path, engine="openpyxl")
-            except Exception as exc:
-                raise ValueError(f"Erro ao ler XLSX: {exc}")
-
-        if lower_path.endswith(".xls"):
-            try:
-                return pd.read_excel(file_path)
-            except Exception as exc:
-                raise ValueError(f"Erro ao ler XLS: {exc}")
-
-        raise ValueError("Formato de ficheiro não suportado.")
-
-    def _build_constraints_summary(self, selected_constraints):
-        enabled = [item for item in selected_constraints if item.get("enabled", True)]
-        hard = [item for item in enabled if item.get("goal") == "hard"]
-        soft = [item for item in enabled if item.get("goal") == "soft"]
-
-        return {
-            "total": len(enabled),
-            "hard": len(hard),
-            "soft": len(soft),
-            "selected": [
-                {
-                    "id": item.get("id"),
-                    "goal": item.get("goal"),
-                    "importance": item.get("importance"),
-                }
-                for item in enabled
-            ],
-        }
-
-    def _analyze_schedule_dataframe(self, df, mapping, resolution_scope):
-        week_column = self._get_mapped_column(df, mapping, "semana")
-        day_column = self._get_mapped_column(df, mapping, "dia")
-        weekday_column = self._get_mapped_column(df, mapping, "dia_da_semana")
-        start_time_column = self._get_mapped_column(df, mapping, "hora_inicio")
-
-        working_df = df.copy()
-
-        working_df["_parsed_day"] = (
-            working_df[day_column].apply(self._parse_date_value)
-            if day_column
-            else pd.Series([None] * len(working_df), index=working_df.index)
-        )
-
-        working_df["_parsed_start_time"] = (
-            working_df[start_time_column].apply(self._parse_time_value)
-            if start_time_column
-            else pd.Series([None] * len(working_df), index=working_df.index)
-        )
-
-        if resolution_scope == "semester":
-            partition_series = pd.Series(["semester"] * len(working_df), index=working_df.index)
-
-        elif resolution_scope == "week":
-            partition_series = self._build_week_partition_series(working_df, week_column)
-
-        elif resolution_scope == "day":
-            partition_series = self._build_day_partition_series(
-                working_df, day_column, weekday_column
+    def post(self, request, problem_id, *args, **kwargs):
+        try:
+            problem_draft = ProblemDraft.objects.get(pk=problem_id)
+        except ProblemDraft.DoesNotExist:
+            return Response(
+                {"error": "Problem draft not found."},
+                status=status.HTTP_404_NOT_FOUND
             )
 
-        elif resolution_scope == "start_half_hour":
-            partition_series = self._build_day_time_partition_series(working_df)
+        resolution_scope = request.data.get("resolution_scope")
+        repeated_instance_strategy = request.data.get("repeated_instance_strategy")
+        selected_algorithm_name = request.data.get("selected_algorithm")
 
-        else:
-            partition_series = pd.Series(["unknown"] * len(working_df), index=working_df.index)
+        if resolution_scope not in self.VALID_RESOLUTION_SCOPES:
+            return Response(
+                {"error": "resolution_scope inválido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        return {
-            "selected_partition_statistics": self._summarize_partitions(partition_series),
-        }
+        if resolution_scope == "semester":
+            repeated_instance_strategy = None
+        elif repeated_instance_strategy not in self.VALID_REPEATED_INSTANCE_STRATEGIES:
+            return Response(
+                {"error": "repeated_instance_strategy inválido para o nível selecionado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    def _get_mapped_column(self, df, mapping, logical_key):
-        column_name = (mapping or {}).get(logical_key)
+        if not selected_algorithm_name:
+            return Response(
+                {"error": "É obrigatório indicar o algoritmo selecionado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        if not column_name:
-            return None
+        if not problem_draft.uploaded_schedule:
+            return Response(
+                {"error": "O problema não tem ficheiro de horário associado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        if column_name not in df.columns:
-            return None
+        missing_fields = []
 
-        return column_name
+        if not problem_draft.name:
+            missing_fields.append("name")
+        if not problem_draft.problem_family:
+            missing_fields.append("problem_family")
+        if not problem_draft.problem_subtype:
+            missing_fields.append("problem_subtype")
+        if not problem_draft.mapping_data:
+            missing_fields.append("mapping_data")
+        if not problem_draft.uploaded_schedule_id:
+            missing_fields.append("uploaded_schedule")
+        if not problem_draft.selected_constraints:
+            missing_fields.append("selected_constraints")
 
-    def _build_week_partition_series(self, df, week_column):
-        if week_column and week_column in df.columns:
-            week_values = df[week_column].dropna().astype(str).str.strip()
+        if missing_fields:
+            return Response(
+                {
+                    "error": "O problema ainda não está pronto para execução.",
+                    "missing_fields": missing_fields,
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-            if not week_values.empty:
-                unique_values = set(v.lower() for v in week_values.unique())
+        try:
+            df = load_schedule_dataframe(problem_draft.uploaded_schedule.file.path)
+            mapping = (problem_draft.mapping_data or {}).get("mapping", {}) or {}
 
-                weekday_like_values = {
-                    "seg", "segunda", "segunda-feira",
-                    "ter", "terça", "terca", "terça-feira", "terca-feira",
-                    "qua", "quarta", "quarta-feira",
-                    "qui", "quinta", "quinta-feira",
-                    "sex", "sexta", "sexta-feira",
-                    "sáb", "sab", "sábado", "sabado",
-                    "dom", "domingo",
-                    "mon", "monday", "tue", "tuesday", "wed", "wednesday",
-                    "thu", "thursday", "fri", "friday", "sat", "saturday",
-                    "sun", "sunday",
-                }
+            analysis = analyze_schedule_dataframe(df, mapping, resolution_scope)
+            constraints_summary = build_constraints_summary(
+                problem_draft.selected_constraints or []
+            )
 
-                looks_like_weekday_column = unique_values.issubset(weekday_like_values)
+            payload = {
+                "problem_id": problem_draft.id,
+                "name": problem_draft.name,
 
-                if not looks_like_weekday_column:
-                    return df[week_column].fillna("unknown_week").astype(str)
+                "resolution_scope": resolution_scope,
+                "repeated_instance_strategy": repeated_instance_strategy,
 
-        if "_parsed_day" not in df.columns:
-            return pd.Series([None] * len(df), index=df.index, dtype="object")
+                "selected_algorithm": selected_algorithm_name,
 
-        parsed_days = pd.to_datetime(df["_parsed_day"], errors="coerce").dt.normalize()
-        valid_mask = parsed_days.notna()
+                "constraints_summary": constraints_summary,
+                "selected_constraints": problem_draft.selected_constraints or [],
 
-        result = pd.Series([None] * len(df), index=df.index, dtype="object")
+                "instance_characteristics": {
+                    "total_classes": int(len(df)),
+                    "selected_partition_statistics": analysis["selected_partition_statistics"],
+                },
 
-        if not valid_mask.any():
-            return result
 
-        min_day = parsed_days.loc[valid_mask].min()
-        week_numbers = ((parsed_days.loc[valid_mask] - min_day).dt.days // 7) + 1
+                "problem_type": problem_draft.problem_family,
+                "problem_subtype": problem_draft.problem_subtype,
+                "schedule_id": problem_draft.uploaded_schedule_id,
+                "rooms_id": getattr(problem_draft, "rooms_file_id", None),
+                "mapping_data": problem_draft.mapping_data,
+                "rooms_mapping_data": getattr(problem_draft, "rooms_mapping_data", None),
 
-        result.loc[valid_mask] = week_numbers.apply(lambda x: f"week_{int(x)}")
-
-        return result
-
-    def _build_day_partition_series(self, df, day_column, weekday_column):
-        if day_column and "_parsed_day" in df.columns:
-            parsed_days = pd.to_datetime(df["_parsed_day"], errors="coerce")
-            if parsed_days.notna().any():
-                return parsed_days.dt.strftime("%Y-%m-%d").fillna("unknown_day")
-
-        if weekday_column:
-            return df[weekday_column].fillna("unknown_day").astype(str)
-
-        return pd.Series(["unknown_day"] * len(df), index=df.index)
-
-    def _build_start_half_hour_partition_series(self, df):
-        if "_parsed_start_time" not in df.columns:
-            return pd.Series(["unknown_start_time"] * len(df), index=df.index)
-
-        return df["_parsed_start_time"].apply(self._time_to_half_hour_label)
-
-    def _summarize_partitions(self, partition_series):
-        valid_partitions = partition_series.dropna()
-
-        if valid_partitions.empty:
-            return {
-                "partition_count": 0,
-                "average_classes_per_partition": 0,
-                "min_classes_per_partition": 0,
-                "max_classes_per_partition": 0,
             }
 
-        counts = valid_partitions.astype(str).value_counts()
+            print(payload)
 
-        return {
-            "partition_count": int(counts.shape[0]),
-            "average_classes_per_partition": round(float(counts.mean()), 2),
-            "min_classes_per_partition": int(counts.min()),
-            "max_classes_per_partition": int(counts.max()),
-        }
+        except Exception as exc:
+            return Response(
+                {
+                    "error": "Não foi possível preparar o payload de execução.",
+                    "details": str(exc),
+                    "trace": traceback.format_exc(),
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-    def _parse_date_value(self, value):
-        if pd.isna(value):
-            return None
+        try:
+            java_response = requests.post(
+                self.JAVA_BACKEND_URL,
+                json=payload,
+                timeout=(10, 600),
+            )
+        except requests.exceptions.RequestException as exc:
+            return Response(
+                {
+                    "error": "Não foi possível contactar o backend Java.",
+                    "details": str(exc),
+                    "payload_preview": payload,
+                },
+                status=status.HTTP_502_BAD_GATEWAY
+            )
 
-        if isinstance(value, pd.Timestamp):
-            return value.to_pydatetime().date()
+        try:
+            java_data = java_response.json()
+        except ValueError:
+            java_data = {"raw_response": java_response.text}
 
-        if isinstance(value, datetime):
-            return value.date()
+        if not java_response.ok:
+            return Response(
+                {
+                    "error": "O backend Java respondeu com erro na execução.",
+                    "java_status_code": java_response.status_code,
+                    "java_response": java_data,
+                    "payload_preview": payload,
+                },
+                status=status.HTTP_502_BAD_GATEWAY
+            )
 
-        if hasattr(value, "date") and not isinstance(value, str):
-            try:
-                return value.date()
-            except Exception:
-                pass
-
-        text = str(value).strip()
-        if not text:
-            return None
-
-        parsed = pd.to_datetime(text, errors="coerce", dayfirst=True)
-
-        if pd.isna(parsed):
-            parsed = pd.to_datetime(text, errors="coerce", dayfirst=False)
-
-        if pd.isna(parsed):
-            return None
-
-        return parsed.date()
-
-    def _parse_time_value(self, value):
-        return self._coerce_to_time(value)
-
-    def _time_to_half_hour_label(self, value):
-        parsed_time = self._coerce_to_time(value)
-
-        if not parsed_time:
-            return "unknown_start_time"
-
-        minute = parsed_time.minute
-        hour = parsed_time.hour
-
-        if minute >= 30:
-            return f"{hour:02d}:30"
-
-        return f"{hour:02d}:00"
-
-    def _coerce_to_time(self, value):
-        if value is None or pd.isna(value):
-            return None
-
-        if isinstance(value, time):
-            return value
-
-        if isinstance(value, pd.Timestamp):
-            return value.to_pydatetime().time()
-
-        if isinstance(value, datetime):
-            return value.time()
-
-        if isinstance(value, (int, float)):
-            try:
-                total_seconds = int(round(float(value) * 24 * 60 * 60))
-                hours = (total_seconds // 3600) % 24
-                minutes = (total_seconds % 3600) // 60
-                return time(hour=hours, minute=minutes)
-            except Exception:
-                return None
-
-        text = str(value).strip()
-        if not text:
-            return None
-
-        for fmt in ("%H:%M", "%H:%M:%S", "%H.%M"):
-            try:
-                return datetime.strptime(text, fmt).time()
-            except ValueError:
-                continue
-
-        parsed = pd.to_datetime(text, errors="coerce")
-        if pd.isna(parsed):
-            return None
-
-        return parsed.to_pydatetime().time()
-
-    def _build_day_time_partition_series(self, df):
-        if "_parsed_day" not in df.columns or "_parsed_start_time" not in df.columns:
-            return pd.Series([None] * len(df), index=df.index, dtype="object")
-
-        parsed_days = pd.to_datetime(df["_parsed_day"], errors="coerce").dt.normalize()
-
-        def normalize_half_hour(value):
-            parsed_time = self._coerce_to_time(value)
-            if not parsed_time:
-                return None
-
-            minute = 30 if parsed_time.minute >= 30 else 0
-            return f"{parsed_time.hour:02d}:{minute:02d}"
-
-        normalized_slots = df["_parsed_start_time"].apply(normalize_half_hour)
-
-        result = pd.Series([None] * len(df), index=df.index, dtype="object")
-
-        valid_mask = parsed_days.notna() & normalized_slots.notna()
-
-        result.loc[valid_mask] = (
-                parsed_days.loc[valid_mask].dt.strftime("%Y-%m-%d")
-                + " "
-                + normalized_slots.loc[valid_mask]
+        return Response(
+            {
+                "message": "Execução enviada com sucesso para o backend Java.",
+                "payload_sent": payload,
+                "java_response": java_data,
+            },
+            status=status.HTTP_200_OK
         )
 
+
+def load_schedule_dataframe(file_path):
+    lower_path = file_path.lower()
+
+    if lower_path.endswith(".csv"):
+        attempts = [
+            {"encoding": "utf-8", "sep": ","},
+            {"encoding": "utf-8-sig", "sep": ","},
+            {"encoding": "latin1", "sep": ","},
+            {"encoding": "utf-8", "sep": ";"},
+            {"encoding": "utf-8-sig", "sep": ";"},
+            {"encoding": "latin1", "sep": ";"},
+        ]
+
+        last_error = None
+
+        for attempt in attempts:
+            try:
+                df = pd.read_csv(
+                    file_path,
+                    encoding=attempt["encoding"],
+                    sep=attempt["sep"],
+                    engine="python",
+                )
+                if df.shape[1] > 1:
+                    return df
+            except Exception as exc:
+                last_error = exc
+
+        raise ValueError(f"Não foi possível ler o CSV. Último erro: {last_error}")
+
+    if lower_path.endswith(".xlsx"):
+        try:
+            return pd.read_excel(file_path, engine="openpyxl")
+        except Exception as exc:
+            raise ValueError(f"Erro ao ler XLSX: {exc}")
+
+    if lower_path.endswith(".xls"):
+        try:
+            return pd.read_excel(file_path)
+        except Exception as exc:
+            raise ValueError(f"Erro ao ler XLS: {exc}")
+
+    raise ValueError("Formato de ficheiro não suportado.")
+
+
+def build_constraints_summary(selected_constraints):
+    enabled = [item for item in selected_constraints if item.get("enabled", True)]
+    hard = [item for item in enabled if item.get("goal") == "hard"]
+    soft = [item for item in enabled if item.get("goal") == "soft"]
+
+    return {
+        "total": len(enabled),
+        "hard": len(hard),
+        "soft": len(soft),
+        "selected": [
+            {
+                "id": item.get("id"),
+                "goal": item.get("goal"),
+                "importance": item.get("importance"),
+            }
+            for item in enabled
+        ],
+    }
+
+
+def analyze_schedule_dataframe(df, mapping, resolution_scope):
+    week_column = get_mapped_column(df, mapping, "semana")
+    day_column = get_mapped_column(df, mapping, "dia")
+    weekday_column = get_mapped_column(df, mapping, "dia_da_semana")
+    start_time_column = get_mapped_column(df, mapping, "hora_inicio")
+
+    working_df = df.copy()
+
+    working_df["_parsed_day"] = (
+        working_df[day_column].apply(parse_date_value)
+        if day_column
+        else pd.Series([None] * len(working_df), index=working_df.index)
+    )
+
+    working_df["_parsed_start_time"] = (
+        working_df[start_time_column].apply(parse_time_value)
+        if start_time_column
+        else pd.Series([None] * len(working_df), index=working_df.index)
+    )
+
+    if resolution_scope == "semester":
+        partition_series = pd.Series(["semester"] * len(working_df), index=working_df.index)
+    elif resolution_scope == "week":
+        partition_series = build_week_partition_series(working_df, week_column)
+    elif resolution_scope == "day":
+        partition_series = build_day_partition_series(
+            working_df, day_column, weekday_column
+        )
+    elif resolution_scope == "start_half_hour":
+        partition_series = build_day_time_partition_series(working_df)
+    else:
+        partition_series = pd.Series(["unknown"] * len(working_df), index=working_df.index)
+
+    return {
+        "selected_partition_statistics": summarize_partitions(partition_series),
+    }
+
+
+def get_mapped_column(df, mapping, logical_key):
+    column_name = (mapping or {}).get(logical_key)
+
+    if not column_name:
+        return None
+
+    if column_name not in df.columns:
+        return None
+
+    return column_name
+
+
+def build_week_partition_series(df, week_column):
+    if week_column and week_column in df.columns:
+        week_values = df[week_column].dropna().astype(str).str.strip()
+
+        if not week_values.empty:
+            unique_values = set(v.lower() for v in week_values.unique())
+
+            weekday_like_values = {
+                "seg", "segunda", "segunda-feira",
+                "ter", "terça", "terca", "terça-feira", "terca-feira",
+                "qua", "quarta", "quarta-feira",
+                "qui", "quinta", "quinta-feira",
+                "sex", "sexta", "sexta-feira",
+                "sáb", "sab", "sábado", "sabado",
+                "dom", "domingo",
+                "mon", "monday", "tue", "tuesday", "wed", "wednesday",
+                "thu", "thursday", "fri", "friday", "sat", "saturday",
+                "sun", "sunday",
+            }
+
+            looks_like_weekday_column = unique_values.issubset(weekday_like_values)
+
+            if not looks_like_weekday_column:
+                return df[week_column].fillna("unknown_week").astype(str)
+
+    if "_parsed_day" not in df.columns:
+        return pd.Series([None] * len(df), index=df.index, dtype="object")
+
+    parsed_days = pd.to_datetime(df["_parsed_day"], errors="coerce").dt.normalize()
+    valid_mask = parsed_days.notna()
+
+    result = pd.Series([None] * len(df), index=df.index, dtype="object")
+
+    if not valid_mask.any():
         return result
+
+    min_day = parsed_days.loc[valid_mask].min()
+    week_numbers = ((parsed_days.loc[valid_mask] - min_day).dt.days // 7) + 1
+
+    result.loc[valid_mask] = week_numbers.apply(lambda x: f"week_{int(x)}")
+
+    return result
+
+
+def build_day_partition_series(df, day_column, weekday_column):
+    if day_column and "_parsed_day" in df.columns:
+        parsed_days = pd.to_datetime(df["_parsed_day"], errors="coerce")
+        if parsed_days.notna().any():
+            return parsed_days.dt.strftime("%Y-%m-%d").fillna("unknown_day")
+
+    if weekday_column:
+        return df[weekday_column].fillna("unknown_day").astype(str)
+
+    return pd.Series(["unknown_day"] * len(df), index=df.index)
+
+
+def build_start_half_hour_partition_series(df):
+    if "_parsed_start_time" not in df.columns:
+        return pd.Series(["unknown_start_time"] * len(df), index=df.index)
+
+    return df["_parsed_start_time"].apply(time_to_half_hour_label)
+
+
+def summarize_partitions(partition_series):
+    valid_partitions = partition_series.dropna()
+
+    if valid_partitions.empty:
+        return {
+            "partition_count": 0,
+            "average_classes_per_partition": 0,
+            "min_classes_per_partition": 0,
+            "max_classes_per_partition": 0,
+        }
+
+    counts = valid_partitions.astype(str).value_counts()
+
+    return {
+        "partition_count": int(counts.shape[0]),
+        "average_classes_per_partition": round(float(counts.mean()), 2),
+        "min_classes_per_partition": int(counts.min()),
+        "max_classes_per_partition": int(counts.max()),
+    }
+
+
+def parse_date_value(value):
+    if pd.isna(value):
+        return None
+
+    if isinstance(value, pd.Timestamp):
+        return value.to_pydatetime().date()
+
+    if isinstance(value, datetime):
+        return value.date()
+
+    if hasattr(value, "date") and not isinstance(value, str):
+        try:
+            return value.date()
+        except Exception:
+            pass
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    parsed = pd.to_datetime(text, errors="coerce", dayfirst=True)
+
+    if pd.isna(parsed):
+        parsed = pd.to_datetime(text, errors="coerce", dayfirst=False)
+
+    if pd.isna(parsed):
+        return None
+
+    return parsed.date()
+
+
+def parse_time_value(value):
+    return coerce_to_time(value)
+
+
+def time_to_half_hour_label(value):
+    parsed_time = coerce_to_time(value)
+
+    if not parsed_time:
+        return "unknown_start_time"
+
+    minute = parsed_time.minute
+    hour = parsed_time.hour
+
+    if minute >= 30:
+        return f"{hour:02d}:30"
+
+    return f"{hour:02d}:00"
+
+
+def coerce_to_time(value):
+    if value is None or pd.isna(value):
+        return None
+
+    if isinstance(value, time):
+        return value
+
+    if isinstance(value, pd.Timestamp):
+        return value.to_pydatetime().time()
+
+    if isinstance(value, datetime):
+        return value.time()
+
+    if isinstance(value, (int, float)):
+        try:
+            total_seconds = int(round(float(value) * 24 * 60 * 60))
+            hours = (total_seconds // 3600) % 24
+            minutes = (total_seconds % 3600) // 60
+            return time(hour=hours, minute=minutes)
+        except Exception:
+            return None
+
+    text = str(value).strip()
+    if not text:
+        return None
+
+    for fmt in ("%H:%M", "%H:%M:%S", "%H.%M"):
+        try:
+            return datetime.strptime(text, fmt).time()
+        except ValueError:
+            continue
+
+    parsed = pd.to_datetime(text, errors="coerce")
+    if pd.isna(parsed):
+        return None
+
+    return parsed.to_pydatetime().time()
+
+
+def build_day_time_partition_series(df):
+    if "_parsed_day" not in df.columns or "_parsed_start_time" not in df.columns:
+        return pd.Series([None] * len(df), index=df.index, dtype="object")
+
+    parsed_days = pd.to_datetime(df["_parsed_day"], errors="coerce").dt.normalize()
+
+    def normalize_half_hour(value):
+        parsed_time = coerce_to_time(value)
+        if not parsed_time:
+            return None
+
+        minute = 30 if parsed_time.minute >= 30 else 0
+        return f"{parsed_time.hour:02d}:{minute:02d}"
+
+    normalized_slots = df["_parsed_start_time"].apply(normalize_half_hour)
+
+    result = pd.Series([None] * len(df), index=df.index, dtype="object")
+
+    valid_mask = parsed_days.notna() & normalized_slots.notna()
+
+    result.loc[valid_mask] = (
+        parsed_days.loc[valid_mask].dt.strftime("%Y-%m-%d")
+        + " "
+        + normalized_slots.loc[valid_mask]
+    )
+
+    return result
+
+
+class FilesForJavaView(APIView):
+    def get(self, request, draft_id):
+        draft = get_object_or_404(ProblemDraft, pk=draft_id)
+
+        if not draft.uploaded_schedule:
+            return Response(
+                {"detail": "O ProblemDraft não tem horário associado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not draft.uploaded_rooms_file:
+            return Response(
+                {"detail": "O ProblemDraft não tem ficheiro de salas associado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            schedule_df = read_tabular_file(draft.uploaded_schedule.file.path)
+            rooms_df = read_tabular_file(draft.uploaded_rooms_file.file.path)
+        except FileNotFoundError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+        except ValueError as exc:
+            return Response(
+                {"detail": str(exc)},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Exception as exc:
+            return Response(
+                {
+                    "detail": "Erro ao processar os ficheiros do problema.",
+                    "error": str(exc),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        schedule_data = build_schedule_data(schedule_df)
+        rooms_data = build_rooms_data(rooms_df)
+
+        return Response(
+            {
+                "schedule_data": schedule_data,
+                "rooms_data": rooms_data,
+            },
+            status=status.HTTP_200_OK,
+        )
+
+
+def read_tabular_file(file_path):
+    if not file_path or not os.path.exists(file_path):
+        raise FileNotFoundError(f"Ficheiro não encontrado: {file_path}")
+
+    extension = os.path.splitext(file_path)[1].lower()
+
+    if extension == ".csv":
+        return pd.read_csv(file_path)
+
+    if extension in {".xlsx", ".xls"}:
+        return pd.read_excel(file_path)
+
+    raise ValueError(f"Formato de ficheiro não suportado: {extension}")
+
+
+def normalize_dataframe(df):
+    df = df.copy()
+    df.columns = [str(col).strip() for col in df.columns]
+    df = df.where(pd.notnull(df), None)
+    return df
+
+
+def build_schedule_data(df):
+    df = normalize_dataframe(df)
+
+    return {
+        "classes": df.to_dict(orient="records")
+    }
+
+
+def build_rooms_data(df):
+    df = normalize_dataframe(df)
+
+    return {
+        "rooms": df.to_dict(orient="records")
+    }

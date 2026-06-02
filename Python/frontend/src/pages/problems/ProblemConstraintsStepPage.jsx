@@ -35,7 +35,7 @@ export default function ProblemConstraintsStepPage() {
             setCatalogLoaded(true);
         } catch (err) {
             console.error("Erro ao carregar catálogo:", err);
-            setLocalError("Não foi possível carregar o catálogo de constraints.");
+            setLocalError("Não foi possível carregar o catálogo de restrições.");
         }
     }, [catalogLoaded]);
 
@@ -161,21 +161,21 @@ export default function ProblemConstraintsStepPage() {
 
     const getImportanceHelpText = useCallback((goal) => {
         if (goal === "hard") {
-            return "A importância é comparada com as restantes constraints obrigatórias.";
+            return "A importância é comparada com as restantes restrições obrigatórias.";
         }
 
         if (goal === "soft") {
-            return "A importância é comparada com as restantes constraints preferenciais.";
+            return "A importância é comparada com as restantes restrições preferenciais.";
         }
 
-        return "Seleciona primeiro o tipo da constraint.";
+        return "Selecione primeiro o tipo da constraint.";
     }, []);
 
     const handleContinue = useCallback(async () => {
         const validConstraints = selectedConstraints.filter((item) => item.enabled);
 
         if (validConstraints.length === 0) {
-            setLocalError("Seleciona pelo menos uma constraint antes de continuar.");
+            setLocalError("Selecione pelo menos uma restrição antes de continuar.");
             return;
         }
 
@@ -185,7 +185,7 @@ export default function ProblemConstraintsStepPage() {
 
         if (incompleteConstraints.length > 0) {
             setLocalError(
-                "Preenche o tipo e a importância de todas as constraints selecionadas antes de continuar."
+                "Preencha o tipo e a importância de todas as restrições selecionadas antes de continuar."
             );
             return;
         }
@@ -202,8 +202,8 @@ export default function ProblemConstraintsStepPage() {
 
             navigate(`/problems/${id}/rooms-upload`);
         } catch (err) {
-            console.error("Erro ao guardar constraints:", err);
-            setLocalError(err.message || "Não foi possível guardar as constraints.");
+            console.error("Erro ao guardar restrições:", err);
+            setLocalError(err.message || "Não foi possível guardar as restrições.");
         }
     }, [selectedConstraints, id, saveDraft, navigate]);
 
@@ -439,7 +439,7 @@ export default function ProblemConstraintsStepPage() {
                         <p style={styles.message}>
                             {!catalogLoaded
                                 ? "A carregar catálogo..."
-                                : "Não existem constraints disponíveis para esta família."}
+                                : "Não existem restrições disponíveis para esta família."}
                         </p>
                     </div>
                 )}

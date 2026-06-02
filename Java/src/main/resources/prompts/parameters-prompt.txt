@@ -2,35 +2,24 @@ ROLE:
 You are an expert in optimization, metaheuristics, and the jMetal library.
 
 TASK:
-Analyze the problem data and select appropriate configuration parameters for the NSGA-II algorithm in jMetal 6.1.
+Analyze the problem data and select appropriate configuration parameters for the {{ALGORITHM_NAME}} algorithm in jMetal 6.1.
 
 INSTRUCTIONS/REQUIREMENTS:
 - Answer in English.
 - Reply ONLY with valid JSON and no extra text.
-- The target algorithm is NSGA-II in jMetal 6.1.
-- The intended implementation uses SBX crossover and Polynomial Mutation.
+- The target algorithm is {{ALGORITHM_NAME}} in jMetal 6.1.
+{{ALGORITHM_OPERATORS_DESCRIPTION}}
 - Select appropriate values for the parameters in the following order:
-  1. populationSize
-  2. maxEvaluations
-  3. crossoverProbability
-  4. mutationProbability
-  5. etaC
-  6. etaM
-- The selected values must be coherent with NSGA-II, SBX crossover, and Polynomial Mutation.
+{{PARAMETERS_LIST}}
+- The selected values must be coherent with {{ALGORITHM_NAME}}.
+{{ALGORITHM_COHERENCE_RULE}}
 - Consider the problem data when choosing the parameter values.
 - Provide a brief justification for the selected configuration.
 - Do not invent parameters outside the requested list.
-- The parameter values should be suitable for practical execution on a local machine with limited computational resources
+- The parameter values should be suitable for practical execution on a local machine with limited computational resources.
 - If the problem data is insufficient to choose reliable parameter values, set the parameter values to null where necessary and explain the limitation briefly in "Justification".
 - Reply ONLY with valid JSON and no extra text in the following format.
-{
-  "populationSize": null,
-  "maxEvaluations": null,
-  "crossoverProbability": null,
-  "mutationProbability": null,
-  "etaC": null,
-  "etaM": null,
-  "Justification": ""
-}
+{{PARAMETERS_JSON}}
 
 PROBLEM DATA:
+{{PROBLEM_DATA}}

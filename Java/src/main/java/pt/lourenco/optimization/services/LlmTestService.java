@@ -1,6 +1,9 @@
-package pt.lourenco.optimization.llm;
+package pt.lourenco.optimization.services;
 
 import org.springframework.stereotype.Service;
+import pt.lourenco.optimization.llm.LlmResponse;
+import pt.lourenco.optimization.llm.OllamaClient;
+import pt.lourenco.optimization.llm.ResultWriter;
 
 import java.util.ArrayList;
 import java.util.List;

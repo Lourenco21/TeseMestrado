@@ -5,7 +5,7 @@ TASK:
 Analyze the problem data and select the most adequate algorithms from the jMetal Java library to solve it.
 
 INSTRUCTIONS/REQUIREMENTS:
-- Answer in english
+- Answer the algorithm in English and the key pointers in Portuguese from Portugal.
 - Do not invent information that is not present in the problem data.
 - The chosen algorithms must exist in the jMetal Java library.
 - The chosen algorithms must be sorted by order of suitability for the problem characteristics.
@@ -15,6 +15,8 @@ INSTRUCTIONS/REQUIREMENTS:
 - Provide a brief justification for the selected algorithm.
 - Do not mention algorithms that are not part of jMetal.
 - If the problem data is insufficient to choose a clear algorithm, set "Algorithm" to null and explain the limitation briefly in "Justification".
+- Do not include literal line breaks inside JSON string values.
+- The response must be directly parseable by Jackson.
 - Reply ONLY with valid JSON in the following format.
 {
 "algorithms":[{

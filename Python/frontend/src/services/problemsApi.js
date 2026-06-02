@@ -119,6 +119,46 @@ export async function requestProblemAlgorithms(problemId, executionConfig = {}) 
   return data;
 }
 
+export async function executeProblemWithAlgorithm(problemId, executionConfig = {}) {
+  const response = await fetch(
+    `http://127.0.0.1:8000/optimization_problems/${problemId}/execute/`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(executionConfig),
+    }
+  );
+
+  const contentType = response.headers.get("content-type") || "";
+
+  let data;
+  if (contentType.includes("application/json")) {
+    data = await response.json();
+  } else {
+    const text = await response.text();
+    throw new Error(
+      `Resposta não JSON recebida do backend. Status ${response.status}. Conteúdo inicial: ${text.slice(0, 120)}`
+    );
+  }
+
+  if (!response.ok) {
+    const message = [
+      data.error,
+      data.details,
+      data.java_response?.error,
+      data.java_response?.message,
+    ]
+      .filter(Boolean)
+      .join(" | ");
+
+    throw new Error(message || "Não foi possível executar o problema.");
+  }
+
+  return data;
+}
+
 
 
 
