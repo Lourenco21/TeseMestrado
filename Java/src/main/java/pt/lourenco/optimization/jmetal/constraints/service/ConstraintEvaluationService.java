@@ -2,11 +2,11 @@ package pt.lourenco.optimization.jmetal.constraints.service;
 
 import org.springframework.stereotype.Service;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
-import pt.lourenco.optimization.jmetal.constraints.model.ConstraintEvaluationItem;
 import pt.lourenco.optimization.jmetal.constraints.model.ConstraintEvaluationResult;
 import pt.lourenco.optimization.jmetal.constraints.model.ConstraintGoal;
+import pt.lourenco.optimization.jmetal.constraints.model.ConstraintImportance;
+import pt.lourenco.optimization.jmetal.constraints.model.ConstraintResult;
 import pt.lourenco.optimization.jmetal.constraints.model.SolutionContext;
-import pt.lourenco.optimization.jmetal.constraints.registry.ConstraintRegistry;
 import pt.lourenco.optimization.jmetal.constraints.rules.ConstraintRule;
 
 import java.util.ArrayList;
@@ -15,67 +15,57 @@ import java.util.List;
 @Service
 public class ConstraintEvaluationService {
 
-    private final ConstraintRegistry constraintRegistry;
+    private final ConstraintRuleRegistry constraintRuleRegistry;
 
-    public ConstraintEvaluationService(ConstraintRegistry constraintRegistry) {
-        this.constraintRegistry = constraintRegistry;
+    public ConstraintEvaluationService(ConstraintRuleRegistry constraintRuleRegistry) {
+        this.constraintRuleRegistry = constraintRuleRegistry;
     }
 
     public ConstraintEvaluationResult evaluate(
             SolutionContext context,
             List<UserConstraintSelection> selectedConstraints
     ) {
-        double totalHardViolation = 0.0;
-        double totalSoftViolation = 0.0;
-        int hardViolatedCount = 0;
-        int softViolatedCount = 0;
-        List<ConstraintEvaluationItem> items = new ArrayList<>();
+        List<ConstraintResult> results = new ArrayList<>();
+
+        double hardScore = 0.0;
+        double softScore = 0.0;
 
         if (selectedConstraints == null || selectedConstraints.isEmpty()) {
-            return new ConstraintEvaluationResult(
-                    0.0,
-                    0.0,
-                    0,
-                    0,
-                    items
-            );
+            return new ConstraintEvaluationResult(hardScore, softScore, results);
         }
 
         for (UserConstraintSelection selection : selectedConstraints) {
-            ConstraintRule rule = constraintRegistry.getById(selection.getId());
-
-            double rawViolation = rule.computeViolation(context);
-            boolean violated = rawViolation > 0.0;
-            double weightedViolation = violated
-                    ? rawViolation * selection.getImportance().getWeight()
-                    : 0.0;
-
-            if (violated) {
-                if (selection.getGoal() == ConstraintGoal.HARD) {
-                    totalHardViolation += weightedViolation;
-                    hardViolatedCount++;
-                } else {
-                    totalSoftViolation += weightedViolation;
-                    softViolatedCount++;
-                }
+            if (selection == null || selection.getId() == null || selection.getId().isBlank()) {
+                continue;
             }
 
-            items.add(new ConstraintEvaluationItem(
-                    selection.getId(),
-                    selection.getGoal(),
-                    selection.getImportance(),
-                    rawViolation,
-                    weightedViolation,
-                    violated
-            ));
+            ConstraintRule rule = constraintRuleRegistry.getById(selection.getId());
+            if (rule == null) {
+                continue;
+            }
+
+            ConstraintResult result = rule.evaluate(context, selection);
+            double rawViolation = result.getViolationScore() == null ? 0.0 : result.getViolationScore();
+            double weightedScore = applyImportanceWeight(rawViolation, selection.getImportance());
+
+            result.setWeightedScore(weightedScore);
+            results.add(result);
+
+            if (selection.getGoal() == ConstraintGoal.HARD) {
+                hardScore += weightedScore;
+            } else {
+                softScore += weightedScore;
+            }
         }
 
-        return new ConstraintEvaluationResult(
-                totalHardViolation,
-                totalSoftViolation,
-                hardViolatedCount,
-                softViolatedCount,
-                items
-        );
+        return new ConstraintEvaluationResult(hardScore, softScore, results);
+    }
+
+    private double applyImportanceWeight(double rawViolation, ConstraintImportance importance) {
+        if (importance == null) {
+            return rawViolation;
+        }
+
+        return rawViolation * importance.getWeight();
     }
 }

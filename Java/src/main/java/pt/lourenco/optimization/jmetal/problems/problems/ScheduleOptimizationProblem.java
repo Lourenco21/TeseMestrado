@@ -14,7 +14,13 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import lombok.extern.slf4j.Slf4j;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Slf4j
 public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
+
+    private static final AtomicInteger EVALUATION_COUNTER = new AtomicInteger(0);
 
     private final ProblemInputData inputData;
     private final SolutionContextBuilderService solutionContextBuilderService;
@@ -47,15 +53,34 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         variableBounds(buildLowerBounds(), buildUpperBounds());
         numberOfObjectives(this.numberOfObjectives);
         numberOfConstraints(this.numberOfConstraints);
+
+        if (classes == null || classes.isEmpty()) {
+            throw new IllegalArgumentException("Schedule data must contain at least one class.");
+        }
+
+        if (rooms == null || rooms.isEmpty()) {
+            throw new IllegalArgumentException("Rooms data must contain at least one room.");
+        }
+
+        Object classesObject = inputData.getScheduleData().get("classes");
+        if (classesObject instanceof List<?> classes) {
+            log.info("Classes in problem input: {}", classes.size());
+        } else {
+            log.warn("Classes in problem input are missing or invalid");
+        }
+
+        log.info("Problem numberOfVariables: {}", numberOfVariables());
     }
 
     @Override
     public IntegerSolution evaluate(IntegerSolution solution) {
+
+        int evaluationNumber = EVALUATION_COUNTER.incrementAndGet();
+
         List<ClassRoomAssignment> assignments = buildAssignments(solution);
 
         SolutionContext context = solutionContextBuilderService.buildFromProblemInput(inputData);
-        context.setObjectives(List.of(buildSoftObjectiveContext(assignments)));
-        context.setConstraints(List.of(buildHardConstraintContext(assignments)));
+        context.setAssignments(assignments);
 
         List<UserConstraintSelection> selectedConstraints = inputData.getSelectedConstraints();
         ConstraintEvaluationResult evaluationResult =
@@ -131,7 +156,7 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         for (var item : evaluationResult.getConstraintResults()) {
             if (item.getGoal() != null && item.getGoal().name().equalsIgnoreCase("HARD")) {
                 if (index < violations.length) {
-                    violations[index] = item.getViolationScore() == null ? 0.0 : item.getViolationScore();
+                    violations[index] = item.getWeightedScore() == null ? 0.0 : item.getWeightedScore();
                     index++;
                 }
             }

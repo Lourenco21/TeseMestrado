@@ -1,6 +1,7 @@
 package pt.lourenco.optimization.services;
 
 import org.springframework.stereotype.Service;
+import pt.lourenco.optimization.jmetal.problems.service.ProblemDataBuilderService;
 import pt.lourenco.optimization.llm.LlmResponse;
 import pt.lourenco.optimization.llm.OllamaClient;
 import pt.lourenco.optimization.utils.JSONGetters;

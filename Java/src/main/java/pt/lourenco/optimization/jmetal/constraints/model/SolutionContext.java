@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class SolutionContext {
     private Map<String, Object> constraintsSummary;
     private Map<String, Object> instanceCharacteristics;
 
-    private List<Object> objectives;
-    private List<Object> constraints;
+    private List<ClassRoomAssignment> assignments;
+
     private List<Object> selectedConstraints;
 }

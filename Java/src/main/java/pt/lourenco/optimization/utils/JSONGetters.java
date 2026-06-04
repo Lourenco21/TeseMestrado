@@ -26,9 +26,6 @@ public class JSONGetters {
     @JsonProperty("problem_id")
     private Integer problem_id;
 
-    @JsonProperty("problem_draft_id")
-    private Integer problem_draft_id;
-
     @JsonProperty("name")
     private String name;
 
@@ -61,4 +58,13 @@ public class JSONGetters {
 
     @JsonProperty("selected_constraints")
     private List<Map<String, Object>> selected_constraints;
+
+    @JsonProperty("schedule_data")
+    private Map<String, Object> schedule_data;
+
+    @JsonProperty("rooms_data")
+    private Map<String, Object> rooms_data;
+
+    @JsonProperty("metadata")
+    private Map<String, Object> metadata;
 }

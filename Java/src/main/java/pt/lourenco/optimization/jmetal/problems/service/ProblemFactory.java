@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationService;
 import pt.lourenco.optimization.jmetal.constraints.service.SolutionContextBuilderService;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
-import pt.lourenco.optimization.jmetal.problems.problem.ScheduleOptimizationProblem;
+import pt.lourenco.optimization.jmetal.problems.problems.ScheduleOptimizationProblem;
 
 @Service
 public class ProblemFactory {

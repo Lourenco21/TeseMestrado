@@ -3,6 +3,7 @@ package pt.lourenco.optimization.jmetal.problems.mapping;
 import pt.lourenco.optimization.utils.NestedMapUtils;
 
 import java.util.Map;
+import java.util.Objects;
 
 public final class ScheduleMappingUtils {
 
@@ -26,6 +27,7 @@ public final class ScheduleMappingUtils {
         }
 
         Object value = classRow.get(columnName);
+
         return value == null ? null : String.valueOf(value);
     }
 

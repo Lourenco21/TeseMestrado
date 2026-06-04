@@ -1,6 +1,5 @@
 package pt.lourenco.optimization.django;
 
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClientException;
@@ -22,13 +21,12 @@ public class DjangoProblemDataClient {
         this.properties = properties;
     }
 
-    @Cacheable(value = "djangoProblemData", key = "T(String).valueOf(#problemDraftId)")
-    public DjangoProblemDataResponse fetchProblemData(Integer problemDraftId) {
-        if (problemDraftId == null) {
-            throw new DjangoIntegrationException("Problem draft id is required.");
+    public DjangoProblemDataResponse fetchProblemData(Integer problemId) {
+        if (problemId == null) {
+            throw new DjangoIntegrationException("Problem id is required.");
         }
 
-        String url = buildUrl(problemDraftId);
+        String url = buildUrl(problemId);
 
         try {
             ResponseEntity<DjangoProblemDataResponse> response =
@@ -51,7 +49,7 @@ public class DjangoProblemDataClient {
         }
     }
 
-    private String buildUrl(Integer problemDraftId) {
+    private String buildUrl(Integer problemId) {
         String baseUrl = properties.getBaseUrl();
         String path = properties.getProblemDataPath();
 
@@ -63,6 +61,6 @@ public class DjangoProblemDataClient {
             throw new DjangoIntegrationException("Django problem data path is not configured.");
         }
 
-        return baseUrl + path.replace("{draftId}", String.valueOf(problemDraftId));
+        return baseUrl + path.replace("{problemId}", String.valueOf(problemId));
     }
 }

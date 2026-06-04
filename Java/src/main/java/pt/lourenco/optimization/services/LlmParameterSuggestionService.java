@@ -120,9 +120,28 @@ public class LlmParameterSuggestionService {
         );
 
         Map<String, Object> normalized = new HashMap<>();
-        normalized.put("algorithm", parsed.get("algorithm"));
-        normalized.put("parameters", parsed.getOrDefault("parameters", Map.of()));
-        normalized.put("justification", parsed.getOrDefault("justification", List.of()));
+
+        Object algorithm = parsed.get("algorithm");
+        Object parameters = parsed.get("parameters");
+        Object justification = parsed.get("justification");
+
+        if (parameters instanceof Map<?, ?> parametersMap && !parametersMap.isEmpty()) {
+            normalized.put("algorithm", algorithm);
+            normalized.put("parameters", objectMapper.convertValue(
+                    parametersMap,
+                    new TypeReference<Map<String, Object>>() {}
+            ));
+            normalized.put("justification", normalizeJustification(justification));
+            return normalized;
+        }
+
+        Map<String, Object> flatParameters = extractFlatParameters(parsed);
+
+        normalized.put("algorithm", algorithm);
+        normalized.put("parameters", flatParameters);
+        normalized.put("justification", normalizeJustification(
+                justification != null ? justification : parsed.get("Justification")
+        ));
 
         return normalized;
     }
@@ -207,5 +226,40 @@ public class LlmParameterSuggestionService {
         result.put("llm_error", response != null ? response.getError() : null);
         result.put("http_status_code", response != null ? response.getHttpStatusCode() : null);
         return result;
+    }
+
+    private Map<String, Object> extractFlatParameters(Map<String, Object> parsed) {
+        Map<String, Object> parameters = new HashMap<>();
+
+        copyIfPresent(parsed, parameters, "populationSize");
+        copyIfPresent(parsed, parameters, "maxEvaluations");
+        copyIfPresent(parsed, parameters, "crossoverProbability");
+        copyIfPresent(parsed, parameters, "mutationProbability");
+        copyIfPresent(parsed, parameters, "etaC");
+        copyIfPresent(parsed, parameters, "etaM");
+
+        return parameters;
+    }
+
+    private void copyIfPresent(Map<String, Object> source, Map<String, Object> target, String key) {
+        if (source.containsKey(key)) {
+            target.put(key, source.get(key));
+        }
+    }
+
+    private Object normalizeJustification(Object justification) {
+        if (justification == null) {
+            return List.of();
+        }
+
+        if (justification instanceof List<?>) {
+            return justification;
+        }
+
+        if (justification instanceof String text && !text.isBlank()) {
+            return List.of(text);
+        }
+
+        return List.of(String.valueOf(justification));
     }
 }

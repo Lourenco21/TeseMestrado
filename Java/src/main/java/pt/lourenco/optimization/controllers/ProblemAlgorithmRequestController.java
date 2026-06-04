@@ -5,7 +5,7 @@ import java.util.Map;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import pt.lourenco.optimization.services.ProblemDataBuilderService;
+import pt.lourenco.optimization.jmetal.problems.service.ProblemDataBuilderService;
 import pt.lourenco.optimization.services.PromptBuilderService;
 import pt.lourenco.optimization.services.SingleModelLlmService;
 import pt.lourenco.optimization.utils.JSONGetters;

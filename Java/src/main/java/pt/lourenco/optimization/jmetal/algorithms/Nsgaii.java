@@ -10,30 +10,40 @@ import org.uma.jmetal.operator.mutation.impl.IntegerPolynomialMutation;
 import org.uma.jmetal.operator.selection.impl.BinaryTournamentSelection;
 import org.uma.jmetal.solution.integersolution.IntegerSolution;
 import org.uma.jmetal.util.comparator.RankingAndCrowdingDistanceComparator;
+import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationService;
+import pt.lourenco.optimization.jmetal.constraints.service.SolutionContextBuilderService;
+import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
+import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
+import pt.lourenco.optimization.jmetal.problems.problems.ScheduleOptimizationProblem;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Component
-public class Nsgaii implements AlgorithmMetadataProvider{
+public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
-    /**public static Map<String, Object> runNsgaii(
-            Map<String, Object> dataset,
-            Map<String, Object> variables,
-            Map<String, Object> objectives,
-            Map<String, Object> constraints,
-            Map<String, Object> inputParameters
-    ) throws JsonProcessingException {
+    private final SolutionContextBuilderService solutionContextBuilderService;
+    private final ConstraintEvaluationService constraintEvaluationService;
 
-        ScheduleProblem problem = new ScheduleProblem(
-                dataset,
-                variables,
-                objectives,
-                constraints
+    public Nsgaii(
+            SolutionContextBuilderService solutionContextBuilderService,
+            ConstraintEvaluationService constraintEvaluationService
+    ) {
+        this.solutionContextBuilderService = solutionContextBuilderService;
+        this.constraintEvaluationService = constraintEvaluationService;
+    }
+
+    public Map<String, Object> run(ProblemInputData inputData, Map<String, Object> inputParameters) {
+        ScheduleOptimizationProblem problem = new ScheduleOptimizationProblem(
+                inputData,
+                solutionContextBuilderService,
+                constraintEvaluationService
         );
 
         int numberOfVariables = problem.numberOfVariables();
@@ -82,7 +92,6 @@ public class Nsgaii implements AlgorithmMetadataProvider{
         algorithm.run();
 
         List<IntegerSolution> resultPopulation = algorithm.result();
-
         List<Map<String, Object>> solutions = new ArrayList<>();
 
         for (IntegerSolution solution : resultPopulation) {
@@ -90,11 +99,12 @@ public class Nsgaii implements AlgorithmMetadataProvider{
             serializedSolution.put("solution", new ArrayList<>(solution.variables()));
             serializedSolution.put("objectives", toDoubleList(solution.objectives()));
             serializedSolution.put("constraints", toDoubleList(solution.constraints()));
+            serializedSolution.put("assignments", decodeAssignments(solution, inputData));
             solutions.add(serializedSolution);
         }
 
         Map<String, Object> response = new LinkedHashMap<>();
-        response.put("algorithm", "NSGAII");
+        response.put("algorithm", "NSGA-II");
         response.put("usedParameters", buildUsedParametersMap(
                 populationSize,
                 maxEvaluations,
@@ -107,7 +117,32 @@ public class Nsgaii implements AlgorithmMetadataProvider{
         response.put("solutions", solutions);
 
         return response;
-    }**/
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> decodeAssignments(IntegerSolution solution, ProblemInputData inputData) {
+        List<Map<String, Object>> decoded = new ArrayList<>();
+
+        Object classesObject = inputData.getScheduleData().get("classes");
+        Object roomsObject = inputData.getRoomsData().get("rooms");
+
+        if (!(classesObject instanceof List<?> rawClasses) || !(roomsObject instanceof List<?> rawRooms)) {
+            return decoded;
+        }
+
+        for (int i = 0; i < solution.variables().size(); i++) {
+            int roomIndex = solution.variables().get(i);
+
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("classIndex", i);
+            row.put("classData", rawClasses.get(i));
+            row.put("roomIndex", roomIndex);
+            row.put("roomData", rawRooms.get(roomIndex));
+            decoded.add(row);
+        }
+
+        return decoded;
+    }
 
     public static String getRequiredParametersAsPromptList() {
         return """
@@ -250,8 +285,7 @@ public class Nsgaii implements AlgorithmMetadataProvider{
         template.put("etaC", null);
         template.put("etaM", null);
         template.put("Justification", "");
-        return OBJECT_MAPPER.writerWithDefaultPrettyPrinter()
-                .writeValueAsString(template);
+        return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(template);
     }
 
     @Override
@@ -262,5 +296,29 @@ public class Nsgaii implements AlgorithmMetadataProvider{
     @Override
     public String getCoherenceRule() {
         return "- The selected values must be coherent with NSGA-II, SBX crossover, and Polynomial Mutation.";
+    }
+
+    @Override
+    public List<String> getRequiredParameterKeys() {
+        return List.of(
+                "populationSize",
+                "maxEvaluations",
+                "crossoverProbability",
+                "mutationProbability",
+                "etaC",
+                "etaM"
+        );
+    }
+
+    @Override
+    public Map<String, Object> getDefaultParameterValues() {
+        Map<String, Object> defaults = new LinkedHashMap<>();
+        defaults.put("populationSize", 100);
+        defaults.put("maxEvaluations", 1000);
+        defaults.put("crossoverProbability", 0.9);
+        defaults.put("mutationProbability", 0.01);
+        defaults.put("etaC", 20.0);
+        defaults.put("etaM", 20.0);
+        return defaults;
     }
 }

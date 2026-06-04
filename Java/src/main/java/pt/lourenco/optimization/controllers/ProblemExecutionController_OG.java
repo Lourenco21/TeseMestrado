@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.*;
 
 import pt.lourenco.optimization.llm.LlmResponse;
 import pt.lourenco.optimization.services.LlmTestService;
-import pt.lourenco.optimization.services.ProblemDataBuilderService;
+import pt.lourenco.optimization.jmetal.problems.service.ProblemDataBuilderService;
 import pt.lourenco.optimization.services.PromptBuilderService;
 import pt.lourenco.optimization.utils.JSONGetters;
 

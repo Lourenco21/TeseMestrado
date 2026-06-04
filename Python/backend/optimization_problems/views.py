@@ -7,7 +7,9 @@ from django.shortcuts import get_object_or_404
 from openpyxl import load_workbook
 
 import pandas as pd
+import numpy as np
 import requests
+from pandas.errors import ParserError
 from rest_framework import status, generics
 from rest_framework.generics import ListAPIView
 from rest_framework.parsers import MultiPartParser, FormParser
@@ -790,7 +792,7 @@ class ProblemRequestAlgorithmsView(APIView):
                     "selected_partition_statistics": analysis["selected_partition_statistics"],
                 },
             }
-            print(payload)
+
         except Exception as exc:
             return Response(
                 {
@@ -957,8 +959,6 @@ class ProblemExecuteView(APIView):
                 "rooms_mapping_data": getattr(problem_draft, "rooms_mapping_data", None),
 
             }
-
-            print(payload)
 
         except Exception as exc:
             return Response(
@@ -1183,13 +1183,6 @@ def build_day_partition_series(df, day_column, weekday_column):
     return pd.Series(["unknown_day"] * len(df), index=df.index)
 
 
-def build_start_half_hour_partition_series(df):
-    if "_parsed_start_time" not in df.columns:
-        return pd.Series(["unknown_start_time"] * len(df), index=df.index)
-
-    return df["_parsed_start_time"].apply(time_to_half_hour_label)
-
-
 def summarize_partitions(partition_series):
     valid_partitions = partition_series.dropna()
 
@@ -1330,8 +1323,8 @@ def build_day_time_partition_series(df):
 
 
 class FilesForJavaView(APIView):
-    def get(self, request, draft_id):
-        draft = get_object_or_404(ProblemDraft, pk=draft_id)
+    def get(self, request, problem_id, *args, **kwargs):
+        draft = get_object_or_404(ProblemDraft, pk=problem_id)
 
         if not draft.uploaded_schedule:
             return Response(
@@ -1386,7 +1379,7 @@ def read_tabular_file(file_path):
     extension = os.path.splitext(file_path)[1].lower()
 
     if extension == ".csv":
-        return pd.read_csv(file_path)
+        return read_csv_robust(file_path)
 
     if extension in {".xlsx", ".xls"}:
         return pd.read_excel(file_path)
@@ -1394,24 +1387,75 @@ def read_tabular_file(file_path):
     raise ValueError(f"Formato de ficheiro não suportado: {extension}")
 
 
+def read_csv_robust(file_path):
+    attempts = [
+        {"sep": None, "engine": "python", "encoding": "utf-8"},
+        {"sep": ";", "engine": "python", "encoding": "utf-8"},
+        {"sep": ",", "engine": "python", "encoding": "utf-8"},
+        {"sep": "\t", "engine": "python", "encoding": "utf-8"},
+        {"sep": None, "engine": "python", "encoding": "utf-8-sig"},
+        {"sep": ";", "engine": "python", "encoding": "utf-8-sig"},
+        {"sep": ",", "engine": "python", "encoding": "utf-8-sig"},
+        {"sep": None, "engine": "python", "encoding": "cp1252"},
+        {"sep": ";", "engine": "python", "encoding": "cp1252"},
+        {"sep": ",", "engine": "python", "encoding": "cp1252"},
+    ]
+
+    last_exception = None
+
+    for attempt in attempts:
+        try:
+            df = pd.read_csv(
+                file_path,
+                sep=attempt["sep"],
+                engine=attempt["engine"],
+                encoding=attempt["encoding"]
+            )
+
+            if df is not None and len(df.columns) > 1:
+                return df
+
+        except (ParserError, UnicodeDecodeError, ValueError) as exc:
+            last_exception = exc
+
+    raise ValueError(f"Erro ao ler CSV '{file_path}': {last_exception}")
+
+
 def normalize_dataframe(df):
     df = df.copy()
     df.columns = [str(col).strip() for col in df.columns]
+    df = df.replace([np.inf, -np.inf], np.nan)
+    df = df.astype(object)
     df = df.where(pd.notnull(df), None)
     return df
 
 
+def sanitize_records(records):
+    sanitized = []
+
+    for record in records:
+        clean_record = {}
+        for key, value in record.items():
+            if pd.isna(value):
+                clean_record[key] = None
+            elif value == np.inf or value == -np.inf:
+                clean_record[key] = None
+            else:
+                clean_record[key] = value
+        sanitized.append(clean_record)
+
+    return sanitized
+
+
 def build_schedule_data(df):
     df = normalize_dataframe(df)
-
     return {
-        "classes": df.to_dict(orient="records")
+        "classes": sanitize_records(df.to_dict(orient="records"))
     }
 
 
 def build_rooms_data(df):
     df = normalize_dataframe(df)
-
     return {
-        "rooms": df.to_dict(orient="records")
+        "rooms": sanitize_records(df.to_dict(orient="records"))
     }
