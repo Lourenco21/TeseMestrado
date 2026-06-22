@@ -4,16 +4,25 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pt.lourenco.optimization.jmetal.algorithms.AlgorithmExecutionRegistry;
 import pt.lourenco.optimization.jmetal.algorithms.AlgorithmExecutor;
-import pt.lourenco.optimization.jmetal.partitioning.*;
-import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
-import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
+import pt.lourenco.optimization.jmetal.partitioning.PartitionReuseStrategy;
+import pt.lourenco.optimization.jmetal.partitioning.PartitionSignatureService;
+import pt.lourenco.optimization.jmetal.partitioning.PartitionType;
+import pt.lourenco.optimization.jmetal.partitioning.PartitionedProblemInputData;
+import pt.lourenco.optimization.jmetal.partitioning.PreviousPartitionAssignmentsContext;
+import pt.lourenco.optimization.jmetal.partitioning.SchedulePartitionService;
 import pt.lourenco.optimization.jmetal.problems.mapping.RoomsMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.mapping.ScheduleMappingUtils;
+import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
+import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -42,6 +51,7 @@ public class PartitionExecutionCoordinatorService {
             PartitionType partitionType,
             PartitionReuseStrategy reuseStrategy
     ) {
+        long executionStartNs = System.nanoTime();
 
         AlgorithmExecutor executor =
                 algorithmExecutionRegistry.getByName(inputData.getSelectedAlgorithm());
@@ -51,20 +61,21 @@ public class PartitionExecutionCoordinatorService {
 
         log.info("Total partitions created: {}", partitions.size());
 
-        for (PartitionedProblemInputData partition : partitions) {
-            log.info("Partition [{}] key='{}' classes={}",
-                    partition.getPartitionOrder(),
-                    partition.getPartitionKey(),
-                    partition.getClassesInPartition() == null ? 0 : partition.getClassesInPartition().size());
-        }
-
         PreviousPartitionAssignmentsContext previousAssignmentsContext =
                 new PreviousPartitionAssignmentsContext();
 
         Map<String, Map<String, Object>> executionResultBySignature = new LinkedHashMap<>();
         List<Map<String, Object>> partitionResults = new ArrayList<>();
 
+        long totalPartitionExecutionMs = 0L;
+        int reusedPartitions = 0;
+
         for (PartitionedProblemInputData partition : partitions) {
+
+            long partitionStartNs = System.nanoTime();
+
+            LocalDateTime partitionStart = extractPartitionStart(partition);
+            previousAssignmentsContext.removeEndedBefore(partitionStart);
 
             injectPreviousAssignmentsContext(partition.getInputData(), previousAssignmentsContext);
 
@@ -73,6 +84,10 @@ public class PartitionExecutionCoordinatorService {
             boolean reused = false;
             String reusedFromSignature = null;
             Map<String, Object> executionResult;
+
+            int classCount = partition.getClassesInPartition() == null
+                    ? 0
+                    : partition.getClassesInPartition().size();
 
             if (reuseStrategy == PartitionReuseStrategy.REUSE_EQUAL_PARTITION_SOLUTION
                     && executionResultBySignature.containsKey(partitionSignature)) {
@@ -83,12 +98,11 @@ public class PartitionExecutionCoordinatorService {
                 executionResult.put("reusedFromSignature", partitionSignature);
                 reused = true;
                 reusedFromSignature = partitionSignature;
+                reusedPartitions++;
 
             } else {
                 executionResult = executor.run(partition.getInputData(), parameters);
                 executionResultBySignature.put(partitionSignature, deepCopyMap(executionResult));
-
-                logPartitionSummary(partition, executionResult);
             }
 
             Object solutionsObject = executionResult.get("solutions");
@@ -99,24 +113,79 @@ public class PartitionExecutionCoordinatorService {
 
             previousAssignmentsContext.addAll(resolvedAssignments);
 
+            long partitionDurationMs = (System.nanoTime() - partitionStartNs) / 1_000_000L;
+            totalPartitionExecutionMs += partitionDurationMs;
+
+            Double objectiveValue = extractObjectiveValue(executionResult);
+            Integer evaluationsUsed = extractEvaluationsUsed(executionResult);
+            Double avgEvaluationMs = extractAvgEvaluationMs(executionResult);
+            Long totalEvaluateMs = extractTotalEvaluateMs(executionResult);
+            Long buildAssignmentsMs = extractBuildAssignmentsMs(executionResult);
+            Long constraintEvalMs = extractConstraintEvalMs(executionResult);
+            Integer hardViolations = extractHardViolationsCount(executionResult);
+
+            log.info(
+                    "Partition finished | type={} order={} key={} classes={} reused={} durationMs={} solutions={} resolvedAssignments={} objective={} evaluations={} evalAvgMs={} evalTotalMs={} buildAssignmentsMs={} constraintEvalMs={} hardViolations={}",
+                    partition.getPartitionType().name(),
+                    partition.getPartitionOrder(),
+                    partition.getPartitionKey(),
+                    classCount,
+                    reused,
+                    partitionDurationMs,
+                    solutionCount,
+                    resolvedAssignments.size(),
+                    objectiveValue,
+                    evaluationsUsed,
+                    avgEvaluationMs,
+                    totalEvaluateMs,
+                    buildAssignmentsMs,
+                    constraintEvalMs,
+                    hardViolations
+            );
+
             Map<String, Object> wrapped = new LinkedHashMap<>();
             wrapped.put("partitionKey", partition.getPartitionKey());
             wrapped.put("partitionType", partition.getPartitionType().name());
             wrapped.put("partitionOrder", partition.getPartitionOrder());
-            wrapped.put("classCount", partition.getClassesInPartition().size());
+            wrapped.put("classCount", classCount);
             wrapped.put("partitionSignature", partitionSignature);
             wrapped.put("reused", reused);
             wrapped.put("reusedFromSignature", reusedFromSignature);
             wrapped.put("resolvedAssignmentCount", resolvedAssignments.size());
+            wrapped.put("partitionDurationMs", partitionDurationMs);
+            wrapped.put("solutionCount", solutionCount);
+            wrapped.put("objectiveValue", objectiveValue);
+            wrapped.put("evaluationsUsed", evaluationsUsed);
+            wrapped.put("avgEvaluationMs", avgEvaluationMs);
+            wrapped.put("totalEvaluateMs", totalEvaluateMs);
+            wrapped.put("buildAssignmentsMs", buildAssignmentsMs);
+            wrapped.put("constraintEvalMs", constraintEvalMs);
+            wrapped.put("hardViolations", hardViolations);
             wrapped.put("executionResult", executionResult);
 
             partitionResults.add(wrapped);
         }
 
+        long totalExecutionMs = (System.nanoTime() - executionStartNs) / 1_000_000L;
+
+        log.info(
+                "Partition execution completed | type={} reuseStrategy={} partitions={} reusedPartitions={} totalDurationMs={} avgPartitionDurationMs={}",
+                partitionType.name(),
+                reuseStrategy.name(),
+                partitionResults.size(),
+                reusedPartitions,
+                totalExecutionMs,
+                partitionResults.isEmpty() ? 0.0 : (double) totalPartitionExecutionMs / partitionResults.size()
+        );
+
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("partitionType", partitionType.name());
         response.put("reuseStrategy", reuseStrategy.name());
         response.put("partitionCount", partitionResults.size());
+        response.put("reusedPartitions", reusedPartitions);
+        response.put("totalExecutionMs", totalExecutionMs);
+        response.put("averagePartitionDurationMs",
+                partitionResults.isEmpty() ? 0.0 : (double) totalPartitionExecutionMs / partitionResults.size());
         response.put("partitions", partitionResults);
         return response;
     }
@@ -175,13 +244,13 @@ public class PartitionExecutionCoordinatorService {
             Map<String, Object> roomData = (Map<String, Object>) rawRoomData;
 
             LocalDate day = schedulePartitionService.parseDateValue(
-                    classData.get(schedulePartitionService.getMappedColumn(inputData.getMappingData(), "dia"))
+                    ScheduleMappingUtils.getDay(classData, inputData.getMappingData())
             );
             LocalTime start = schedulePartitionService.coerceToLocalTime(
-                    classData.get(schedulePartitionService.getMappedColumn(inputData.getMappingData(), "hora_inicio"))
+                    ScheduleMappingUtils.getStartTime(classData, inputData.getMappingData())
             );
             LocalTime end = schedulePartitionService.coerceToLocalTime(
-                    classData.get(schedulePartitionService.getMappedColumn(inputData.getMappingData(), "hora_fim"))
+                    ScheduleMappingUtils.getEndTime(classData, inputData.getMappingData())
             );
 
             if (day == null || start == null || end == null || !end.isAfter(start)) {
@@ -197,12 +266,24 @@ public class PartitionExecutionCoordinatorService {
 
             String roomIdentity = extractRoomIdentity(inputData, roomData, roomIndexNumber.intValue());
 
+            LocalDateTime startDateTime = LocalDateTime.of(day, start);
+            LocalDateTime endDateTime = LocalDateTime.of(day, end);
+
+            String uniqueKey = buildResolvedAssignmentUniqueKey(
+                    roomIdentity,
+                    startDateTime,
+                    endDateTime,
+                    rawAssignment,
+                    inputData
+            );
+
             resolved.add(new PreviousPartitionAssignmentsContext.ResolvedAssignment(
+                    uniqueKey,
                     classIndexNumber.intValue(),
                     roomIndexNumber.intValue(),
                     rawAssignment,
-                    LocalDateTime.of(day, start),
-                    LocalDateTime.of(day, end),
+                    startDateTime,
+                    endDateTime,
                     partition.getPartitionKey(),
                     roomIdentity
             ));
@@ -216,19 +297,9 @@ public class PartitionExecutionCoordinatorService {
             Map<String, Object> roomData,
             int fallbackRoomIndex
     ) {
-        String mappedRoomColumn =
-                schedulePartitionService.getMappedColumn(inputData.getRoomsMappingData(), "sala");
-
-        if (mappedRoomColumn != null) {
-            Object mappedValue = roomData.get(mappedRoomColumn);
-            if (mappedValue != null && !mappedValue.toString().trim().isBlank()) {
-                return mappedValue.toString().trim();
-            }
-        }
-
-        Object directName = roomData.get("name");
-        if (directName != null && !directName.toString().trim().isBlank()) {
-            return directName.toString().trim();
+        String roomName = RoomsMappingUtils.getRoomName(roomData, inputData.getRoomsMappingData());
+        if (roomName != null && !roomName.trim().isBlank()) {
+            return normalizeRoomIdentity(roomName);
         }
 
         return "room_index_" + fallbackRoomIndex;
@@ -285,6 +356,7 @@ public class PartitionExecutionCoordinatorService {
 
             String course = ScheduleMappingUtils.getCourse(classData, partition.getInputData().getMappingData());
             String students = ScheduleMappingUtils.getStudents(classData, partition.getInputData().getMappingData());
+            String day = ScheduleMappingUtils.getDay(classData, partition.getInputData().getMappingData());
             String start = ScheduleMappingUtils.getStartTime(classData, partition.getInputData().getMappingData());
             String requestedRoom = ScheduleMappingUtils.getRequestedRoomCharacteristics(
                     classData,
@@ -296,9 +368,10 @@ public class PartitionExecutionCoordinatorService {
             String building = RoomsMappingUtils.getBuilding(roomData, partition.getInputData().getRoomsMappingData());
 
             log.info(
-                    "Class [{}] {} | start={} | students={} | requestedRoom={} | roomIndex={} | room={} | building={} | capacity={}",
+                    "Class [{}] {} | day={} | start={} | students={} | requestedRoom={} | roomIndex={} | room={} | building={} | capacity={}",
                     classIndex,
                     course,
+                    day,
                     start,
                     students,
                     requestedRoom,
@@ -355,5 +428,177 @@ public class PartitionExecutionCoordinatorService {
             return null;
         }
         return rooms.get(roomIndex);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Double extractObjectiveValue(Map<String, Object> executionResult) {
+        Object value = executionResult.get("objectiveValue");
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+
+        Object solutions = executionResult.get("solutions");
+        if (solutions instanceof List<?> list && !list.isEmpty()) {
+            Object first = list.get(0);
+            if (first instanceof Map<?, ?> map) {
+                Object objective = map.get("objectiveValue");
+                if (objective instanceof Number number) {
+                    return number.doubleValue();
+                }
+            }
+        }
+
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Integer extractEvaluationsUsed(Map<String, Object> executionResult) {
+        Object metricsObj = executionResult.get("metrics");
+        if (metricsObj instanceof Map<?, ?> metrics) {
+            Object value = metrics.get("evaluationCount");
+            if (value instanceof Number number) {
+                return number.intValue();
+            }
+        }
+
+        Object direct = executionResult.get("evaluationCount");
+        if (direct instanceof Number number) {
+            return number.intValue();
+        }
+
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Double extractAvgEvaluationMs(Map<String, Object> executionResult) {
+        Object metricsObj = executionResult.get("metrics");
+        if (metricsObj instanceof Map<?, ?> metrics) {
+            Object value = metrics.get("averageEvaluateTimeMs");
+            if (value instanceof Number number) {
+                return number.doubleValue();
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Long extractTotalEvaluateMs(Map<String, Object> executionResult) {
+        Object metricsObj = executionResult.get("metrics");
+        if (metricsObj instanceof Map<?, ?> metrics) {
+            Object value = metrics.get("totalEvaluateTimeMs");
+            if (value instanceof Number number) {
+                return number.longValue();
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Long extractBuildAssignmentsMs(Map<String, Object> executionResult) {
+        Object metricsObj = executionResult.get("metrics");
+        if (metricsObj instanceof Map<?, ?> metrics) {
+            Object value = metrics.get("totalBuildAssignmentsTimeMs");
+            if (value instanceof Number number) {
+                return number.longValue();
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Long extractConstraintEvalMs(Map<String, Object> executionResult) {
+        Object metricsObj = executionResult.get("metrics");
+        if (metricsObj instanceof Map<?, ?> metrics) {
+            Object value = metrics.get("totalConstraintEvaluationTimeMs");
+            if (value instanceof Number number) {
+                return number.longValue();
+            }
+        }
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Integer extractHardViolationsCount(Map<String, Object> executionResult) {
+        Object value = executionResult.get("hardViolations");
+        if (value instanceof Number number) {
+            return number.intValue();
+        }
+        return null;
+    }
+
+    private LocalDateTime extractPartitionStart(PartitionedProblemInputData partition) {
+        if (partition == null || partition.getClassesInPartition() == null || partition.getClassesInPartition().isEmpty()) {
+            return null;
+        }
+
+        LocalDateTime minStart = null;
+
+        for (Map<String, Object> classData : partition.getClassesInPartition()) {
+            if (classData == null) {
+                continue;
+            }
+
+            LocalDate day = schedulePartitionService.parseDateValue(
+                    ScheduleMappingUtils.getDay(classData, partition.getInputData().getMappingData())
+            );
+            LocalTime start = schedulePartitionService.coerceToLocalTime(
+                    ScheduleMappingUtils.getStartTime(classData, partition.getInputData().getMappingData())
+            );
+
+            if (day == null || start == null) {
+                continue;
+            }
+
+            LocalDateTime startDateTime = LocalDateTime.of(day, start);
+            if (minStart == null || startDateTime.isBefore(minStart)) {
+                minStart = startDateTime;
+            }
+        }
+
+        return minStart;
+    }
+
+    private String buildResolvedAssignmentUniqueKey(
+            String roomIdentity,
+            LocalDateTime startDateTime,
+            LocalDateTime endDateTime,
+            ClassRoomAssignment rawAssignment,
+            ProblemInputData inputData
+    ) {
+        String normalizedRoom = normalizeRoomIdentity(roomIdentity);
+        String start = startDateTime == null ? "" : startDateTime.toString();
+        String end = endDateTime == null ? "" : endDateTime.toString();
+        String classIdentity = extractStableClassIdentity(rawAssignment, inputData);
+
+        return classIdentity + "|" + normalizedRoom + "|" + start + "|" + end;
+    }
+
+    private String extractStableClassIdentity(
+            ClassRoomAssignment rawAssignment,
+            ProblemInputData inputData
+    ) {
+        if (rawAssignment == null || rawAssignment.getClassData() == null) {
+            return "unknown-class";
+        }
+
+        Map<String, Object> classData = rawAssignment.getClassData();
+
+        Object explicitId = classData.get("id");
+        if (explicitId != null) {
+            return String.valueOf(explicitId);
+        }
+
+        return String.join("|",
+                Objects.toString(ScheduleMappingUtils.getCourse(classData, inputData.getMappingData()), ""),
+                Objects.toString(ScheduleMappingUtils.getClassGroup(classData, inputData.getMappingData()), ""),
+                Objects.toString(ScheduleMappingUtils.getDay(classData, inputData.getMappingData()), ""),
+                Objects.toString(ScheduleMappingUtils.getStartTime(classData, inputData.getMappingData()), ""),
+                Objects.toString(ScheduleMappingUtils.getEndTime(classData, inputData.getMappingData()), ""),
+                Objects.toString(ScheduleMappingUtils.getTeacher(classData, inputData.getMappingData()), "")
+        );
+    }
+
+    private String normalizeRoomIdentity(String roomIdentity) {
+        return roomIdentity == null ? "" : roomIdentity.trim().toLowerCase();
     }
 }

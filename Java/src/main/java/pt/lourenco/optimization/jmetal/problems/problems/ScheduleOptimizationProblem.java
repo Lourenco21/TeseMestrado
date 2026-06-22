@@ -1,5 +1,6 @@
 package pt.lourenco.optimization.jmetal.problems.problems;
 
+import lombok.extern.slf4j.Slf4j;
 import org.uma.jmetal.problem.integerproblem.impl.AbstractIntegerProblem;
 import org.uma.jmetal.solution.integersolution.IntegerSolution;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
@@ -7,14 +8,13 @@ import pt.lourenco.optimization.jmetal.constraints.model.ConstraintEvaluationRes
 import pt.lourenco.optimization.jmetal.constraints.model.SolutionContext;
 import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationService;
 import pt.lourenco.optimization.jmetal.constraints.service.SolutionContextBuilderService;
+import pt.lourenco.optimization.jmetal.metrics.PartitionMetrics;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-
-import lombok.extern.slf4j.Slf4j;
 import java.util.concurrent.atomic.AtomicInteger;
 
 @Slf4j
@@ -23,14 +23,18 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
     private static final AtomicInteger EVALUATION_COUNTER = new AtomicInteger(0);
 
     private final ProblemInputData inputData;
-    private final SolutionContextBuilderService solutionContextBuilderService;
     private final ConstraintEvaluationService constraintEvaluationService;
 
     private final List<Map<String, Object>> classes;
     private final List<Map<String, Object>> rooms;
+    private final List<UserConstraintSelection> selectedConstraints;
+    private final SolutionContext baseContext;
+
     private final int numberOfVariables;
     private final int numberOfObjectives;
     private final int numberOfConstraints;
+
+    private final PartitionMetrics partitionMetrics = new PartitionMetrics();
 
     public ScheduleOptimizationProblem(
             ProblemInputData inputData,
@@ -38,17 +42,21 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
             ConstraintEvaluationService constraintEvaluationService
     ) {
         this.inputData = inputData;
-        this.solutionContextBuilderService = solutionContextBuilderService;
         this.constraintEvaluationService = constraintEvaluationService;
 
         this.name("ScheduleOptimizationProblem");
 
         this.classes = extractClasses(inputData.getScheduleData());
         this.rooms = extractRooms(inputData.getRoomsData());
+        this.selectedConstraints = inputData.getSelectedConstraints() == null
+                ? List.of()
+                : inputData.getSelectedConstraints();
+
+        this.baseContext = solutionContextBuilderService.buildFromProblemInput(inputData);
 
         this.numberOfVariables = classes.size();
         this.numberOfObjectives = 1;
-        this.numberOfConstraints = countHardConstraints(inputData.getSelectedConstraints());
+        this.numberOfConstraints = countHardConstraints(this.selectedConstraints);
 
         variableBounds(buildLowerBounds(), buildUpperBounds());
         numberOfObjectives(this.numberOfObjectives);
@@ -74,17 +82,19 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
     @Override
     public IntegerSolution evaluate(IntegerSolution solution) {
+        long evaluateStartNs = System.nanoTime();
+        partitionMetrics.incrementEvaluationCount();
 
-        int evaluationNumber = EVALUATION_COUNTER.incrementAndGet();
-
+        long buildAssignmentsStartNs = System.nanoTime();
         List<ClassRoomAssignment> assignments = buildAssignments(solution);
+        partitionMetrics.addBuildAssignmentsTime(System.nanoTime() - buildAssignmentsStartNs);
 
-        SolutionContext context = solutionContextBuilderService.buildFromProblemInput(inputData);
-        context.setAssignments(assignments);
+        baseContext.setAssignments(assignments);
 
-        List<UserConstraintSelection> selectedConstraints = inputData.getSelectedConstraints();
+        long constraintEvalStartNs = System.nanoTime();
         ConstraintEvaluationResult evaluationResult =
-                constraintEvaluationService.evaluate(context, selectedConstraints);
+                constraintEvaluationService.evaluate(baseContext, selectedConstraints);
+        partitionMetrics.addConstraintEvaluationTime(System.nanoTime() - constraintEvalStartNs);
 
         double softPenalty = evaluationResult.getSoftScore() == null
                 ? 0.0
@@ -92,16 +102,41 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
         solution.objectives()[0] = softPenalty;
 
-        double[] hardViolations = extractHardConstraintViolations(evaluationResult);
-        for (int i = 0; i < solution.constraints().length && i < hardViolations.length; i++) {
-            solution.constraints()[i] = hardViolations[i];
-        }
+        fillHardConstraintViolations(solution, evaluationResult);
+
+        partitionMetrics.addEvaluateTime(System.nanoTime() - evaluateStartNs);
 
         return solution;
     }
 
+    private void fillHardConstraintViolations(
+            IntegerSolution solution,
+            ConstraintEvaluationResult evaluationResult
+    ) {
+        double[] constraintArray = solution.constraints();
+
+        for (int i = 0; i < constraintArray.length; i++) {
+            constraintArray[i] = 0.0;
+        }
+
+        if (evaluationResult == null || evaluationResult.getConstraintResults() == null) {
+            return;
+        }
+
+        int index = 0;
+        for (var item : evaluationResult.getConstraintResults()) {
+            if (item.getGoal() != null && item.getGoal().name().equalsIgnoreCase("HARD")) {
+                if (index < constraintArray.length) {
+                    double weightedScore = item.getWeightedScore() == null ? 0.0 : item.getWeightedScore();
+                    constraintArray[index] = weightedScore > 0.0 ? -Math.abs(weightedScore) : 0.0;
+                    index++;
+                }
+            }
+        }
+    }
+
     private List<Integer> buildLowerBounds() {
-        List<Integer> lowerBounds = new ArrayList<>();
+        List<Integer> lowerBounds = new ArrayList<>(numberOfVariables);
         for (int i = 0; i < numberOfVariables; i++) {
             lowerBounds.add(0);
         }
@@ -109,7 +144,7 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
     }
 
     private List<Integer> buildUpperBounds() {
-        List<Integer> upperBounds = new ArrayList<>();
+        List<Integer> upperBounds = new ArrayList<>(numberOfVariables);
         int upperBound = rooms.size() - 1;
 
         for (int i = 0; i < numberOfVariables; i++) {
@@ -119,50 +154,20 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
     }
 
     private List<ClassRoomAssignment> buildAssignments(IntegerSolution solution) {
-        List<ClassRoomAssignment> assignments = new ArrayList<>();
+        int size = solution.variables().size();
+        List<ClassRoomAssignment> assignments = new ArrayList<>(size);
 
-        for (int i = 0; i < solution.variables().size(); i++) {
+        for (int i = 0; i < size; i++) {
             int roomIndex = solution.variables().get(i);
-
-            Map<String, Object> classData = classes.get(i);
-            Map<String, Object> roomData = rooms.get(roomIndex);
-
-            assignments.add(new ClassRoomAssignment(i, classData, roomIndex, roomData));
+            assignments.add(new ClassRoomAssignment(
+                    i,
+                    classes.get(i),
+                    roomIndex,
+                    rooms.get(roomIndex)
+            ));
         }
 
         return assignments;
-    }
-
-    private Object buildSoftObjectiveContext(List<ClassRoomAssignment> assignments) {
-        return assignments;
-    }
-
-    private Object buildHardConstraintContext(List<ClassRoomAssignment> assignments) {
-        return assignments;
-    }
-
-    private double[] extractHardConstraintViolations(ConstraintEvaluationResult evaluationResult) {
-        if (numberOfConstraints == 0) {
-            return new double[0];
-        }
-
-        double[] violations = new double[numberOfConstraints];
-
-        if (evaluationResult == null || evaluationResult.getConstraintResults() == null) {
-            return violations;
-        }
-
-        int index = 0;
-        for (var item : evaluationResult.getConstraintResults()) {
-            if (item.getGoal() != null && item.getGoal().name().equalsIgnoreCase("HARD")) {
-                if (index < violations.length) {
-                    violations[index] = item.getWeightedScore() == null ? 0.0 : item.getWeightedScore();
-                    index++;
-                }
-            }
-        }
-
-        return violations;
     }
 
     private int countHardConstraints(List<UserConstraintSelection> selectedConstraints) {
@@ -189,5 +194,9 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
     private List<Map<String, Object>> extractRooms(Map<String, Object> roomsData) {
         Object roomsObject = roomsData.get("rooms");
         return (List<Map<String, Object>>) roomsObject;
+    }
+
+    public PartitionMetrics getPartitionMetrics() {
+        return partitionMetrics;
     }
 }

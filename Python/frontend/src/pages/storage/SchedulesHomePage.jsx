@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { getSchedules } from "../../services/schedulesApi";
+import { getSchedules } from "../../services/schedulesApi.js";
 
 function formatDate(value) {
   if (!value) return "-";

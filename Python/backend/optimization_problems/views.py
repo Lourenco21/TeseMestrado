@@ -2,8 +2,11 @@ import csv
 import os
 import traceback
 from datetime import datetime, time
+from io import StringIO
 
+from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
+from django.utils.text import slugify
 from openpyxl import load_workbook
 
 import pandas as pd
@@ -19,8 +22,9 @@ from rest_framework.views import APIView
 from .problem_schemas import get_problem_schema, PROBLEM_SCHEMAS
 from .problem_schemas.problem_catalog import PROBLEM_FAMILIES, CONSTRAINT_LIBRARY, OBJECTIVE_LIBRARY
 from .problem_schemas.rooms import ROOMS_FILE_SCHEMA
-from .serializers import ScheduleSerializer, ScheduleListSerializer, ProblemDraftSerializer, RoomDataFileSerializer
-from .models import Schedule, ProblemDraft, RoomDataFile
+from .serializers import ScheduleSerializer, ScheduleListSerializer, ProblemDraftSerializer, RoomDataFileSerializer, \
+    SolutionListSerializer, SolutionDetailSerializer
+from .models import Schedule, ProblemDraft, RoomDataFile, Solution
 from .services.file_reader import read_schedule_file, extract_columns_and_preview
 from .services.column_matcher import match_canonical_fields_to_source_columns
 
@@ -640,7 +644,7 @@ class ProblemSendToJavaView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(10,600),
+                timeout=(10,6000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -807,7 +811,7 @@ class ProblemRequestAlgorithmsView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(10,600),
+                timeout=(10,6000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -844,6 +848,36 @@ class ProblemRequestAlgorithmsView(APIView):
             status=status.HTTP_200_OK
         )
 
+
+
+def build_schedule_csv_content(schedule_rows):
+    if not isinstance(schedule_rows, list) or not schedule_rows:
+        return None
+
+    normalized_rows = [
+        row if isinstance(row, dict) else {"value": row}
+        for row in schedule_rows
+    ]
+
+    fieldnames = []
+    for row in normalized_rows:
+        for key in row.keys():
+            if key not in fieldnames:
+                fieldnames.append(key)
+
+    buffer = StringIO()
+    writer = csv.DictWriter(
+        buffer,
+        fieldnames=fieldnames,
+        extrasaction="ignore",
+        lineterminator="\n",
+    )
+    writer.writeheader()
+
+    for row in normalized_rows:
+        writer.writerow({key: row.get(key, "") for key in fieldnames})
+
+    return ContentFile(buffer.getvalue().encode("utf-8"))
 
 
 class ProblemExecuteView(APIView):
@@ -936,28 +970,21 @@ class ProblemExecuteView(APIView):
             payload = {
                 "problem_id": problem_draft.id,
                 "name": problem_draft.name,
-
                 "resolution_scope": resolution_scope,
                 "repeated_instance_strategy": repeated_instance_strategy,
-
                 "selected_algorithm": selected_algorithm_name,
-
                 "constraints_summary": constraints_summary,
                 "selected_constraints": problem_draft.selected_constraints or [],
-
                 "instance_characteristics": {
                     "total_classes": int(len(df)),
                     "selected_partition_statistics": analysis["selected_partition_statistics"],
                 },
-
-
                 "problem_type": problem_draft.problem_family,
                 "problem_subtype": problem_draft.problem_subtype,
                 "schedule_id": problem_draft.uploaded_schedule_id,
                 "rooms_id": getattr(problem_draft, "rooms_file_id", None),
                 "mapping_data": problem_draft.mapping_data,
                 "rooms_mapping_data": getattr(problem_draft, "rooms_mapping_data", None),
-
             }
 
         except Exception as exc:
@@ -974,7 +1001,7 @@ class ProblemExecuteView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(10, 600),
+                timeout=(10, 6000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -1002,11 +1029,52 @@ class ProblemExecuteView(APIView):
                 status=status.HTTP_502_BAD_GATEWAY
             )
 
+        try:
+            solution = Solution.objects.create(
+                problem=problem_draft,
+                status="completed",
+                algorithm_used=java_data.get("algorithm_used", selected_algorithm_name),
+                used_parameters=java_data.get("used_parameters", {}),
+                partition_type=java_data.get("partition_type", ""),
+                reuse_solution=bool(java_data.get("reuse_solution", False)),
+                constraint_values=java_data.get("constraint_values", {}),
+                penalty_summary=java_data.get("penalty_summary", {}),
+                execution_result=java_data.get("execution_result", {}),
+                partition_count=int(java_data.get("partition_count", 0) or 0),
+            )
+
+            schedule_rows = java_data.get("schedule", [])
+            csv_content = build_schedule_csv_content(schedule_rows)
+
+            if csv_content:
+                filename = (
+                    f"problem-{problem_draft.id}-solution-{solution.id}-"
+                    f"{slugify(solution.algorithm_used or 'algorithm')}.csv"
+                )
+                solution.schedule_file.save(filename, csv_content, save=True)
+
+            serialized_solution = SolutionDetailSerializer(
+                solution,
+                context={"request": request}
+            ).data
+
+        except Exception as exc:
+            return Response(
+                {
+                    "error": "A execução foi concluída, mas não foi possível guardar a solução.",
+                    "details": str(exc),
+                    "java_response": java_data,
+                    "trace": traceback.format_exc(),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
         return Response(
             {
                 "message": "Execução enviada com sucesso para o backend Java.",
                 "payload_sent": payload,
                 "java_response": java_data,
+                "solution": serialized_solution,
             },
             status=status.HTTP_200_OK
         )
@@ -1459,3 +1527,23 @@ def build_rooms_data(df):
     return {
         "rooms": sanitize_records(df.to_dict(orient="records"))
     }
+
+
+class ProblemSolutionsListView(APIView):
+    def get(self, request, problem_id):
+        problem = get_object_or_404(ProblemDraft, pk=problem_id)
+        queryset = problem.solutions.all().order_by("-created_at")
+        serializer = SolutionListSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+
+class SolutionDetailView(APIView):
+    def get(self, request, problem_id, solution_id):
+        solution = get_object_or_404(
+            Solution,
+            id=solution_id,
+            problem_id=problem_id
+        )
+
+        serializer = SolutionDetailSerializer(solution, context={"request": request})
+        return Response(serializer.data)

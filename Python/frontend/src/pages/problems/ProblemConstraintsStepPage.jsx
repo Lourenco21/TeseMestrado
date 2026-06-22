@@ -197,7 +197,6 @@ export default function ProblemConstraintsStepPage() {
                 status: "constraints_selected",
                 selected_constraints: validConstraints,
                 current_step: 6,
-                last_completed_step: 6,
             });
 
             navigate(`/problems/${id}/rooms-upload`);

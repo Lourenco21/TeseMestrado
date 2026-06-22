@@ -2,6 +2,8 @@ package pt.lourenco.optimization.jmetal.constraints.service;
 
 import org.springframework.stereotype.Service;
 import pt.lourenco.optimization.jmetal.partitioning.PreviousPartitionAssignmentsContext;
+import pt.lourenco.optimization.jmetal.problems.mapping.RoomsMappingUtils;
+import pt.lourenco.optimization.jmetal.problems.mapping.ScheduleMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 
@@ -55,29 +57,28 @@ public class RoomExclusivityConstraintService {
     ) {
         List<ResolvedCurrentAssignment> resolved = new ArrayList<>();
 
-        String dayColumn = scheduleAdapter.getMappedColumn(inputData.getMappingData(), "dia");
-        String startColumn = scheduleAdapter.getMappedColumn(inputData.getMappingData(), "hora_inicio");
-        String endColumn = scheduleAdapter.getMappedColumn(inputData.getMappingData(), "hora_fim");
-        String roomColumn = scheduleAdapter.getMappedColumn(inputData.getRoomsMappingData(), "sala");
+        Map<String, Object> mappingData = inputData.getMappingData();
+        Map<String, Object> roomsMappingData = inputData.getRoomsMappingData();
 
         for (ClassRoomAssignment assignment : currentAssignments) {
             Map<String, Object> classData = assignment.getClassData();
             Map<String, Object> roomData = assignment.getRoomData();
 
-            LocalDate day = scheduleAdapter.parseDateValue(classData.get(dayColumn));
-            LocalTime start = scheduleAdapter.coerceToLocalTime(classData.get(startColumn));
-            LocalTime end = scheduleAdapter.coerceToLocalTime(classData.get(endColumn));
+            String dayRaw = ScheduleMappingUtils.getDay(classData, mappingData);
+            String startRaw = ScheduleMappingUtils.getStartTime(classData, mappingData);
+            String endRaw = ScheduleMappingUtils.getEndTime(classData, mappingData);
+
+            LocalDate day = scheduleAdapter.parseDateValue(dayRaw);
+            LocalTime start = scheduleAdapter.coerceToLocalTime(startRaw);
+            LocalTime end = scheduleAdapter.coerceToLocalTime(endRaw);
 
             if (day == null || start == null || end == null || !end.isAfter(start)) {
                 continue;
             }
 
-            String roomIdentity = null;
-            if (roomColumn != null) {
-                Object roomValue = roomData.get(roomColumn);
-                if (roomValue != null && !roomValue.toString().trim().isBlank()) {
-                    roomIdentity = roomValue.toString().trim();
-                }
+            String roomIdentity = RoomsMappingUtils.getRoomName(roomData, roomsMappingData);
+            if (roomIdentity != null) {
+                roomIdentity = roomIdentity.trim();
             }
 
             if (roomIdentity == null || roomIdentity.isBlank()) {
@@ -116,17 +117,6 @@ public class RoomExclusivityConstraintService {
     ) { }
 
     static class SchedulePartitionServiceAdapter {
-        public String getMappedColumn(Map<String, Object> mapping, String logicalKey) {
-            if (mapping == null) {
-                return null;
-            }
-            Object column = mapping.get(logicalKey);
-            if (column == null) {
-                return null;
-            }
-            String value = column.toString().trim();
-            return value.isBlank() ? null : value;
-        }
 
         public LocalDate parseDateValue(Object value) {
             return new pt.lourenco.optimization.jmetal.partitioning.SchedulePartitionService().parseDateValue(value);

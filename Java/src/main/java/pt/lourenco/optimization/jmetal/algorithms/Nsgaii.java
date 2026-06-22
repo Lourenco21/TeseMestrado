@@ -12,6 +12,7 @@ import org.uma.jmetal.solution.integersolution.IntegerSolution;
 import org.uma.jmetal.util.comparator.RankingAndCrowdingDistanceComparator;
 import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationService;
 import pt.lourenco.optimization.jmetal.constraints.service.SolutionContextBuilderService;
+import pt.lourenco.optimization.jmetal.metrics.PartitionMetrics;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 import pt.lourenco.optimization.jmetal.problems.problems.ScheduleOptimizationProblem;
@@ -40,6 +41,8 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
     }
 
     public Map<String, Object> run(ProblemInputData inputData, Map<String, Object> inputParameters) {
+        long algorithmStartNs = System.nanoTime();
+
         ScheduleOptimizationProblem problem = new ScheduleOptimizationProblem(
                 inputData,
                 solutionContextBuilderService,
@@ -86,22 +89,31 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
                                 new RankingAndCrowdingDistanceComparator<>()
                         )
                 )
-                .setMaxEvaluations(maxEvaluations)
+                .setMaxEvaluations(10000/*maxEvaluations*/)
                 .build();
 
         algorithm.run();
+
+        long algorithmDurationMs = (System.nanoTime() - algorithmStartNs) / 1_000_000L;
 
         List<IntegerSolution> resultPopulation = algorithm.result();
         List<Map<String, Object>> solutions = new ArrayList<>();
 
         for (IntegerSolution solution : resultPopulation) {
+            List<Map<String, Object>> decodedAssignments = decodeAssignments(solution, inputData);
+            Map<String, Object> evaluationDetails = evaluateDecodedAssignments(decodedAssignments, inputData);
+
             Map<String, Object> serializedSolution = new LinkedHashMap<>();
             serializedSolution.put("solution", new ArrayList<>(solution.variables()));
             serializedSolution.put("objectives", toDoubleList(solution.objectives()));
             serializedSolution.put("constraints", toDoubleList(solution.constraints()));
-            serializedSolution.put("assignments", decodeAssignments(solution, inputData));
+            serializedSolution.put("assignments", decodedAssignments);
+            serializedSolution.put("constraintValues", evaluationDetails.get("constraintValues"));
+            serializedSolution.put("penaltySummary", evaluationDetails.get("penaltySummary"));
             solutions.add(serializedSolution);
         }
+
+        Map<String, Object> metrics = buildProblemMetrics(problem, algorithmDurationMs);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("algorithm", "NSGA-II");
@@ -113,6 +125,8 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
                 etaC,
                 etaM
         ));
+        response.put("algorithmDurationMs", algorithmDurationMs);
+        response.put("metrics", metrics);
         response.put("solutionCount", solutions.size());
         response.put("solutions", solutions);
 
@@ -320,5 +334,100 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
         defaults.put("etaC", 20.0);
         defaults.put("etaM", 20.0);
         return defaults;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> evaluateDecodedAssignments(
+            List<Map<String, Object>> decodedAssignments,
+            ProblemInputData inputData
+    ) {
+        List<ClassRoomAssignment> assignments = new ArrayList<>();
+
+        for (Map<String, Object> decodedAssignment : decodedAssignments) {
+            Object classIndexObject = decodedAssignment.get("classIndex");
+            Object roomIndexObject = decodedAssignment.get("roomIndex");
+            Object classDataObject = decodedAssignment.get("classData");
+            Object roomDataObject = decodedAssignment.get("roomData");
+
+            if (!(classIndexObject instanceof Number classIndexNumber)) continue;
+            if (!(roomIndexObject instanceof Number roomIndexNumber)) continue;
+            if (!(classDataObject instanceof Map<?, ?> rawClassData)) continue;
+            if (!(roomDataObject instanceof Map<?, ?> rawRoomData)) continue;
+
+            assignments.add(new ClassRoomAssignment(
+                    classIndexNumber.intValue(),
+                    (Map<String, Object>) rawClassData,
+                    roomIndexNumber.intValue(),
+                    (Map<String, Object>) rawRoomData
+            ));
+        }
+
+        var context = solutionContextBuilderService.buildFromProblemInput(inputData);
+        context.setAssignments(assignments);
+
+        var evaluationResult = constraintEvaluationService.evaluate(context, inputData.getSelectedConstraints());
+
+        Map<String, Object> constraintValues = new LinkedHashMap<>();
+
+        double softRawTotal = 0.0;
+        double softWeightedTotal = 0.0;
+        double hardRawTotal = 0.0;
+        double hardWeightedTotal = 0.0;
+
+        if (evaluationResult.getConstraintResults() != null) {
+            for (var result : evaluationResult.getConstraintResults()) {
+                double raw = result.getViolationScore() == null ? 0.0 : result.getViolationScore();
+                double weighted = result.getWeightedScore() == null ? 0.0 : result.getWeightedScore();
+                String goal = result.getGoal() == null ? null : result.getGoal().name();
+
+                Map<String, Object> item = new LinkedHashMap<>();
+                item.put("goal", goal);
+                item.put("raw", raw);
+                item.put("weighted", weighted);
+
+                constraintValues.put(result.getConstraintId(), item);
+
+                if ("HARD".equalsIgnoreCase(goal)) {
+                    hardRawTotal += raw;
+                    hardWeightedTotal += weighted;
+                } else {
+                    softRawTotal += raw;
+                    softWeightedTotal += weighted;
+                }
+            }
+        }
+
+        Map<String, Object> penaltySummary = new LinkedHashMap<>();
+        penaltySummary.put("soft_raw_total", softRawTotal);
+        penaltySummary.put("soft_weighted_total", softWeightedTotal);
+        penaltySummary.put("hard_raw_total", hardRawTotal);
+        penaltySummary.put("hard_weighted_total", hardWeightedTotal);
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("constraintValues", constraintValues);
+        response.put("penaltySummary", penaltySummary);
+        return response;
+    }
+
+    private Map<String, Object> buildProblemMetrics(
+            ScheduleOptimizationProblem problem,
+            long algorithmDurationMs
+    ) {
+        PartitionMetrics partitionMetrics = problem.getPartitionMetrics();
+
+        Map<String, Object> metrics = new LinkedHashMap<>();
+        metrics.put("algorithmDurationMs", algorithmDurationMs);
+        metrics.put("evaluationCount", partitionMetrics.getEvaluationCount());
+        metrics.put("totalEvaluateTimeMs", partitionMetrics.getTotalEvaluateTimeMs());
+        metrics.put("averageEvaluateTimeMs", partitionMetrics.getAverageEvaluateTimeMs());
+        metrics.put("totalBuildAssignmentsTimeMs", partitionMetrics.getTotalBuildAssignmentsTimeMs());
+        metrics.put("totalConstraintEvaluationTimeMs", partitionMetrics.getTotalConstraintEvaluationTimeMs());
+
+        long otherTimeMs = algorithmDurationMs
+                - partitionMetrics.getTotalEvaluateTimeMs();
+
+        metrics.put("otherAlgorithmTimeMs", Math.max(otherTimeMs, 0L));
+
+        return metrics;
     }
 }

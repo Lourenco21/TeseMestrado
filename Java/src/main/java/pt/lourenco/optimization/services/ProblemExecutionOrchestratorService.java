@@ -10,10 +10,12 @@ import pt.lourenco.optimization.jmetal.algorithms.AlgorithmMetadataProvider;
 import pt.lourenco.optimization.jmetal.algorithms.AlgorithmMetadataRegistry;
 import pt.lourenco.optimization.jmetal.partitioning.PartitionReuseStrategy;
 import pt.lourenco.optimization.jmetal.partitioning.PartitionType;
+import pt.lourenco.optimization.jmetal.problems.mapping.RoomsMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 import pt.lourenco.optimization.jmetal.problems.service.ProblemDataBuilderService;
 import pt.lourenco.optimization.utils.JSONGetters;
 
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -29,8 +31,10 @@ public class ProblemExecutionOrchestratorService {
     private final AlgorithmMetadataRegistry algorithmMetadataRegistry;
     private final PartitionExecutionCoordinatorService partitionExecutionCoordinatorService;
     private final ObjectMapper objectMapper;
+    private final ScheduleResponseBuilderService scheduleResponseBuilderService;
 
     public Map<String, Object> executeProblem(JSONGetters request) throws JsonProcessingException {
+        long totalStartNs = System.nanoTime();
 
         log.debug("Raw schedule_data present: {}", request.getSchedule_data() != null);
         log.debug("Raw rooms_data present: {}", request.getRooms_data() != null);
@@ -113,18 +117,39 @@ public class ProblemExecutionOrchestratorService {
                         reuseStrategy
                 );
 
+        List<Map<String, Object>> originalSchedule = extractOriginalScheduleRows(inputData.getScheduleData());
+
+        List<ScheduleResponseBuilderService.SolvedClassRoomAssignment> solvedAssignments =
+                extractSolvedAssignments(executionResult, inputData);
+
+        Map<String, Object> aggregatedConstraintValues = aggregateConstraintValues(executionResult);
+        Map<String, Object> aggregatedPenaltySummary = aggregatePenaltySummary(executionResult);
+
+        List<Map<String, Object>> updatedSchedule =
+                scheduleResponseBuilderService.buildUpdatedSchedule(
+                        originalSchedule,
+                        inputData.getMappingData(),
+                        solvedAssignments
+                );
+
         log.info("=== END problem execution ===");
-        log.debug("Execution result summary: {}", executionResult);
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("message", "Problem executed successfully.");
-        response.put("selected_algorithm", selectedAlgorithmName);
+        response.put("schedule", updatedSchedule);
+        response.put("algorithm_used", selectedAlgorithmName);
+        response.put("used_parameters", algorithmParameters);
         response.put("partition_type", partitionType.name());
-        response.put("reuse_strategy", reuseStrategy.name());
-        response.put("prompt_used", finalPrompt);
-        response.put("llm_parameters_response", llmResponse);
-        response.put("normalized_algorithm_parameters", algorithmParameters);
+        response.put("reuse_solution", reuseStrategy == PartitionReuseStrategy.REUSE_EQUAL_PARTITION_SOLUTION);
+        response.put("partition_count", executionResult.get("partitionCount"));
+        response.put("constraint_values", aggregatedConstraintValues);
+        response.put("penalty_summary", aggregatedPenaltySummary);
         response.put("execution_result", executionResult);
+
+        long totalElapsedNs = System.nanoTime() - totalStartNs;
+        double totalElapsedMs = totalElapsedNs / 1_000_000.0;
+
+        log.info("Total problem execution time: {} ms", String.format("%.3f", totalElapsedMs));
 
         return response;
     }
@@ -247,5 +272,245 @@ public class ProblemExecutionOrchestratorService {
             case "generate_new" -> PartitionReuseStrategy.INDEPENDENT;
             default -> throw new IllegalArgumentException("Unsupported repeated instance strategy: " + value);
         };
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> extractOriginalScheduleRows(Map<String, Object> scheduleData) {
+        if (scheduleData == null) {
+            return List.of();
+        }
+
+        Object classes = scheduleData.get("classes");
+        return classes instanceof List<?> list ? (List<Map<String, Object>>) list : List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<ScheduleResponseBuilderService.SolvedClassRoomAssignment> extractSolvedAssignments(
+            Map<String, Object> executionResult,
+            ProblemInputData inputData
+    ) {
+        List<ScheduleResponseBuilderService.SolvedClassRoomAssignment> solvedAssignments = new ArrayList<>();
+
+        Object partitionsObject = executionResult.get("partitions");
+        if (!(partitionsObject instanceof List<?> partitions)) {
+            return solvedAssignments;
+        }
+
+        for (Object partitionObject : partitions) {
+            if (!(partitionObject instanceof Map<?, ?> rawPartition)) {
+                continue;
+            }
+
+            Map<String, Object> partition = (Map<String, Object>) rawPartition;
+            Object partitionExecutionResultObject = partition.get("executionResult");
+
+            if (!(partitionExecutionResultObject instanceof Map<?, ?> rawPartitionExecutionResult)) {
+                continue;
+            }
+
+            Map<String, Object> partitionExecutionResult = (Map<String, Object>) rawPartitionExecutionResult;
+            Object solutionsObject = partitionExecutionResult.get("solutions");
+
+            if (!(solutionsObject instanceof List<?> solutions) || solutions.isEmpty()) {
+                continue;
+            }
+
+            Object bestSolutionObject = solutions.get(0);
+            if (!(bestSolutionObject instanceof Map<?, ?> rawBestSolution)) {
+                continue;
+            }
+
+            Map<String, Object> bestSolution = (Map<String, Object>) rawBestSolution;
+            Object assignmentsObject = bestSolution.get("assignments");
+
+            if (!(assignmentsObject instanceof List<?> assignments)) {
+                continue;
+            }
+
+            for (Object assignmentObject : assignments) {
+                if (!(assignmentObject instanceof Map<?, ?> rawAssignment)) {
+                    continue;
+                }
+
+                Map<String, Object> assignment = (Map<String, Object>) rawAssignment;
+                Object classDataObject = assignment.get("classData");
+                Object roomDataObject = assignment.get("roomData");
+
+                if (!(classDataObject instanceof Map<?, ?> rawClassData)) {
+                    continue;
+                }
+
+                if (!(roomDataObject instanceof Map<?, ?> rawRoomData)) {
+                    continue;
+                }
+
+                Map<String, Object> classData = (Map<String, Object>) rawClassData;
+                Map<String, Object> roomData = (Map<String, Object>) rawRoomData;
+
+                String classKey = scheduleResponseBuilderService.buildClassKey(
+                        classData,
+                        inputData.getMappingData()
+                );
+
+                String roomName = RoomsMappingUtils.getRoomName(
+                        roomData,
+                        inputData.getRoomsMappingData()
+                );
+
+                solvedAssignments.add(
+                        new ScheduleResponseBuilderService.SolvedClassRoomAssignment(classKey, roomName)
+                );
+            }
+        }
+
+        return solvedAssignments;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> aggregateConstraintValues(Map<String, Object> executionResult) {
+        Map<String, Object> aggregated = new LinkedHashMap<>();
+
+        Object partitionsObject = executionResult.get("partitions");
+        if (!(partitionsObject instanceof List<?> partitions)) {
+            return aggregated;
+        }
+
+        for (Object partitionObject : partitions) {
+            if (!(partitionObject instanceof Map<?, ?> rawPartition)) {
+                continue;
+            }
+
+            Map<String, Object> partition = (Map<String, Object>) rawPartition;
+            Object partitionExecutionResultObject = partition.get("executionResult");
+
+            if (!(partitionExecutionResultObject instanceof Map<?, ?> rawPartitionExecutionResult)) {
+                continue;
+            }
+
+            Map<String, Object> partitionExecutionResult = (Map<String, Object>) rawPartitionExecutionResult;
+            Object solutionsObject = partitionExecutionResult.get("solutions");
+
+            if (!(solutionsObject instanceof List<?> solutions) || solutions.isEmpty()) {
+                continue;
+            }
+
+            Object bestSolutionObject = solutions.get(0);
+            if (!(bestSolutionObject instanceof Map<?, ?> rawBestSolution)) {
+                continue;
+            }
+
+            Map<String, Object> bestSolution = (Map<String, Object>) rawBestSolution;
+            Object constraintValuesObject = bestSolution.get("constraintValues");
+
+            if (!(constraintValuesObject instanceof Map<?, ?> rawConstraintValues)) {
+                continue;
+            }
+
+            Map<String, Object> constraintValues = (Map<String, Object>) rawConstraintValues;
+
+            for (Map.Entry<String, Object> entry : constraintValues.entrySet()) {
+                String constraintId = entry.getKey();
+
+                if (!(entry.getValue() instanceof Map<?, ?> rawItem)) {
+                    continue;
+                }
+
+                Map<String, Object> item = (Map<String, Object>) rawItem;
+                String goal = item.get("goal") == null ? null : String.valueOf(item.get("goal"));
+                double raw = asDouble(item.get("raw"));
+                double weighted = asDouble(item.get("weighted"));
+
+                Map<String, Object> aggregateItem = (Map<String, Object>) aggregated.computeIfAbsent(
+                        constraintId,
+                        key -> {
+                            Map<String, Object> created = new LinkedHashMap<>();
+                            created.put("goal", goal);
+                            created.put("raw", 0.0);
+                            created.put("weighted", 0.0);
+                            return created;
+                        }
+                );
+
+                aggregateItem.put("raw", asDouble(aggregateItem.get("raw")) + raw);
+                aggregateItem.put("weighted", asDouble(aggregateItem.get("weighted")) + weighted);
+            }
+        }
+
+        return aggregated;
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> aggregatePenaltySummary(Map<String, Object> executionResult) {
+        Map<String, Object> summary = new LinkedHashMap<>();
+        summary.put("soft_raw_total", 0.0);
+        summary.put("soft_weighted_total", 0.0);
+        summary.put("hard_raw_total", 0.0);
+        summary.put("hard_weighted_total", 0.0);
+
+        Object partitionsObject = executionResult.get("partitions");
+        if (!(partitionsObject instanceof List<?> partitions)) {
+            return summary;
+        }
+
+        for (Object partitionObject : partitions) {
+            if (!(partitionObject instanceof Map<?, ?> rawPartition)) {
+                continue;
+            }
+
+            Map<String, Object> partition = (Map<String, Object>) rawPartition;
+            Object partitionExecutionResultObject = partition.get("executionResult");
+
+            if (!(partitionExecutionResultObject instanceof Map<?, ?> rawPartitionExecutionResult)) {
+                continue;
+            }
+
+            Map<String, Object> partitionExecutionResult = (Map<String, Object>) rawPartitionExecutionResult;
+            Object solutionsObject = partitionExecutionResult.get("solutions");
+
+            if (!(solutionsObject instanceof List<?> solutions) || solutions.isEmpty()) {
+                continue;
+            }
+
+            Object bestSolutionObject = solutions.get(0);
+            if (!(bestSolutionObject instanceof Map<?, ?> rawBestSolution)) {
+                continue;
+            }
+
+            Map<String, Object> bestSolution = (Map<String, Object>) rawBestSolution;
+            Object penaltySummaryObject = bestSolution.get("penaltySummary");
+
+            if (!(penaltySummaryObject instanceof Map<?, ?> rawPenaltySummary)) {
+                continue;
+            }
+
+            Map<String, Object> penaltySummary = (Map<String, Object>) rawPenaltySummary;
+
+            summary.put("soft_raw_total",
+                    asDouble(summary.get("soft_raw_total")) + asDouble(penaltySummary.get("soft_raw_total")));
+            summary.put("soft_weighted_total",
+                    asDouble(summary.get("soft_weighted_total")) + asDouble(penaltySummary.get("soft_weighted_total")));
+            summary.put("hard_raw_total",
+                    asDouble(summary.get("hard_raw_total")) + asDouble(penaltySummary.get("hard_raw_total")));
+            summary.put("hard_weighted_total",
+                    asDouble(summary.get("hard_weighted_total")) + asDouble(penaltySummary.get("hard_weighted_total")));
+        }
+
+        return summary;
+    }
+
+    private double asDouble(Object value) {
+        if (value instanceof Number number) {
+            return number.doubleValue();
+        }
+
+        if (value instanceof String text) {
+            try {
+                return Double.parseDouble(text.trim());
+            } catch (NumberFormatException ignored) {
+                return 0.0;
+            }
+        }
+
+        return 0.0;
     }
 }

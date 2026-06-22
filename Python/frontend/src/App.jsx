@@ -10,8 +10,10 @@ import ProblemMappingStepPage from "./pages/problems/ProblemMappingStepPage.jsx"
 //import ProblemConstraintsStepPage from "./pages/storage/ProblemConstraintsStepPage.jsx";
 import ProblemRoomsUploadStepPage from "./pages/problems/ProblemRoomsUploadStepPage.jsx";
 import ProblemRoomsMappingStepPage from "./pages/problems/ProblemRoomsMappingStepPage.jsx";
-import ProblemDetailPage from "./pages/problems/ProblemDetailPage.jsx";
+import ProblemExecutePage from "./pages/problems/ProblemExecutePage.jsx";
 import ProblemConstraintsStepPage from "./pages/problems/ProblemConstraintsStepPage.jsx";
+import ProblemDetailPage from "./pages/problems/ProblemDetailPage.jsx"
+import SolutionScheduleByRoomPage from "./pages/schedules/SolutionScheduleByRoomPage.jsx"
 
 export default function App() {
   return (
@@ -29,7 +31,11 @@ export default function App() {
           <Route path="/problems/:id/constraints" element={<ProblemConstraintsStepPage />} />
           <Route path="/problems/:id/rooms-upload" element={<ProblemRoomsUploadStepPage />} />
           <Route path="/problems/:id/rooms-mapping" element={<ProblemRoomsMappingStepPage />} />
+          <Route path="/problems/:id/execute" element={<ProblemExecutePage />} />
           <Route path="/problems/:id/detail" element={<ProblemDetailPage />} />
+          {/*<Route path="/problems/:problemId/solutions/:solutionId" element={<SolutionDetailPage />} />*/}
+          <Route path="/problems/:id/solutions/:solutionId/schedule/rooms" element={<SolutionScheduleByRoomPage />} />
+
         </Routes>
       </ProblemWizardProvider>
     </BrowserRouter>

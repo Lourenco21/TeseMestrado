@@ -36,6 +36,14 @@ PROBLEM_SCHEMA = {
             "aliases": ["tipo aula", "tipo_aula", "tipo", "lesson_type", "class_type"],
         },
         {
+            "key": "turno",
+            "label": "Turno da aula",
+            "description": "Turno da aula.",
+            "required": False,
+            "data_type": "string",
+            "aliases": ["turno"],
+        },
+        {
             "key": "sala",
             "label": "Sala",
             "description": "Sala onde a aula decorre.",
@@ -61,7 +69,7 @@ PROBLEM_SCHEMA = {
             "key": "dia",
             "label": "Dia",
             "description": "Dia da aula.",
-            "required": False,
+            "required": True,
             "data_type": "string",
             "aliases": ["dia", "day", "weekday"],
         },

@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import ScheduleToolbar from "../../components/schedule/ScheduleToolbar.jsx";
 import WeeklySchedule from "../../components/schedule/WeeklySchedule.jsx";
-import ScheduleViewSwitcher from "../../components/schedule/ScheduleViewSwitcher";
-import { classOptions, schedulesByClass } from "../../data/mockScheduleData";
+import ScheduleViewSwitcher from "../../components/schedule/ScheduleViewSwitcher.jsx";
+import { classOptions, schedulesByClass } from "../../data/mockScheduleData.js";
 
 export default function ScheduleByClassPage() {
   const [selectedClass, setSelectedClass] = useState(classOptions[0]?.id || "");

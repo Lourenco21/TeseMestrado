@@ -1,8 +1,8 @@
 import { useMemo, useState } from "react";
 import ScheduleToolbar from "../../components/schedule/ScheduleToolbar.jsx";
 import WeeklySchedule from "../../components/schedule/WeeklySchedule.jsx";
-import ScheduleViewSwitcher from "../../components/schedule/ScheduleViewSwitcher";
-import { subjectOptions, schedulesBySubject } from "../../data/mockScheduleData";
+import ScheduleViewSwitcher from "../../components/schedule/ScheduleViewSwitcher.jsx";
+import { subjectOptions, schedulesBySubject } from "../../data/mockScheduleData.js";
 
 export default function ScheduleBySubjectPage() {
   const [selectedSubject, setSelectedSubject] = useState(

@@ -1,680 +1,405 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import {
-  requestProblemAlgorithms,
-  executeProblemWithAlgorithm,
-} from "../../services/problemsApi";
+import { getProblemDraft } from "../../services/problemsApi";
+import { listProblemSolutions } from "../../services/solutionsApi";
 
-const RESOLUTION_OPTIONS = [
-  {
-    value: "semester",
-    label: "Por semestre",
-    description:
-      "Tende a exigir mais tempo de execução, mas permite procurar soluções mais globais e potencialmente de maior qualidade.",
-  },
-  {
-    value: "week",
-    label: "Por semana",
-    description:
-      "Reduz o tempo de execução face ao semestre e mantém um bom equilíbrio entre qualidade da solução e dimensão do problema.",
-  },
-  {
-    value: "day",
-    label: "Por dia",
-    description:
-      "Normalmente executa mais rápido, mas pode perder alguma qualidade global por resolver o problema de forma mais fragmentada.",
-  },
-  {
-    value: "start_half_hour",
-    label: "Por cada meia hora de começo",
-    description:
-      "É a divisão mais fina, com execução potencialmente mais rápida por bloco, mas com maior risco de sacrificar consistência e qualidade global.",
-  },
-];
-
-function getRepeatedInstanceOptions(resolutionScope) {
-  switch (resolutionScope) {
-    case "week":
-      return [
-        {
-          value: "reuse_solution",
-          label: "Guardar a mesma solução para semanas iguais",
-          description:
-            "Reutiliza a mesma solução sempre que forem detetadas semanas equivalentes.",
-        },
-        {
-          value: "generate_new",
-          label: "Gerar nova solução para cada semana",
-          description:
-            "Volta a gerar a solução em cada semana, mesmo quando o padrão é idêntico.",
-        },
-      ];
-    case "day":
-      return [
-        {
-          value: "reuse_solution",
-          label: "Guardar a mesma solução para dias iguais",
-          description:
-            "Reutiliza a mesma solução sempre que forem detetados dias equivalentes.",
-        },
-        {
-          value: "generate_new",
-          label: "Gerar nova solução para cada dia",
-          description:
-            "Volta a gerar a solução em cada dia, mesmo quando o padrão é idêntico.",
-        },
-      ];
-    case "start_half_hour":
-      return [
-        {
-          value: "reuse_solution",
-          label: "Guardar a mesma solução para blocos iguais",
-          description:
-            "Reutiliza a mesma solução para blocos de meia hora com o mesmo padrão.",
-        },
-        {
-          value: "generate_new",
-          label: "Gerar nova solução para cada bloco",
-          description:
-            "Volta a gerar a solução para cada bloco de meia hora, mesmo quando o padrão é idêntico.",
-        },
-      ];
-    default:
-      return [];
-  }
-}
-
-function getRepeatedStrategySectionTitle(resolutionScope) {
-  switch (resolutionScope) {
-    case "week":
-      return "Tratamento de semanas iguais";
-    case "day":
-      return "Tratamento de dias iguais";
-    case "start_half_hour":
-      return "Tratamento de blocos de meia hora iguais";
-    default:
-      return "";
-  }
-}
-
-function extractAlgorithms(result) {
-  const candidates = [
-    result?.algorithms,
-    result?.recommended_algorithms,
-    result?.java_response?.algorithms,
-    result?.java_response?.recommended_algorithms,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate;
-    }
-  }
-
-  return [];
-}
-
-function formatAlgorithmParameters(parameters) {
-  if (!parameters || typeof parameters !== "object" || Array.isArray(parameters)) {
-    return [];
-  }
-
-  return Object.entries(parameters);
-}
-
-function extractKeyPoints(algorithm) {
-  const candidates = [
-    algorithm?.key_points,
-    algorithm?.keyPoints,
-    algorithm?.points,
-  ];
-
-  for (const candidate of candidates) {
-    if (Array.isArray(candidate)) {
-      return candidate;
-    }
-  }
-
-  return [];
-}
-
-function extractAlgorithmName(algorithm) {
-  return algorithm?.name || algorithm?.algorithm_name || "";
-}
-
-function CollapsibleSection({
-  title,
-  subtitle,
-  badge,
-  isCollapsed,
-  onToggle,
-  children,
-}) {
-  return (
-    <div style={styles.collapsibleCard}>
-      <button
-        type="button"
-        onClick={onToggle}
-        style={styles.collapsibleHeader}
-        aria-expanded={!isCollapsed}
-      >
-        <div style={styles.collapsibleHeaderLeft}>
-          <div>
-            <h2 style={styles.collapsibleTitle}>{title}</h2>
-            {subtitle ? (
-              <p style={styles.collapsibleSubtitle}>{subtitle}</p>
-            ) : null}
-          </div>
-        </div>
-
-        <div style={styles.collapsibleHeaderRight}>
-          {badge ? <span style={styles.collapsibleBadge}>{badge}</span> : null}
-          <span style={styles.chevron}>{isCollapsed ? "◂" : "▾"}</span>
-        </div>
-      </button>
-
-      {!isCollapsed ? <div style={styles.collapsibleBody}>{children}</div> : null}
-    </div>
-  );
-}
-
-export default function ProblemSendToJavaPage() {
+export default function ProblemDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [sending, setSending] = useState(false);
-  const [executing, setExecuting] = useState(false);
-  const [localError, setLocalError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
-  const [executionMessage, setExecutionMessage] = useState("");
-  const [responseData, setResponseData] = useState(null);
-  const [executionResponseData, setExecutionResponseData] = useState(null);
-  const [resolutionScope, setResolutionScope] = useState("");
-  const [repeatedInstanceStrategy, setRepeatedInstanceStrategy] = useState("");
-  const [selectedAlgorithmIndex, setSelectedAlgorithmIndex] = useState(null);
-  const [collapsedSections, setCollapsedSections] = useState({
-    requestConfig: false,
-    algorithms: false,
-    execution: false,
-  });
-  const [expandedAlgorithms, setExpandedAlgorithms] = useState({});
+  const [problem, setProblem] = useState(null);
+  const [solutions, setSolutions] = useState([]);
 
-  const requiresRepeatedStrategy = useMemo(() => {
-    return ["week", "day", "start_half_hour"].includes(resolutionScope);
-  }, [resolutionScope]);
+  const [loadingProblem, setLoadingProblem] = useState(true);
+  const [loadingSolutions, setLoadingSolutions] = useState(true);
 
-  const repeatedInstanceOptions = useMemo(() => {
-    return getRepeatedInstanceOptions(resolutionScope);
-  }, [resolutionScope]);
+  const [problemError, setProblemError] = useState("");
+  const [solutionsError, setSolutionsError] = useState("");
+  const [hoveredTile, setHoveredTile] = useState(null);
 
-  const repeatedStrategyTitle = useMemo(() => {
-    return getRepeatedStrategySectionTitle(resolutionScope);
-  }, [resolutionScope]);
+  useEffect(() => {
+    async function fetchProblem() {
+      try {
+        setLoadingProblem(true);
+        setProblemError("");
 
-  const recommendedAlgorithms = useMemo(() => {
-    return extractAlgorithms(responseData);
-  }, [responseData]);
-
-  const manuallySelectedAlgorithm = useMemo(() => {
-    if (
-      selectedAlgorithmIndex === null ||
-      selectedAlgorithmIndex < 0 ||
-      selectedAlgorithmIndex >= recommendedAlgorithms.length
-    ) {
-      return null;
+        const data = await getProblemDraft(id);
+        setProblem(data);
+      } catch (error) {
+        setProblemError(error.message || "Erro ao carregar problema.");
+      } finally {
+        setLoadingProblem(false);
+      }
     }
 
-    return recommendedAlgorithms[selectedAlgorithmIndex];
-  }, [recommendedAlgorithms, selectedAlgorithmIndex]);
+    if (id) {
+      fetchProblem();
+    }
+  }, [id]);
 
-  const defaultRecommendedAlgorithm = useMemo(() => {
-    return recommendedAlgorithms.length > 0 ? recommendedAlgorithms[0] : null;
-  }, [recommendedAlgorithms]);
+  useEffect(() => {
+    async function fetchSolutions() {
+      try {
+        setLoadingSolutions(true);
+        setSolutionsError("");
 
-  const effectiveSelectedAlgorithm = useMemo(() => {
-    return manuallySelectedAlgorithm || defaultRecommendedAlgorithm;
-  }, [manuallySelectedAlgorithm, defaultRecommendedAlgorithm]);
+        const data = await listProblemSolutions(id);
+        setSolutions(Array.isArray(data) ? data : []);
+      } catch (error) {
+        setSolutionsError(error.message || "Erro ao carregar soluções.");
+      } finally {
+        setLoadingSolutions(false);
+      }
+    }
 
-  const effectiveSelectedAlgorithmName = useMemo(() => {
-    return extractAlgorithmName(effectiveSelectedAlgorithm);
-  }, [effectiveSelectedAlgorithm]);
+    if (id) {
+      fetchSolutions();
+    }
+  }, [id]);
 
-  function toggleSection(sectionKey) {
-    setCollapsedSections((prev) => ({
-      ...prev,
-      [sectionKey]: !prev[sectionKey],
-    }));
-  }
-  function toggleSelectedAlgorithm(index) {
-    setSelectedAlgorithmIndex((prev) => (prev === index ? null : index));
-    setLocalError("");
-    setExecutionMessage("");
-    setExecutionResponseData(null);
-  }
+  const selectedConstraintsCount = Array.isArray(problem?.selected_constraints)
+    ? problem.selected_constraints.length
+    : 0;
 
-  function resetAlgorithmResults() {
-    setResponseData(null);
-    setExecutionResponseData(null);
-    setSelectedAlgorithmIndex(null);
-    setExpandedAlgorithms({});
-    setSuccessMessage("");
-    setExecutionMessage("");
+  const selectedConstraintsLabel =
+    selectedConstraintsCount === 1
+      ? "1 selecionada"
+      : `${selectedConstraintsCount} selecionadas`;
+
+  const handleGoToExecute = () => {
+    navigate(`/problems/${id}/execute`);
+  };
+
+  const handleOpenSolution = (solutionId) => {
+    navigate(`/problems/${id}/solutions/${solutionId}/schedule/rooms`);
+  };
+
+  if (loadingProblem) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <p style={styles.message}>A carregar problema...</p>
+        </div>
+      </div>
+    );
   }
 
-  async function handleSend() {
-    if (!resolutionScope) {
-      setLocalError("Selecione primeiro como quer tentar resolver o problema.");
-      return;
-    }
-
-    if (requiresRepeatedStrategy && !repeatedInstanceStrategy) {
-      setLocalError(
-        "Indique o que fazer quando existirem semanas, dias ou blocos equivalentes."
-      );
-      return;
-    }
-
-    try {
-      setSending(true);
-      setLocalError("");
-      setSuccessMessage("");
-      setExecutionMessage("");
-      setExecutionResponseData(null);
-      setSelectedAlgorithmIndex(null);
-      setExpandedAlgorithms({});
-      setResponseData(null);
-
-      const data = await requestProblemAlgorithms(id, {
-        resolution_scope: resolutionScope,
-        repeated_instance_strategy: requiresRepeatedStrategy
-          ? repeatedInstanceStrategy
-          : null,
-      });
-
-      setSuccessMessage("Recomendação de algoritmos recebida com sucesso.");
-      setResponseData(data);
-      setCollapsedSections((prev) => ({
-        ...prev,
-        algorithms: false,
-        execution: false,
-      }));
-    } catch (err) {
-      console.error("Erro ao enviar para Java:", err);
-      setLocalError(
-        err.message || "Não foi possível obter a recomendação de algoritmos."
-      );
-    } finally {
-      setSending(false);
-    }
-  }
-
-  async function handleExecute() {
-    if (!resolutionScope) {
-      setLocalError("Selecione primeiro o nível de resolução.");
-      return;
-    }
-
-    if (requiresRepeatedStrategy && !repeatedInstanceStrategy) {
-      setLocalError(
-        "Indique o tratamento das instâncias equivalentes antes de executar."
-      );
-      return;
-    }
-
-    if (!effectiveSelectedAlgorithmName) {
-      setLocalError("Não foi possível determinar um algoritmo para executar.");
-      return;
-    }
-
-    try {
-      setExecuting(true);
-      setLocalError("");
-      setExecutionMessage("");
-      setExecutionResponseData(null);
-
-      const data = await executeProblemWithAlgorithm(id, {
-        resolution_scope: resolutionScope,
-        repeated_instance_strategy: requiresRepeatedStrategy
-          ? repeatedInstanceStrategy
-          : null,
-        selected_algorithm: effectiveSelectedAlgorithmName,
-      });
-
-      setExecutionMessage("Execução enviada com sucesso para o backend Java.");
-      setExecutionResponseData(data);
-      setCollapsedSections((prev) => ({
-        ...prev,
-        execution: false,
-      }));
-    } catch (err) {
-      console.error("Erro ao executar problema:", err);
-      setLocalError(
-        err.message || "Não foi possível enviar a execução do problema."
-      );
-    } finally {
-      setExecuting(false);
-    }
+  if (problemError) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.container}>
+          <div style={styles.error}>{problemError}</div>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Execução</p>
-        <h1 style={styles.title}>Recomendar e executar algoritmo</h1>
+        <p style={styles.step}>Detalhe do problema</p>
+        <h1 style={styles.title}>{problem?.name || `Problema #${id}`}</h1>
         <p style={styles.description}>
-          Configura a forma de resolução do problema, pede ao backend Java uma
-          recomendação de algoritmos e seleciona depois o algoritmo a executar.
+          Página de detalhe do problema e respetivas soluções.
         </p>
 
-        <CollapsibleSection
-          title="Configuração do pedido"
-          subtitle="Define o nível de resolução e, quando necessário, o tratamento de instâncias equivalentes."
-          isCollapsed={collapsedSections.requestConfig}
-          onToggle={() => toggleSection("requestConfig")}
-        >
-          <div style={styles.section}>
-            <p style={styles.sectionTitle}>Nível de resolução</p>
-            <div style={styles.optionGrid}>
-              {RESOLUTION_OPTIONS.map((option) => {
-                const selected = resolutionScope === option.value;
+        <div style={styles.problemInfo}>
+          <span style={styles.problemLabel}>Número de Soluções:</span>
+          <span style={styles.problemName}>{solutions.length}</span>
+        </div>
 
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setResolutionScope(option.value);
-                      setLocalError("");
-                      resetAlgorithmResults();
+        <div style={styles.actions}>
+          <button style={styles.secondaryButton} onClick={() => navigate("/problems")}>
+            Voltar
+          </button>
 
-                      if (option.value === "semester") {
-                        setRepeatedInstanceStrategy("");
-                      }
-                    }}
-                    style={{
-                      ...styles.optionCard,
-                      ...(selected ? styles.optionCardActive : {}),
-                    }}
-                  >
-                    <span style={styles.optionTitle}>{option.label}</span>
-                    <span style={styles.optionDescription}>
-                      {option.description}
+          <button style={styles.primaryButton} onClick={handleGoToExecute}>
+            Executar problema
+          </button>
+        </div>
+
+        <section style={styles.sectionCard}>
+          <h2 style={styles.sectionTitle}>Informação geral</h2>
+          <p style={styles.sectionDescription}>
+            Dados principais do problema atualmente guardado.
+          </p>
+
+          <div style={styles.infoGrid}>
+            <InfoCard label="Nome" value={problem?.name || "-"} />
+            <InfoCard
+              label="Tipo"
+              value={problem?.problem_family || problem?.type || "-"}
+            />
+            <InfoCard
+              label="Subtipo"
+              value={problem?.problem_subtype || problem?.subtype || "-"}
+            />
+            <InfoCard
+              label="Última atualização"
+              value={
+                problem?.updated_at
+                  ? new Date(problem.updated_at).toLocaleString("pt-PT")
+                  : "-"
+              }
+            />
+          </div>
+        </section>
+
+        <section style={styles.sectionCard}>
+          <h2 style={styles.sectionTitle}>Ficheiros e mapping</h2>
+          <p style={styles.sectionDescription}>
+            Estado dos ficheiros associados ao problema e respetivo mapping.
+          </p>
+
+          <div style={styles.infoGrid}>
+            <EditableTile
+              tileId="schedule-file"
+              label="Ficheiro de horário"
+              value={problem?.uploaded_schedule_name || "-"}
+              onClick={() => navigate(`/problems/${id}/upload`)}
+              hoveredTile={hoveredTile}
+              setHoveredTile={setHoveredTile}
+            />
+
+            <EditableTile
+              tileId="rooms-file"
+              label="Ficheiro de salas"
+              value={problem?.uploaded_rooms_file_name || "-"}
+              onClick={() => navigate(`/problems/${id}/rooms-upload`)}
+              hoveredTile={hoveredTile}
+              setHoveredTile={setHoveredTile}
+            />
+
+            <EditableTile
+              tileId="schedule-mapping"
+              label="Mapping de horário"
+              value={
+                hasContent(problem?.mapping_data) ? "Configurado" : "Não configurado"
+              }
+              onClick={() => navigate(`/problems/${id}/mapping`)}
+              hoveredTile={hoveredTile}
+              setHoveredTile={setHoveredTile}
+            />
+
+            <EditableTile
+              tileId="rooms-mapping"
+              label="Mapping de salas"
+              value={
+                hasContent(problem?.rooms_mapping_data)
+                  ? "Configurado"
+                  : "Não configurado"
+              }
+              onClick={() => navigate(`/problems/${id}/rooms-mapping`)}
+              hoveredTile={hoveredTile}
+              setHoveredTile={setHoveredTile}
+            />
+          </div>
+        </section>
+
+        <section style={styles.sectionCard}>
+          <h2 style={styles.sectionTitle}>Restrições</h2>
+          <p style={styles.sectionDescription}>
+            Restrições atualmente associadas ao problema.
+          </p>
+
+          <div style={styles.twoColumnSection}>
+            <EditableTile
+              tileId="constraints-list"
+              label={`Lista de restrições`}
+              value={
+                selectedConstraintsCount > 0
+                  ? selectedConstraintsLabel
+                  : "Sem restrições selecionadas"
+              }
+              onClick={() => navigate(`/problems/${id}/constraints`)}
+              hoveredTile={hoveredTile}
+              setHoveredTile={setHoveredTile}
+              fullWidth
+              largeEditBadge
+            >
+              {selectedConstraintsCount > 0 ? (
+                <ul style={styles.tagList}>
+                  {problem.selected_constraints.map((item, index) => (
+                    <li key={item?.id || item || index} style={styles.tag}>
+                      {typeof item === "string"
+                        ? item
+                        : item?.label || item?.id || "-"}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p style={styles.emptyText}>Sem restrições selecionadas.</p>
+              )}
+            </EditableTile>
+          </div>
+        </section>
+
+        <section style={styles.sectionCard}>
+          <h2 style={styles.sectionTitle}>Soluções</h2>
+          <p style={styles.sectionDescription}>
+            Soluções já associadas a este problema.
+          </p>
+
+          <div style={styles.summaryBar}>
+            <span style={styles.summaryItem}>
+              {loadingSolutions ? "A carregar soluções..." : `${solutions.length} solução(ões)`}
+            </span>
+          </div>
+
+          {solutionsError ? <div style={styles.error}>{solutionsError}</div> : null}
+
+          {loadingSolutions && <p style={styles.message}>A carregar soluções...</p>}
+
+          {!loadingSolutions && !solutionsError && solutions.length === 0 && (
+            <div style={styles.warningBox}>
+              <p style={styles.warningTitle}>Sem soluções disponíveis</p>
+              <p style={styles.warningText}>
+                Ainda não existem soluções para este problema.
+              </p>
+
+              <div style={styles.actionsRow}>
+                <button style={styles.primaryButton} onClick={handleGoToExecute}>
+                  Ir para execução
+                </button>
+              </div>
+            </div>
+          )}
+
+          {!loadingSolutions && !solutionsError && solutions.length > 0 && (
+            <div style={styles.solutionList}>
+              {solutions.map((solution) => (
+                <button
+                  key={solution.id}
+                  type="button"
+                  onClick={() => handleOpenSolution(solution.id)}
+                  style={styles.solutionCard}
+                >
+                  <div style={styles.solutionCardTop}>
+                    <h3 style={styles.solutionTitle}>Solução #{solution.id}</h3>
+                    <span style={styles.solutionStatus}>
+                      {solution.status || "-"}
                     </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
+                  </div>
 
-          {requiresRepeatedStrategy ? (
-            <div style={styles.section}>
-              <p style={styles.sectionTitle}>{repeatedStrategyTitle}</p>
-              <div style={styles.optionGrid}>
-                {repeatedInstanceOptions.map((option) => {
-                  const selected = repeatedInstanceStrategy === option.value;
+                  <div style={styles.solutionMeta}>
+                    <span>
+                      <strong>Algoritmo:</strong> {solution.algorithm_used || "-"}
+                    </span>
+                    <span>
+                      <strong>Partição:</strong> {solution.partition_type || "-"}
+                    </span>
+                    <span>
+                      <strong>Reuse:</strong> {solution.reuse_solution ? "Sim" : "Não"}
+                    </span>
+                  </div>
 
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => {
-                        setRepeatedInstanceStrategy(option.value);
-                        setLocalError("");
-                        resetAlgorithmResults();
-                      }}
-                      style={{
-                        ...styles.optionCard,
-                        ...(selected ? styles.optionCardActive : {}),
-                      }}
-                    >
-                      <span style={styles.optionTitle}>{option.label}</span>
-                      <span style={styles.optionDescription}>
-                        {option.description}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          <div style={styles.actions}>
-            <button
-              type="button"
-              onClick={() => navigate(`/problems/${id}`)}
-              style={styles.secondaryButton}
-            >
-              Voltar
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={sending}
-              style={{
-                ...styles.primaryButton,
-                ...(sending ? styles.primaryButtonDisabled : {}),
-              }}
-            >
-              {sending ? "A analisar..." : "Obter recomendação"}
-            </button>
-          </div>
-
-          {localError ? <p style={styles.error}>{localError}</p> : null}
-          {successMessage ? <p style={styles.success}>{successMessage}</p> : null}
-        </CollapsibleSection>
-
-        {responseData ? (
-          <CollapsibleSection
-            title="Algoritmos recomendados"
-            subtitle="Lista compacta de candidatos sugeridos pelo backend."
-            badge={`${recommendedAlgorithms.length} encontrados`}
-            isCollapsed={collapsedSections.algorithms}
-            onToggle={() => toggleSection("algorithms")}
-          >
-            {recommendedAlgorithms.length > 0 ? (
-              <div style={styles.algorithmGrid}>
-                {recommendedAlgorithms.map((algorithm, index) => {
-                  const keyPoints = extractKeyPoints(algorithm);
-                  const parameters = formatAlgorithmParameters(
-                    algorithm.parameters || algorithm.configuration
-                  );
-                  const expanded = !!expandedAlgorithms[index];
-                  const previewPoints = keyPoints.slice(0, 4);
-                  const hiddenCount = Math.max(keyPoints.length - 4, 0);
-                  const algorithmName = extractAlgorithmName(algorithm);
-                  const isManuallySelected = selectedAlgorithmIndex === index;
-                  const isDefaultRecommended =
-                    selectedAlgorithmIndex === null && index === 0;
-
-                  return (
-                    <div
-                      key={`${algorithmName || "algorithm"}-${index}`}
-                      style={{
-                        ...styles.algorithmCompactCard,
-                        ...(isManuallySelected
-                          ? styles.algorithmCompactCardSelected
-                          : {}),
-                      }}
-                    >
-                      <div style={styles.algorithmCompactHeader}>
-                        <div style={styles.algorithmCompactTitleWrap}>
-                          <span style={styles.rankBadge}>#{index + 1}</span>
-                          <h3 style={styles.algorithmCompactName}>
-                            {algorithmName || "Sem nome"}
-                          </h3>
-                          {isDefaultRecommended ? (
-                            <span style={styles.recommendedBadge}>
-                              Recomendado
-                            </span>
-                          ) : null}
-                        </div>
-
-                        <div style={styles.algorithmHeaderActions}>
-                          <button
-                            type="button"
-                            onClick={() => toggleSelectedAlgorithm(index)}
-                            style={{
-                              ...styles.selectButton,
-                              ...(isManuallySelected
-                                ? styles.selectButtonActive
-                                : {}),
-                            }}
-                          >
-                            {isManuallySelected
-                              ? "Remover seleção"
-                              : "Escolher"}
-                          </button>
-
-                          
-                        </div>
-                      </div>
-
-                      <div style={styles.tagsRow}>
-                        {previewPoints.map((item, pointIndex) => (
-                          <span
-                            key={`${algorithmName || "algorithm"}-preview-${pointIndex}`}
-                            style={styles.keyTag}
-                          >
-                            {typeof item === "string"
-                              ? item
-                              : item?.point || "Ponto"}
-                          </span>
-                        ))}
-
-                        {!expanded && hiddenCount > 0 ? (
-                          <span style={styles.moreTag}>+{hiddenCount}</span>
-                        ) : null}
-                      </div>
-
-                      {expanded ? (
-                        <div style={styles.algorithmExpandedBlock}>
-                          {keyPoints.length > 0 ? (
-                            <div style={styles.expandedSection}>
-                              <p style={styles.expandedSectionTitle}>Pontos-chave</p>
-                              <div style={styles.keyPointsListCompact}>
-                                {keyPoints.map((item, pointIndex) => (
-                                  <div
-                                    key={`${algorithmName || "algorithm"}-point-${pointIndex}`}
-                                    style={styles.keyPointCompactItem}
-                                  >
-                                    <span style={styles.keyPointBullet}>•</span>
-                                    <span style={styles.keyPointText}>
-                                      {typeof item === "string"
-                                        ? item
-                                        : item?.point || "Ponto não disponível"}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-
-                          {parameters.length > 0 ? (
-                            <div style={styles.expandedSection}>
-                              <p style={styles.expandedSectionTitle}>
-                                Parâmetros sugeridos
-                              </p>
-                              <div style={styles.parametersGrid}>
-                                {parameters.map(([key, value]) => (
-                                  <div key={key} style={styles.parameterItem}>
-                                    <span style={styles.parameterKey}>{key}</span>
-                                    <span style={styles.parameterValue}>
-                                      {typeof value === "object"
-                                        ? JSON.stringify(value)
-                                        : String(value)}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          ) : null}
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <div style={styles.emptyResults}>
-                <p style={styles.emptyResultsTitle}>
-                  Não foi encontrada uma lista de algoritmos na resposta.
-                </p>
-                <p style={styles.emptyResultsText}>
-                  O pedido foi concluído, mas a resposta ainda não veio no formato
-                  esperado pela interface.
-                </p>
-              </div>
-            )}
-          </CollapsibleSection>
-        ) : null}
-
-        {responseData && recommendedAlgorithms.length > 0 ? (
-          <CollapsibleSection
-            title="Execução"
-            subtitle="Seleciona um dos algoritmos recomendados e envia a execução final."
-            badge={
-              effectiveSelectedAlgorithmName
-                ? effectiveSelectedAlgorithmName
-                : "Sem algoritmo disponível"
-            }
-            isCollapsed={collapsedSections.execution}
-            onToggle={() => toggleSection("execution")}
-          >
-            <div style={styles.executionPanel}>
-              <div style={styles.executionSummaryCard}>
-                <p style={styles.executionSummaryLabel}>Algoritmo a executar</p>
-                <p style={styles.executionSummaryValue}>
-                  {effectiveSelectedAlgorithmName || "Ainda não disponível"}
-                </p>
-                <p style={styles.executionSummaryHint}>
-                  Se não escolheres manualmente um algoritmo, será usado
-                  automaticamente o primeiro algoritmo recomendado.
-                </p>
-              </div>
-
-              <div style={styles.actions}>
-                <button
-                  type="button"
-                  onClick={() => navigate(`/problems/${id}`)}
-                  style={styles.secondaryButton}
-                >
-                  Voltar ao problema
+                  <div style={styles.solutionFooter}>
+                    <span>
+                      <strong>Criada em:</strong>{" "}
+                      {solution.created_at
+                        ? new Date(solution.created_at).toLocaleString("pt-PT")
+                        : "-"}
+                    </span>
+                  </div>
                 </button>
-
-                <button
-                  type="button"
-                  onClick={handleExecute}
-                  disabled={executing || !effectiveSelectedAlgorithmName}
-                  style={{
-                    ...styles.executeButton,
-                    ...((executing || !effectiveSelectedAlgorithmName)
-                      ? styles.primaryButtonDisabled
-                      : {}),
-                  }}
-                >
-                  {executing ? "A executar..." : "Executar algoritmo"}
-                </button>
-              </div>
-
-              {executionMessage ? (
-                <p style={styles.success}>{executionMessage}</p>
-              ) : null}
-
-              {executionResponseData ? (
-                <div style={styles.executionResponseBox}>
-                  <p style={styles.executionResponseTitle}>Resposta da execução</p>
-                  <pre style={styles.responsePre}>
-                    {JSON.stringify(executionResponseData, null, 2)}
-                  </pre>
-                </div>
-              ) : null}
+              ))}
             </div>
-          </CollapsibleSection>
-        ) : null}
+          )}
+        </section>
       </div>
     </div>
   );
+}
+
+function InfoCard({ label, value }) {
+  return (
+    <div style={styles.infoCard}>
+      <span style={styles.infoLabel}>{label}</span>
+      <span style={styles.infoValue}>{formatValue(value)}</span>
+    </div>
+  );
+}
+
+function EditableTile({
+  tileId,
+  label,
+  value,
+  onClick,
+  hoveredTile,
+  setHoveredTile,
+  children,
+  fullWidth = false,
+  largeEditBadge = false,
+}) {
+  const isHovered = hoveredTile === tileId;
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      onMouseEnter={() => setHoveredTile(tileId)}
+      onMouseLeave={() => setHoveredTile(null)}
+      style={{
+        ...styles.editableTile,
+        ...(fullWidth ? styles.editableTileFullWidth : {}),
+        ...(isHovered ? styles.editableTileHover : {}),
+      }}
+    >
+      <span
+        style={{
+          ...styles.editBadge,
+          ...(largeEditBadge ? styles.editBadgeLarge : {}),
+          ...(isHovered ? styles.editBadgeVisible : {}),
+        }}
+      >
+        Editar
+      </span>
+
+      <span
+        style={{
+          ...styles.infoLabel,
+          ...(largeEditBadge ? styles.infoLabelWithLargeBadge : {}),
+        }}
+      >
+        {label}
+      </span>
+      <span style={styles.infoValue}>{formatValue(value)}</span>
+
+      {children ? <div style={styles.tileContent}>{children}</div> : null}
+    </button>
+  );
+}
+
+function formatValue(value) {
+  if (value === null || value === undefined || value === "") {
+    return "-";
+  }
+
+  if (typeof value === "boolean") {
+    return value ? "Sim" : "Não";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value);
+  }
+
+  return String(value);
+}
+
+function hasContent(value) {
+  if (!value) {
+    return false;
+  }
+
+  if (Array.isArray(value)) {
+    return value.length > 0;
+  }
+
+  if (typeof value === "object") {
+    return Object.keys(value).length > 0;
+  }
+
+  return true;
 }
 
 const styles = {
@@ -684,7 +409,7 @@ const styles = {
     padding: "32px",
   },
   container: {
-    maxWidth: "1080px",
+    maxWidth: "1200px",
     margin: "0 auto",
   },
   step: {
@@ -703,129 +428,175 @@ const styles = {
   description: {
     margin: 0,
     marginBottom: "24px",
+    maxWidth: "780px",
     fontSize: "16px",
     lineHeight: 1.6,
     color: "#475467",
-    maxWidth: "760px",
   },
-  collapsibleCard: {
+  problemInfo: {
+    display: "inline-flex",
+    gap: "8px",
+    alignItems: "center",
+    marginBottom: "24px",
+    padding: "10px 14px",
     backgroundColor: "#ffffff",
     border: "1px solid #eaecf0",
-    borderRadius: "16px",
-    padding: "24px",
-    boxShadow: "0 4px 16px rgba(16, 24, 40, 0.06)",
-    marginBottom: "24px",
+    borderRadius: "10px",
   },
-  collapsibleHeader: {
-    width: "100%",
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "flex-start",
-    gap: "16px",
-    background: "transparent",
-    border: "none",
-    padding: 0,
-    cursor: "pointer",
-    textAlign: "left",
+  problemLabel: {
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#667085",
   },
-  collapsibleHeaderLeft: {
-    flex: 1,
-    minWidth: 0,
-  },
-  collapsibleHeaderRight: {
-    display: "flex",
-    alignItems: "center",
-    gap: "12px",
-    flexShrink: 0,
-  },
-  collapsibleTitle: {
-    margin: 0,
-    fontSize: "22px",
+  problemName: {
+    fontSize: "14px",
     fontWeight: 700,
     color: "#101828",
   },
-  collapsibleSubtitle: {
-    margin: "6px 0 0 0",
-    fontSize: "14px",
-    lineHeight: 1.6,
-    color: "#667085",
-    maxWidth: "720px",
-  },
-  collapsibleBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "8px 12px",
-    borderRadius: "999px",
-    backgroundColor: "#eef2ff",
-    color: "#4338ca",
-    fontSize: "13px",
-    fontWeight: 700,
-  },
-  chevron: {
-    width: "32px",
-    height: "32px",
-    borderRadius: "999px",
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#f2f4f7",
+  message: {
+    fontSize: "16px",
     color: "#475467",
-    fontSize: "18px",
-    fontWeight: 700,
-    lineHeight: 1,
   },
-  collapsibleBody: {
-    marginTop: "20px",
-    paddingTop: "20px",
-    borderTop: "1px solid #eaecf0",
+  error: {
+    marginBottom: "16px",
+    padding: "12px 14px",
+    borderRadius: "12px",
+    border: "1px solid #fecaca",
+    backgroundColor: "#fef2f2",
+    fontSize: "15px",
+    color: "#b42318",
   },
-  section: {
+  summaryBar: {
+    display: "flex",
+    gap: "16px",
+    flexWrap: "wrap",
+    marginBottom: "20px",
+  },
+  summaryItem: {
+    padding: "10px 14px",
+    borderRadius: "999px",
+    backgroundColor: "#f2f4f7",
+    color: "#344054",
+    fontSize: "14px",
+    fontWeight: 600,
+  },
+  sectionCard: {
+    backgroundColor: "#ffffff",
+    borderRadius: "16px",
+    border: "1px solid #eaecf0",
+    boxShadow: "0 4px 16px rgba(16, 24, 40, 0.05)",
+    padding: "24px",
     marginBottom: "24px",
   },
   sectionTitle: {
     margin: 0,
     marginBottom: "12px",
-    fontSize: "16px",
+    fontSize: "22px",
     fontWeight: 700,
     color: "#101828",
   },
-  optionGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
-    gap: "12px",
-  },
-  optionCard: {
-    padding: "16px",
-    borderRadius: "14px",
-    border: "1px solid #d0d5dd",
-    backgroundColor: "#ffffff",
-    textAlign: "left",
-    cursor: "pointer",
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  optionCardActive: {
-    borderColor: "#175cd3",
-    backgroundColor: "#eff6ff",
-    boxShadow: "0 0 0 1px #175cd3 inset",
-  },
-  optionTitle: {
-    fontSize: "15px",
-    fontWeight: 700,
-    color: "#101828",
-  },
-  optionDescription: {
+  sectionDescription: {
+    margin: 0,
+    marginBottom: "18px",
     fontSize: "14px",
     lineHeight: 1.6,
     color: "#667085",
   },
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
+    gap: "16px",
+  },
+  infoCard: {
+    padding: "16px",
+    border: "1px solid #eaecf0",
+    borderRadius: "14px",
+    backgroundColor: "#f9fafb",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+  },
+  editableTile: {
+    position: "relative",
+    textAlign: "left",
+    padding: "16px",
+    border: "1px solid #eaecf0",
+    borderRadius: "14px",
+    backgroundColor: "#f9fafb",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px",
+    cursor: "pointer",
+    transition: "all 0.18s ease",
+  },
+  editableTileFullWidth: {
+    width: "100%",
+    minHeight: "145px",
+  },
+  editableTileHover: {
+    border: "1px solid #b2ddff",
+    backgroundColor: "#f5faff",
+    boxShadow: "0 8px 20px rgba(16, 24, 40, 0.08)",
+    transform: "translateY(-1px)",
+  },
+  editBadge: {
+    position: "absolute",
+    top: "12px",
+    right: "12px",
+    padding: "4px 8px",
+    borderRadius: "999px",
+    backgroundColor: "#eff8ff",
+    color: "#175cd3",
+    fontSize: "14px",
+    fontWeight: 700,
+    opacity: 0,
+    pointerEvents: "none",
+    transition: "opacity 0.18s ease",
+  },
+  editBadgeLarge: {
+    padding: "7px 12px",
+    fontSize: "17px",
+    fontWeight: 700,
+    letterSpacing: "0.01em",
+    boxShadow: "0 2px 8px rgba(23, 92, 211, 0.12)",
+  },
+  editBadgeVisible: {
+    opacity: 1,
+  },
+  infoLabel: {
+    fontSize: "14px",
+    fontWeight: 600,
+    color: "#667085",
+    paddingRight: "52px",
+  },
+  infoLabelWithLargeBadge: {
+    paddingRight: "72px",
+  },
+  infoValue: {
+    fontSize: "16px",
+    fontWeight: 700,
+    color: "#101828",
+    wordBreak: "break-word",
+  },
+  tileContent: {
+    marginTop: "10px",
+  },
   actions: {
     display: "flex",
-    gap: "12px",
     justifyContent: "space-between",
+    gap: "16px",
     flexWrap: "wrap",
-    marginTop: "8px",
+    marginBottom: "24px",
+  },
+  primaryButton: {
+    padding: "12px 18px",
+    borderRadius: "10px",
+    border: "none",
+    backgroundColor: "#0f62fe",
+    color: "#ffffff",
+    fontSize: "16px",
+    fontWeight: 600,
+    cursor: "pointer",
   },
   secondaryButton: {
     padding: "12px 18px",
@@ -833,319 +604,110 @@ const styles = {
     border: "1px solid #d0d5dd",
     backgroundColor: "#ffffff",
     color: "#101828",
-    fontSize: "15px",
+    fontSize: "16px",
     fontWeight: 600,
     cursor: "pointer",
   },
-  primaryButton: {
-    padding: "12px 18px",
-    borderRadius: "10px",
-    border: "none",
-    backgroundColor: "#175cd3",
-    color: "#ffffff",
-    fontSize: "15px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  executeButton: {
-    padding: "12px 18px",
-    borderRadius: "10px",
-    border: "none",
-    backgroundColor: "#067647",
-    color: "#ffffff",
-    fontSize: "15px",
-    fontWeight: 700,
-    cursor: "pointer",
-  },
-  primaryButtonDisabled: {
-    opacity: 0.7,
-    cursor: "not-allowed",
-  },
-  error: {
-    marginTop: "16px",
-    marginBottom: 0,
-    padding: "12px 14px",
-    borderRadius: "12px",
-    backgroundColor: "#fef3f2",
-    border: "1px solid #fecdca",
-    color: "#b42318",
-    fontSize: "14px",
-  },
-  success: {
-    marginTop: "16px",
-    marginBottom: 0,
-    padding: "12px 14px",
-    borderRadius: "12px",
-    backgroundColor: "#ecfdf3",
-    border: "1px solid #abefc6",
-    color: "#067647",
-    fontSize: "14px",
-  },
-  algorithmGrid: {
+  twoColumnSection: {
+    marginTop: "8px",
     display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
-    gap: "14px",
+    gridTemplateColumns: "1fr",
+    gap: "16px",
   },
-  algorithmCompactCard: {
-    backgroundColor: "#ffffff",
-    border: "1px solid #eaecf0",
-    borderRadius: "16px",
-    padding: "16px",
-    boxShadow: "0 4px 14px rgba(16, 24, 40, 0.04)",
-    display: "flex",
-    flexDirection: "column",
-    gap: "14px",
-  },
-  algorithmCompactCardSelected: {
-    borderColor: "#175cd3",
-    backgroundColor: "#f5f9ff",
-    boxShadow: "0 0 0 1px #175cd3 inset",
-  },
-  algorithmCompactHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    gap: "12px",
-  },
-  algorithmCompactTitleWrap: {
-    display: "flex",
-    alignItems: "center",
-    gap: "10px",
-    minWidth: 0,
-    flexWrap: "wrap",
-  },
-  algorithmCompactName: {
+  tagList: {
+    listStyle: "none",
+    padding: 0,
     margin: 0,
-    fontSize: "18px",
-    fontWeight: 700,
-    color: "#101828",
-    lineHeight: 1.3,
-  },
-  algorithmHeaderActions: {
     display: "flex",
-    alignItems: "center",
-    gap: "8px",
     flexWrap: "wrap",
-    justifyContent: "flex-end",
+    gap: "8px",
   },
-  detailsButton: {
-    border: "1px solid #d0d5dd",
-    backgroundColor: "#ffffff",
-    color: "#344054",
-    borderRadius: "999px",
-    padding: "8px 12px",
-    fontSize: "13px",
-    fontWeight: 700,
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-  selectButton: {
-    border: "1px solid #175cd3",
-    backgroundColor: "#ffffff",
-    color: "#175cd3",
-    borderRadius: "999px",
-    padding: "8px 12px",
-    fontSize: "13px",
-    fontWeight: 700,
-    cursor: "pointer",
-    whiteSpace: "nowrap",
-  },
-  selectButtonActive: {
-    backgroundColor: "#175cd3",
-    color: "#ffffff",
-  },
-  recommendedBadge: {
+  tag: {
     display: "inline-flex",
     alignItems: "center",
     padding: "6px 10px",
     borderRadius: "999px",
-    backgroundColor: "#eef2ff",
-    color: "#4338ca",
-    fontSize: "12px",
-    fontWeight: 700,
-    whiteSpace: "nowrap",
-  },
-  rankBadge: {
-    display: "inline-flex",
-    alignItems: "center",
-    justifyContent: "center",
-    minWidth: "34px",
-    height: "34px",
-    padding: "0 10px",
-    borderRadius: "999px",
-    backgroundColor: "#dbeafe",
-    color: "#1d4ed8",
+    backgroundColor: "#eef4ff",
+    border: "1px solid #c7d7fe",
+    color: "#3538cd",
     fontSize: "13px",
+    fontWeight: 600,
+  },
+  emptyText: {
+    margin: 0,
+    fontSize: "14px",
+    color: "#667085",
+  },
+  warningBox: {
+    marginTop: "14px",
+    padding: "14px 16px",
+    borderRadius: "12px",
+    backgroundColor: "#fffaeb",
+    border: "1px solid #fedf89",
+  },
+  warningTitle: {
+    margin: 0,
+    marginBottom: "6px",
+    fontSize: "14px",
     fontWeight: 700,
-    flexShrink: 0,
+    color: "#b54708",
   },
-  tagsRow: {
+  warningText: {
+    margin: 0,
+    fontSize: "14px",
+    lineHeight: 1.6,
+    color: "#93370d",
+  },
+  solutionList: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))",
+    gap: "16px",
+  },
+  solutionCard: {
+    textAlign: "left",
+    padding: "18px",
+    borderRadius: "14px",
+    border: "1px solid #eaecf0",
+    backgroundColor: "#ffffff",
+    cursor: "pointer",
+    boxShadow: "0 4px 16px rgba(16, 24, 40, 0.05)",
     display: "flex",
-    flexWrap: "wrap",
-    gap: "8px",
+    flexDirection: "column",
+    gap: "14px",
   },
-  keyTag: {
+  solutionCardTop: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "12px",
+    flexWrap: "wrap",
+  },
+  solutionTitle: {
+    margin: 0,
+    fontSize: "18px",
+    fontWeight: 700,
+    color: "#101828",
+  },
+  solutionStatus: {
     display: "inline-flex",
     alignItems: "center",
-    padding: "7px 10px",
+    padding: "6px 10px",
     borderRadius: "999px",
     backgroundColor: "#f2f4f7",
     color: "#344054",
-    fontSize: "12px",
-    fontWeight: 600,
-    lineHeight: 1.3,
-  },
-  moreTag: {
-    display: "inline-flex",
-    alignItems: "center",
-    padding: "7px 10px",
-    borderRadius: "999px",
-    backgroundColor: "#eef2ff",
-    color: "#4338ca",
-    fontSize: "12px",
-    fontWeight: 700,
-    lineHeight: 1.3,
-  },
-  algorithmExpandedBlock: {
-    paddingTop: "14px",
-    borderTop: "1px solid #eaecf0",
-    display: "flex",
-    flexDirection: "column",
-    gap: "16px",
-  },
-  expandedSection: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "10px",
-  },
-  expandedSectionTitle: {
-    margin: 0,
     fontSize: "13px",
     fontWeight: 700,
-    color: "#101828",
-    textTransform: "uppercase",
-    letterSpacing: "0.03em",
   },
-  keyPointsListCompact: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "8px",
-  },
-  keyPointCompactItem: {
-    display: "flex",
-    alignItems: "flex-start",
-    gap: "8px",
-  },
-  keyPointBullet: {
-    color: "#175cd3",
-    fontSize: "16px",
-    lineHeight: 1.4,
-    fontWeight: 700,
-  },
-  keyPointText: {
-    fontSize: "14px",
-    lineHeight: 1.6,
-    color: "#475467",
-  },
-  parametersGrid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))",
-    gap: "10px",
-  },
-  parameterItem: {
-    padding: "12px",
-    borderRadius: "12px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #eaecf0",
+  solutionMeta: {
     display: "flex",
     flexDirection: "column",
     gap: "6px",
-  },
-  parameterKey: {
-    fontSize: "12px",
-    fontWeight: 700,
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
-    color: "#667085",
-  },
-  parameterValue: {
-    fontSize: "14px",
-    color: "#101828",
-    wordBreak: "break-word",
-  },
-  emptyResults: {
-    backgroundColor: "#ffffff",
-    border: "1px dashed #d0d5dd",
-    borderRadius: "16px",
-    padding: "24px",
-  },
-  emptyResultsTitle: {
-    margin: 0,
-    marginBottom: "8px",
-    fontSize: "16px",
-    fontWeight: 700,
-    color: "#101828",
-  },
-  emptyResultsText: {
-    margin: 0,
-    fontSize: "14px",
-    lineHeight: 1.6,
-    color: "#667085",
-  },
-  executionPanel: {
-    display: "flex",
-    flexDirection: "column",
-    gap: "18px",
-  },
-  executionSummaryCard: {
-    padding: "18px",
-    borderRadius: "14px",
-    backgroundColor: "#f8fafc",
-    border: "1px solid #eaecf0",
-  },
-  executionSummaryLabel: {
-    margin: 0,
-    marginBottom: "8px",
-    fontSize: "13px",
-    fontWeight: 700,
-    color: "#667085",
-    textTransform: "uppercase",
-    letterSpacing: "0.04em",
-  },
-  executionSummaryValue: {
-    margin: 0,
-    marginBottom: "8px",
-    fontSize: "20px",
-    fontWeight: 700,
-    color: "#101828",
-  },
-  executionSummaryHint: {
-    margin: 0,
-    fontSize: "14px",
-    lineHeight: 1.6,
     color: "#475467",
-  },
-  executionResponseBox: {
-    padding: "16px",
-    borderRadius: "14px",
-    backgroundColor: "#0f172a",
-    color: "#e2e8f0",
-    overflowX: "auto",
-  },
-  executionResponseTitle: {
-    margin: 0,
-    marginBottom: "12px",
     fontSize: "14px",
-    fontWeight: 700,
-    color: "#cbd5e1",
+    lineHeight: 1.5,
   },
-  responsePre: {
-    margin: 0,
+  solutionFooter: {
     fontSize: "13px",
-    lineHeight: 1.6,
-    whiteSpace: "pre-wrap",
-    wordBreak: "break-word",
-    fontFamily:
-      "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, Liberation Mono, monospace",
+    color: "#667085",
   },
 };

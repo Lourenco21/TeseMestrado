@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import pt.lourenco.optimization.jmetal.partitioning.PreviousPartitionAssignmentsContext;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 
 import java.util.List;
@@ -34,4 +35,8 @@ public class SolutionContext {
     private List<ClassRoomAssignment> assignments;
 
     private List<Object> selectedConstraints;
+
+    private PreviousPartitionAssignmentsContext previousPartitionAssignmentsContext;
+
+    private PreparedEvaluationData preparedEvaluationData;
 }

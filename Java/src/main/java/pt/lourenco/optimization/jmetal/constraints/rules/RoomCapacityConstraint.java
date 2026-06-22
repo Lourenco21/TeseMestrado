@@ -1,16 +1,15 @@
 package pt.lourenco.optimization.jmetal.constraints.rules;
 
 import org.springframework.stereotype.Component;
-import pt.lourenco.optimization.utils.NumericParsingUtils;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
 import pt.lourenco.optimization.jmetal.constraints.model.ConstraintResult;
+import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
+import pt.lourenco.optimization.jmetal.constraints.model.PreparedEvaluationData;
+import pt.lourenco.optimization.jmetal.constraints.model.PreparedRoomData;
 import pt.lourenco.optimization.jmetal.constraints.model.SolutionContext;
-import pt.lourenco.optimization.jmetal.problems.mapping.RoomsMappingUtils;
-import pt.lourenco.optimization.jmetal.problems.mapping.ScheduleMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 
 import java.util.List;
-import java.util.Map;
 
 @Component
 public class RoomCapacityConstraint implements ConstraintRule {
@@ -35,23 +34,37 @@ public class RoomCapacityConstraint implements ConstraintRule {
     }
 
     private double calculateRawViolation(SolutionContext context) {
-        List<ClassRoomAssignment> assignments = context.getAssignments();
+        PreparedEvaluationData prepared = context.getPreparedEvaluationData();
 
-        if (assignments == null || assignments.isEmpty()) {
+        if (prepared == null || context.getAssignments() == null || context.getAssignments().isEmpty()) {
             return 0.0;
         }
+
+        List<ClassRoomAssignment> assignments = context.getAssignments();
+        List<PreparedClassData> preparedClasses = prepared.getClasses();
+        List<PreparedRoomData> preparedRooms = prepared.getRooms();
 
         double totalViolation = 0.0;
 
         for (ClassRoomAssignment assignment : assignments) {
-            Map<String, Object> classData = assignment.getClassData();
-            Map<String, Object> roomData = assignment.getRoomData();
+            int classIndex = assignment.getClassIndex();
+            int roomIndex = assignment.getRoomIndex();
 
-            String studentsRaw = ScheduleMappingUtils.getStudents(classData, context.getMappingData());
-            String capacityRaw = RoomsMappingUtils.getCapacity(roomData, context.getRoomsMappingData());
+            if (classIndex < 0 || classIndex >= preparedClasses.size()) {
+                totalViolation += 1.0;
+                continue;
+            }
 
-            Integer students = NumericParsingUtils.parseIntegerSafely(studentsRaw);
-            Integer capacity = NumericParsingUtils.parseIntegerSafely(capacityRaw);
+            if (roomIndex < 0 || roomIndex >= preparedRooms.size()) {
+                totalViolation += 1.0;
+                continue;
+            }
+
+            PreparedClassData preparedClass = preparedClasses.get(classIndex);
+            PreparedRoomData preparedRoom = preparedRooms.get(roomIndex);
+
+            Integer students = preparedClass.getStudents();
+            Integer capacity = preparedRoom.getCapacity();
 
             if (students == null || capacity == null) {
                 totalViolation += 1.0;

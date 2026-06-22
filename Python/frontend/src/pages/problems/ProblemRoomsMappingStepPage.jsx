@@ -506,8 +506,7 @@ export default function ProblemRoomsMappingStepPage() {
       };
 
       await saveDraft({
-        current_step: 9,
-        last_completed_step: 8,
+        current_step: 8,
       });
 
       await saveProblemRoomsMapping(id, payload);

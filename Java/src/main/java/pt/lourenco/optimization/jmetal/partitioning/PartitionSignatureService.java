@@ -2,6 +2,7 @@ package pt.lourenco.optimization.jmetal.partitioning;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
+import pt.lourenco.optimization.jmetal.problems.mapping.ScheduleMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 
 import java.util.ArrayList;
@@ -26,29 +27,21 @@ public class PartitionSignatureService {
 
     public String buildSignature(PartitionedProblemInputData partition) {
         ProblemInputData inputData = partition.getInputData();
-        Map<String, Object> mapping = inputData.getMappingData();
 
-        String dayCol = schedulePartitionService.getMappedColumn(mapping, "dia");
-        String startCol = schedulePartitionService.getMappedColumn(mapping, "hora_inicio");
-        String endCol = schedulePartitionService.getMappedColumn(mapping, "hora_fim");
-        String ucCol = schedulePartitionService.getMappedColumn(mapping, "unidade_curricular");
-        String roomFeaturesCol = schedulePartitionService.getMappedColumn(mapping, "caracteristicas_pedidas_para_sala");
-        String studentsCol = schedulePartitionService.getMappedColumn(mapping, "numero_estudantes");
-        String turmaCol = schedulePartitionService.getMappedColumn(mapping, "turma");
-        String typeCol = schedulePartitionService.getMappedColumn(mapping, "tipo_aula");
 
         List<Map<String, Object>> normalized = new ArrayList<>();
 
         for (Map<String, Object> classData : partition.getClassesInPartition()) {
             Map<String, Object> item = new LinkedHashMap<>();
-            item.put("dia", normalize(schedulePartitionService.getValue(classData, dayCol)));
-            item.put("hora_inicio", normalize(schedulePartitionService.getValue(classData, startCol)));
-            item.put("hora_fim", normalize(schedulePartitionService.getValue(classData, endCol)));
-            item.put("unidade_curricular", normalize(schedulePartitionService.getValue(classData, ucCol)));
-            item.put("caracteristicas_pedidas_para_sala", normalize(schedulePartitionService.getValue(classData, roomFeaturesCol)));
-            item.put("numero_estudantes", normalize(schedulePartitionService.getValue(classData, studentsCol)));
-            item.put("turma", normalize(schedulePartitionService.getValue(classData, turmaCol)));
-            item.put("tipo_aula", normalize(schedulePartitionService.getValue(classData, typeCol)));
+            Map<String, Object> mapping = inputData.getMappingData();
+            item.put("dia", normalize(ScheduleMappingUtils.getDay(classData, mapping)));
+            item.put("hora_inicio", normalize(ScheduleMappingUtils.getStartTime(classData, mapping)));
+            item.put("hora_fim", normalize(ScheduleMappingUtils.getEndTime(classData, mapping)));
+            item.put("unidade_curricular", normalize(ScheduleMappingUtils.getCourse(classData, mapping)));
+            item.put("caracteristicas_pedidas_para_sala", normalize(ScheduleMappingUtils.getRequestedRoomCharacteristics(classData, mapping)));
+            item.put("numero_estudantes", normalize(ScheduleMappingUtils.getStudents(classData, mapping)));
+            item.put("turma", normalize(ScheduleMappingUtils.getClassGroup(classData, mapping)));
+            item.put("tipo_aula", normalize(ScheduleMappingUtils.getClassType(classData, mapping)));
             normalized.add(item);
         }
 

@@ -41,8 +41,8 @@ export default function ProblemRoomsUploadStepPage() {
         if (draft?.uploaded_rooms_file) {
           setExistingRoomsFile({
             id: draft.uploaded_rooms_file,
-            name: draft.uploaded_rooms_file_name || "",
-            file: draft.uploaded_rooms_file_url || "",
+            name: draft.uploaded_rooms_file_name || "Ficheiro sem nome",
+            file: draft.uploaded_rooms_file_file || "",
           });
         } else {
           setExistingRoomsFile(null);
@@ -89,18 +89,21 @@ export default function ProblemRoomsUploadStepPage() {
       setLocalError("");
 
       const uploadedRoomsFile = await uploadRoomsFile({
-        name: fileName.trim() || selectedFile.name,
+        name: selectedFile.name,
         file: selectedFile,
       });
 
       await saveDraft({
         uploaded_rooms_file: uploadedRoomsFile.id,
         rooms_mapping_data: {},
-        current_step: 8,
-        last_completed_step: 7,
+        current_step: 7,
       });
 
-      setExistingRoomsFile(uploadedRoomsFile);
+      setExistingRoomsFile({
+        id: uploadedRoomsFile.id,
+        name: uploadedRoomsFile.name || "Ficheiro sem nome",
+        file: uploadedRoomsFile.file || "",
+      });
       setIsReplacingFile(false);
       setSelectedFile(null);
 
@@ -161,12 +164,12 @@ export default function ProblemRoomsUploadStepPage() {
         <div style={styles.formCard}>
           <div style={styles.field}>
             <label htmlFor="fileName" style={styles.label}>
-              Nome do ficheiro / conjunto de dados
+              Nome do ficheiro
             </label>
             <input
               id="fileName"
               type="text"
-              value={fileName}
+              value={existingRoomsFile && !isReplacingFile ? existingRoomsFile.name || "Ficheiro sem nome" : fileName}
               onChange={(e) => setFileName(e.target.value)}
               placeholder="Ex.: Características das salas 2025/2026"
               style={styles.input}

@@ -26,7 +26,12 @@ export default function ProblemUploadStepPage() {
         }
 
         if (draft?.uploaded_schedule) {
-          setExistingSchedule(draft.uploaded_schedule);
+          setExistingSchedule({
+            id: draft.uploaded_schedule,
+            name: draft.uploaded_schedule_name || "Ficheiro sem nome",
+            file: draft.uploaded_schedule_file || null,
+          });
+          console.log(draft)
         } else {
           setExistingSchedule(null);
         }
@@ -67,7 +72,7 @@ export default function ProblemUploadStepPage() {
       setLocalError("");
 
       const uploadedSchedule = await uploadSchedule({
-        name: scheduleName.trim() || selectedFile.name,
+        name: selectedFile.name,
         file: selectedFile,
       });
 
@@ -130,12 +135,12 @@ export default function ProblemUploadStepPage() {
         <div style={styles.formCard}>
           <div style={styles.field}>
             <label htmlFor="scheduleName" style={styles.label}>
-              Nome do ficheiro / conjunto de dados
+              Nome do ficheiro
             </label>
             <input
               id="scheduleName"
               type="text"
-              value={scheduleName}
+              value={existingSchedule && !isReplacingFile ? existingSchedule.name || "Ficheiro sem nome" : scheduleName}
               onChange={(e) => setScheduleName(e.target.value)}
               placeholder="Ex.: Horário LEI 2025/2026"
               style={styles.input}
@@ -149,7 +154,7 @@ export default function ProblemUploadStepPage() {
                 <div>
                   <p style={styles.existingFileTitle}>Ficheiro já carregado</p>
                   <p style={styles.existingFileName}>
-                    {existingSchedule.name || "Ficheiro sem nome"}
+                    {existingSchedule?.name || "Ficheiro sem nome"}
                   </p>
                 </div>
 

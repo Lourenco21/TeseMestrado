@@ -1,6 +1,7 @@
 package pt.lourenco.optimization.jmetal.partitioning;
 
 import org.springframework.stereotype.Service;
+import pt.lourenco.optimization.jmetal.problems.mapping.ScheduleMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 
 import java.time.*;
@@ -109,20 +110,17 @@ public class SchedulePartitionService {
     }
 
     public String buildWeekPartitionKey(Map<String, Object> classData, ProblemInputData inputData) {
-        Map<String, Object> mapping = inputData.getMappingData();
+        String weekRaw = ScheduleMappingUtils.getWeek(classData, inputData.getMappingData());
+        String dayRaw = ScheduleMappingUtils.getDay(classData, inputData.getMappingData());
 
-        String weekColumn = getMappedColumn(mapping, "semana");
-        String dayColumn = getMappedColumn(mapping, "dia");
-
-        Object weekValue = getValue(classData, weekColumn);
-        if (weekValue != null) {
-            String normalized = weekValue.toString().trim();
+        if (weekRaw != null) {
+            String normalized = weekRaw.trim();
             if (!normalized.isBlank() && !looksLikeWeekdayValue(normalized)) {
                 return normalized;
             }
         }
 
-        LocalDate parsedDay = parseDateValue(getValue(classData, dayColumn));
+        LocalDate parsedDay = parseDateValue(dayRaw);
         if (parsedDay == null) {
             return "unknown_week";
         }
@@ -135,29 +133,27 @@ public class SchedulePartitionService {
     }
 
     public String buildDayPartitionKey(Map<String, Object> classData, ProblemInputData inputData) {
-        Map<String, Object> mapping = inputData.getMappingData();
-
-        String dayColumn = getMappedColumn(mapping, "dia");
-        LocalDate parsedDay = parseDateValue(getValue(classData, dayColumn));
+        String dayRaw = ScheduleMappingUtils.getDay(classData, inputData.getMappingData());
+        LocalDate parsedDay = parseDateValue(dayRaw);
 
         return parsedDay == null ? "unknown_day" : parsedDay.toString();
     }
 
     public String buildDayTimePartitionKey(Map<String, Object> classData, ProblemInputData inputData) {
-        Map<String, Object> mapping = inputData.getMappingData();
+        String dayRaw = ScheduleMappingUtils.getDay(classData, inputData.getMappingData());
+        String startRaw = ScheduleMappingUtils.getStartTime(classData, inputData.getMappingData());
+        LocalDate parsedDay = parseDateValue(dayRaw);
+        LocalTime parsedStartTime = coerceToLocalTime(startRaw);
 
-        String dayColumn = getMappedColumn(mapping, "dia");
-        String startColumn = getMappedColumn(mapping, "hora_inicio");
-
-        LocalDate parsedDay = parseDateValue(getValue(classData, dayColumn));
-        LocalTime parsedStartTime = coerceToLocalTime(getValue(classData, startColumn));
-
+        String key;
         if (parsedDay == null || parsedStartTime == null) {
-            return "unknown_start_time";
+            key = "unknown_start_time";
+        } else {
+            int minute = parsedStartTime.getMinute() >= 30 ? 30 : 0;
+            key = parsedDay + " " + String.format("%02d:%02d", parsedStartTime.getHour(), minute);
         }
 
-        int minute = parsedStartTime.getMinute() >= 30 ? 30 : 0;
-        return parsedDay + " " + String.format("%02d:%02d", parsedStartTime.getHour(), minute);
+        return key;
     }
 
     private LocalDate resolveSemesterStart(ProblemInputData inputData) {
@@ -166,47 +162,14 @@ public class SchedulePartitionService {
             return LocalDate.now();
         }
 
-        Map<String, Object> mapping = inputData.getMappingData();
-        String dayColumn = getMappedColumn(mapping, "dia");
-
         return rawClasses.stream()
                 .filter(Map.class::isInstance)
                 .map(item -> (Map<String, Object>) item)
-                .map(row -> parseDateValue(getValue(row, dayColumn)))
+                .map(row -> ScheduleMappingUtils.getDay(row, inputData.getMappingData()))
+                .map(this::parseDateValue)
                 .filter(Objects::nonNull)
                 .min(LocalDate::compareTo)
                 .orElse(LocalDate.now());
-    }
-
-    @SuppressWarnings("unchecked")
-    public String getMappedColumn(Map<String, Object> mappingWrapper, String logicalKey) {
-        if (mappingWrapper == null) {
-            return null;
-        }
-
-        Object directValue = mappingWrapper.get(logicalKey);
-        if (directValue != null) {
-            String normalized = directValue.toString().trim();
-            return normalized.isBlank() ? null : normalized;
-        }
-
-        Object nestedMappingObject = mappingWrapper.get("mapping");
-        if (nestedMappingObject instanceof Map<?, ?> nestedMapping) {
-            Object nestedValue = nestedMapping.get(logicalKey);
-            if (nestedValue != null) {
-                String normalized = nestedValue.toString().trim();
-                return normalized.isBlank() ? null : normalized;
-            }
-        }
-
-        return null;
-    }
-
-    public Object getValue(Map<String, Object> row, String columnName) {
-        if (row == null || columnName == null) {
-            return null;
-        }
-        return row.get(columnName);
     }
 
     private boolean looksLikeWeekdayValue(String value) {

@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from django.core.validators import FileExtensionValidator
 from django.db import models
 from django.utils.timezone import now
@@ -5,14 +7,16 @@ from django.utils.timezone import now
 
 # Create your models here.
 class Schedule(models.Model):
-    name = models.CharField(max_length=200)
+    name = models.CharField(max_length=255, blank=True)
     file = models.FileField(upload_to='optimization_problems/schedules/',
                             validators=[FileExtensionValidator(allowed_extensions=['csv', 'xlsx', 'xls'])])
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    def __str__(self):
-        return self.name
+    def save(self, *args, **kwargs):
+        if (not self.name) and self.file and self.file.name:
+            self.name = Path(self.file.name).name
+        super().save(*args, **kwargs)
 
 
 class ProblemDraft(models.Model):
@@ -74,3 +78,40 @@ class RoomDataFile(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class Solution(models.Model):
+    STATUS_CHOICES = [
+        ("created", "Created"),
+        ("running", "Running"),
+        ("completed", "Completed"),
+        ("failed", "Failed"),
+    ]
+
+    problem = models.ForeignKey(
+        "optimization_problems.ProblemDraft",
+        on_delete=models.CASCADE,
+        related_name="solutions",
+    )
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default="created")
+    algorithm_used = models.CharField(max_length=100, blank=True, default="")
+    used_parameters = models.JSONField(default=dict, blank=True)
+    partition_type = models.CharField(max_length=50, blank=True, default="")
+    reuse_solution = models.BooleanField(default=False)
+
+    constraint_values = models.JSONField(default=dict, blank=True)
+    penalty_summary = models.JSONField(default=dict, blank=True)
+    execution_result = models.JSONField(default=dict, blank=True)
+    partition_count = models.IntegerField(default=0)
+
+    schedule_file = models.FileField(
+        upload_to="optimization_problems/solutions/",
+        blank=True,
+        null=True
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Solution #{self.pk} - Problem #{self.problem_id}"
