@@ -2,6 +2,7 @@ package pt.lourenco.optimization.jmetal.algorithms;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.uma.jmetal.algorithm.multiobjective.nsgaii.NSGAII;
 import org.uma.jmetal.algorithm.multiobjective.nsgaii.NSGAIIBuilder;
@@ -11,6 +12,7 @@ import org.uma.jmetal.operator.selection.impl.BinaryTournamentSelection;
 import org.uma.jmetal.solution.integersolution.IntegerSolution;
 import org.uma.jmetal.util.comparator.RankingAndCrowdingDistanceComparator;
 import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationService;
+import pt.lourenco.optimization.jmetal.constraints.service.IncrementalConstraintEvaluationService;
 import pt.lourenco.optimization.jmetal.constraints.service.SolutionContextBuilderService;
 import pt.lourenco.optimization.jmetal.metrics.PartitionMetrics;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
@@ -21,7 +23,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 @Component
@@ -31,13 +32,16 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
 
     private final SolutionContextBuilderService solutionContextBuilderService;
     private final ConstraintEvaluationService constraintEvaluationService;
+    private final IncrementalConstraintEvaluationService incrementalConstraintEvaluationService;
 
     public Nsgaii(
             SolutionContextBuilderService solutionContextBuilderService,
-            ConstraintEvaluationService constraintEvaluationService
+            ConstraintEvaluationService constraintEvaluationService,
+            IncrementalConstraintEvaluationService incrementalConstraintEvaluationService
     ) {
         this.solutionContextBuilderService = solutionContextBuilderService;
         this.constraintEvaluationService = constraintEvaluationService;
+        this.incrementalConstraintEvaluationService = incrementalConstraintEvaluationService;
     }
 
     public Map<String, Object> run(ProblemInputData inputData, Map<String, Object> inputParameters) {
@@ -46,7 +50,8 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
         ScheduleOptimizationProblem problem = new ScheduleOptimizationProblem(
                 inputData,
                 solutionContextBuilderService,
-                constraintEvaluationService
+                constraintEvaluationService,
+                incrementalConstraintEvaluationService
         );
 
         int numberOfVariables = problem.numberOfVariables();
@@ -89,7 +94,7 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
                                 new RankingAndCrowdingDistanceComparator<>()
                         )
                 )
-                .setMaxEvaluations(10000/*maxEvaluations*/)
+                .setMaxEvaluations(maxEvaluations)
                 .build();
 
         algorithm.run();
@@ -423,9 +428,7 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
         metrics.put("totalBuildAssignmentsTimeMs", partitionMetrics.getTotalBuildAssignmentsTimeMs());
         metrics.put("totalConstraintEvaluationTimeMs", partitionMetrics.getTotalConstraintEvaluationTimeMs());
 
-        long otherTimeMs = algorithmDurationMs
-                - partitionMetrics.getTotalEvaluateTimeMs();
-
+        long otherTimeMs = algorithmDurationMs - partitionMetrics.getTotalEvaluateTimeMs();
         metrics.put("otherAlgorithmTimeMs", Math.max(otherTimeMs, 0L));
 
         return metrics;

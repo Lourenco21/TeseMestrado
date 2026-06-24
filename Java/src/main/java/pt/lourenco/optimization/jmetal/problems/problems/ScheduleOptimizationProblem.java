@@ -3,10 +3,16 @@ package pt.lourenco.optimization.jmetal.problems.problems;
 import lombok.extern.slf4j.Slf4j;
 import org.uma.jmetal.problem.integerproblem.impl.AbstractIntegerProblem;
 import org.uma.jmetal.solution.integersolution.IntegerSolution;
+import org.uma.jmetal.solution.integersolution.impl.DefaultIntegerSolution;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
 import pt.lourenco.optimization.jmetal.constraints.model.ConstraintEvaluationResult;
+import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
+import pt.lourenco.optimization.jmetal.constraints.model.PreparedRoomData;
 import pt.lourenco.optimization.jmetal.constraints.model.SolutionContext;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.CandidateAssignment;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.PartialSolutionContext;
 import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationService;
+import pt.lourenco.optimization.jmetal.constraints.service.IncrementalConstraintEvaluationService;
 import pt.lourenco.optimization.jmetal.constraints.service.SolutionContextBuilderService;
 import pt.lourenco.optimization.jmetal.metrics.PartitionMetrics;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
@@ -15,15 +21,14 @@ import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
 public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
-    private static final AtomicInteger EVALUATION_COUNTER = new AtomicInteger(0);
-
     private final ProblemInputData inputData;
     private final ConstraintEvaluationService constraintEvaluationService;
+    private final IncrementalConstraintEvaluationService incrementalConstraintEvaluationService;
 
     private final List<Map<String, Object>> classes;
     private final List<Map<String, Object>> rooms;
@@ -39,10 +44,12 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
     public ScheduleOptimizationProblem(
             ProblemInputData inputData,
             SolutionContextBuilderService solutionContextBuilderService,
-            ConstraintEvaluationService constraintEvaluationService
+            ConstraintEvaluationService constraintEvaluationService,
+            IncrementalConstraintEvaluationService incrementalConstraintEvaluationService
     ) {
         this.inputData = inputData;
         this.constraintEvaluationService = constraintEvaluationService;
+        this.incrementalConstraintEvaluationService = incrementalConstraintEvaluationService;
 
         this.name("ScheduleOptimizationProblem");
 
@@ -81,6 +88,37 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
     }
 
     @Override
+    public IntegerSolution createSolution() {
+        IntegerSolution solution = new DefaultIntegerSolution(
+                variableBounds(),
+                numberOfObjectives(),
+                numberOfConstraints()
+        );
+
+        PartialSolutionContext partialContext =
+                new PartialSolutionContext(baseContext.getPreparedEvaluationData());
+
+        List<Integer> orderedClassIndexes = orderClassesByDifficulty();
+
+        for (Integer classIndex : orderedClassIndexes) {
+            int selectedRoomIndex = chooseBestRoom(classIndex, partialContext);
+            solution.variables().set(classIndex, selectedRoomIndex);
+
+            ClassRoomAssignment assignment = new ClassRoomAssignment(
+                    classIndex,
+                    classes.get(classIndex),
+                    selectedRoomIndex,
+                    rooms.get(selectedRoomIndex)
+            );
+
+            partialContext.addAssignment(assignment);
+            indexAssignment(partialContext, classIndex, selectedRoomIndex);
+        }
+
+        return solution;
+    }
+
+    @Override
     public IntegerSolution evaluate(IntegerSolution solution) {
         long evaluateStartNs = System.nanoTime();
         partitionMetrics.incrementEvaluationCount();
@@ -89,11 +127,11 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         List<ClassRoomAssignment> assignments = buildAssignments(solution);
         partitionMetrics.addBuildAssignmentsTime(System.nanoTime() - buildAssignmentsStartNs);
 
-        baseContext.setAssignments(assignments);
+        SolutionContext evaluationContext = copyBaseContextWithAssignments(assignments);
 
         long constraintEvalStartNs = System.nanoTime();
         ConstraintEvaluationResult evaluationResult =
-                constraintEvaluationService.evaluate(baseContext, selectedConstraints);
+                constraintEvaluationService.evaluate(evaluationContext, selectedConstraints);
         partitionMetrics.addConstraintEvaluationTime(System.nanoTime() - constraintEvalStartNs);
 
         double softPenalty = evaluationResult.getSoftScore() == null
@@ -107,6 +145,128 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         partitionMetrics.addEvaluateTime(System.nanoTime() - evaluateStartNs);
 
         return solution;
+    }
+
+    private int chooseBestRoom(int classIndex, PartialSolutionContext partialContext) {
+        double bestHardScore = Double.POSITIVE_INFINITY;
+        double bestSoftScore = Double.POSITIVE_INFINITY;
+        List<Integer> bestRoomIndexes = new ArrayList<>();
+
+        for (int roomIndex = 0; roomIndex < rooms.size(); roomIndex++) {
+            CandidateAssignment candidate = new CandidateAssignment(classIndex, roomIndex);
+
+            IncrementalConstraintEvaluationService.CandidateScore score =
+                    incrementalConstraintEvaluationService.evaluateCandidate(
+                            partialContext,
+                            candidate,
+                            selectedConstraints
+                    );
+
+            boolean isBetter =
+                    score.hardScore() < bestHardScore
+                            || (Double.compare(score.hardScore(), bestHardScore) == 0
+                            && score.softScore() < bestSoftScore);
+
+            boolean isTie =
+                    Double.compare(score.hardScore(), bestHardScore) == 0
+                            && Double.compare(score.softScore(), bestSoftScore) == 0;
+
+            if (isBetter) {
+                bestHardScore = score.hardScore();
+                bestSoftScore = score.softScore();
+                bestRoomIndexes.clear();
+                bestRoomIndexes.add(roomIndex);
+            } else if (isTie) {
+                bestRoomIndexes.add(roomIndex);
+            }
+        }
+
+        if (bestRoomIndexes.isEmpty()) {
+            return ThreadLocalRandom.current().nextInt(rooms.size());
+        }
+
+        return bestRoomIndexes.get(ThreadLocalRandom.current().nextInt(bestRoomIndexes.size()));
+    }
+
+    private void indexAssignment(
+            PartialSolutionContext partialContext,
+            int classIndex,
+            int roomIndex
+    ) {
+        PreparedClassData preparedClass = baseContext.getPreparedEvaluationData().getClasses().get(classIndex);
+        PreparedRoomData preparedRoom = baseContext.getPreparedEvaluationData().getRooms().get(roomIndex);
+
+        if (preparedClass.getStartDateTime() == null
+                || preparedClass.getEndDateTime() == null
+                || !preparedClass.getEndDateTime().isAfter(preparedClass.getStartDateTime())) {
+            return;
+        }
+
+        String roomIdentity = normalizeRoomIdentity(preparedRoom.getRoomIdentity());
+        if (roomIdentity.isBlank()) {
+            return;
+        }
+
+        partialContext.indexOccupation(
+                roomIdentity,
+                classIndex,
+                preparedClass.getStartDateTime(),
+                preparedClass.getEndDateTime()
+        );
+    }
+
+    private List<Integer> orderClassesByDifficulty() {
+        List<Integer> classIndexes = new ArrayList<>();
+        for (int i = 0; i < numberOfVariables; i++) {
+            classIndexes.add(i);
+        }
+
+        classIndexes.sort((a, b) -> {
+            PreparedClassData classA = baseContext.getPreparedEvaluationData().getClasses().get(a);
+            PreparedClassData classB = baseContext.getPreparedEvaluationData().getClasses().get(b);
+
+            int studentsA = classA.getStudents() == null ? 0 : classA.getStudents();
+            int studentsB = classB.getStudents() == null ? 0 : classB.getStudents();
+
+            int featureCountA = classA.getRequestedCharacteristics() == null ? 0 : classA.getRequestedCharacteristics().size();
+            int featureCountB = classB.getRequestedCharacteristics() == null ? 0 : classB.getRequestedCharacteristics().size();
+
+            int compareStudents = Integer.compare(studentsB, studentsA);
+            if (compareStudents != 0) {
+                return compareStudents;
+            }
+
+            return Integer.compare(featureCountB, featureCountA);
+        });
+
+        return classIndexes;
+    }
+
+    private SolutionContext copyBaseContextWithAssignments(List<ClassRoomAssignment> assignments) {
+        SolutionContext copy = new SolutionContext();
+
+        copy.setProblemId(baseContext.getProblemId());
+        copy.setProblemName(baseContext.getProblemName());
+        copy.setProblemType(baseContext.getProblemType());
+        copy.setProblemSubtype(baseContext.getProblemSubtype());
+
+        copy.setSelectedAlgorithm(baseContext.getSelectedAlgorithm());
+        copy.setResolutionScope(baseContext.getResolutionScope());
+        copy.setRepeatedInstanceStrategy(baseContext.getRepeatedInstanceStrategy());
+
+        copy.setScheduleData(baseContext.getScheduleData());
+        copy.setRoomsData(baseContext.getRoomsData());
+        copy.setMappingData(baseContext.getMappingData());
+        copy.setRoomsMappingData(baseContext.getRoomsMappingData());
+        copy.setConstraintsSummary(baseContext.getConstraintsSummary());
+        copy.setInstanceCharacteristics(baseContext.getInstanceCharacteristics());
+
+        copy.setAssignments(assignments);
+        copy.setSelectedConstraints(baseContext.getSelectedConstraints());
+        copy.setPreviousPartitionAssignmentsContext(baseContext.getPreviousPartitionAssignmentsContext());
+        copy.setPreparedEvaluationData(baseContext.getPreparedEvaluationData());
+
+        return copy;
     }
 
     private void fillHardConstraintViolations(
@@ -194,6 +354,10 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
     private List<Map<String, Object>> extractRooms(Map<String, Object> roomsData) {
         Object roomsObject = roomsData.get("rooms");
         return (List<Map<String, Object>>) roomsObject;
+    }
+
+    private String normalizeRoomIdentity(String roomIdentity) {
+        return roomIdentity == null ? "" : roomIdentity.trim().toLowerCase();
     }
 
     public PartitionMetrics getPartitionMetrics() {

@@ -8,6 +8,9 @@ import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedEvaluationData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedRoomData;
 import pt.lourenco.optimization.jmetal.constraints.model.SolutionContext;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.CandidateAssignment;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.IncrementalConstraintResult;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.PartialSolutionContext;
 import pt.lourenco.optimization.jmetal.partitioning.PreviousPartitionAssignmentsContext;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 
@@ -17,7 +20,7 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Component
-public class RoomExclusivityConstraint implements ConstraintRule {
+public class RoomExclusivityConstraint implements ConstraintRule, IncrementalConstraintRule {
 
     private static final String CONSTRAINT_ID = "room_exclusivity";
 
@@ -34,31 +37,31 @@ public class RoomExclusivityConstraint implements ConstraintRule {
     public ConstraintResult evaluate(SolutionContext context, UserConstraintSelection selection) {
         RoomConflictStats stats = calculateStats(context);
 
-        if (TRACE_SUMMARY) {
-            log.info(
-                    "[ROOM_EXCLUSIVITY] currentOccupations={} previousAssignments={} internalPairs={} previousHits={} violatingCurrentClasses={} topRooms={}",
-                    stats.currentOccupationCount,
-                    stats.previousAssignmentCount,
-                    stats.internalConflictPairs,
-                    stats.previousConflictHits,
-                    stats.violatingCurrentClassIndexes.size(),
-                    stats.topRoomSummary()
-            );
-        }
-
-        if (TRACE_DETAILS && !stats.detailedConflicts.isEmpty()) {
-            int limit = Math.min(MAX_DETAILED_CONFLICTS, stats.detailedConflicts.size());
-            for (int i = 0; i < limit; i++) {
-                log.warn("[ROOM_EXCLUSIVITY][DETAIL {}] {}", i + 1, stats.detailedConflicts.get(i));
-            }
-
-            if (stats.detailedConflicts.size() > limit) {
-                log.warn(
-                        "[ROOM_EXCLUSIVITY] {} additional conflicts omitted from detailed log",
-                        stats.detailedConflicts.size() - limit
-                );
-            }
-        }
+//        if (TRACE_SUMMARY) {
+//            log.info(
+//                    "[ROOM_EXCLUSIVITY] currentOccupations={} previousAssignments={} internalPairs={} previousHits={} violatingCurrentClasses={} topRooms={}",
+//                    stats.currentOccupationCount,
+//                    stats.previousAssignmentCount,
+//                    stats.internalConflictPairs,
+//                    stats.previousConflictHits,
+//                    stats.violatingCurrentClassIndexes.size(),
+//                    stats.topRoomSummary()
+//            );
+//        }
+//
+//        if (TRACE_DETAILS && !stats.detailedConflicts.isEmpty()) {
+//            int limit = Math.min(MAX_DETAILED_CONFLICTS, stats.detailedConflicts.size());
+//            for (int i = 0; i < limit; i++) {
+//                log.warn("[ROOM_EXCLUSIVITY][DETAIL {}] {}", i + 1, stats.detailedConflicts.get(i));
+//            }
+//
+//            if (stats.detailedConflicts.size() > limit) {
+//                log.warn(
+//                        "[ROOM_EXCLUSIVITY] {} additional conflicts omitted from detailed log",
+//                        stats.detailedConflicts.size() - limit
+//                );
+//            }
+//        }
 
         double rawViolation = stats.violatingCurrentClassIndexes.size();
 
@@ -68,6 +71,58 @@ public class RoomExclusivityConstraint implements ConstraintRule {
                 rawViolation,
                 rawViolation
         );
+    }
+
+    @Override
+    public IncrementalConstraintResult evaluateIncrementally(
+            PartialSolutionContext context,
+            CandidateAssignment candidate,
+            UserConstraintSelection selection
+    ) {
+        PreparedEvaluationData prepared = context.getPreparedEvaluationData();
+        PreparedClassData preparedClass = prepared.getClasses().get(candidate.classIndex());
+        PreparedRoomData preparedRoom = prepared.getRooms().get(candidate.roomIndex());
+
+        if (preparedClass.getStartDateTime() == null
+                || preparedClass.getEndDateTime() == null
+                || !preparedClass.getEndDateTime().isAfter(preparedClass.getStartDateTime())) {
+            return new IncrementalConstraintResult(1.0);
+        }
+
+        String roomIdentity = normalizeRoomIdentity(preparedRoom.getRoomIdentity());
+        if (roomIdentity.isBlank()) {
+            return new IncrementalConstraintResult(1.0);
+        }
+
+        List<PartialSolutionContext.OccupiedRoomSlot> roomOccupations =
+                context.getOccupationsByRoom().getOrDefault(roomIdentity, List.of());
+
+        for (PartialSolutionContext.OccupiedRoomSlot occupied : roomOccupations) {
+            if (overlaps(
+                    preparedClass.getStartDateTime(),
+                    preparedClass.getEndDateTime(),
+                    occupied.startDateTime(),
+                    occupied.endDateTime()
+            )) {
+                return new IncrementalConstraintResult(1.0);
+            }
+        }
+
+        Map<String, List<PreviousPartitionAssignmentsContext.ResolvedAssignment>> previousByRoom =
+                prepared.getPreviousAssignmentsByRoom();
+
+        if (previousByRoom != null && !previousByRoom.isEmpty()) {
+            List<PreviousPartitionAssignmentsContext.ResolvedAssignment> previousAssignments =
+                    previousByRoom.getOrDefault(roomIdentity, List.of());
+
+            for (PreviousPartitionAssignmentsContext.ResolvedAssignment previous : previousAssignments) {
+                if (previous.overlaps(preparedClass.getStartDateTime(), preparedClass.getEndDateTime())) {
+                    return new IncrementalConstraintResult(1.0);
+                }
+            }
+        }
+
+        return IncrementalConstraintResult.zero();
     }
 
     private RoomConflictStats calculateStats(SolutionContext context) {

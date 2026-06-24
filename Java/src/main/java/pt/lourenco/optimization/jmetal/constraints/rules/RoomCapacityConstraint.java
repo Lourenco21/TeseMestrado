@@ -7,12 +7,15 @@ import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedEvaluationData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedRoomData;
 import pt.lourenco.optimization.jmetal.constraints.model.SolutionContext;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.CandidateAssignment;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.IncrementalConstraintResult;
+import pt.lourenco.optimization.jmetal.constraints.model.incremental.PartialSolutionContext;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 
 import java.util.List;
 
 @Component
-public class RoomCapacityConstraint implements ConstraintRule {
+public class RoomCapacityConstraint implements ConstraintRule, IncrementalConstraintRule {
 
     private static final String CONSTRAINT_ID = "room_capacity_sufficiency";
 
@@ -31,6 +34,24 @@ public class RoomCapacityConstraint implements ConstraintRule {
                 rawViolation,
                 rawViolation
         );
+    }
+
+    @Override
+    public IncrementalConstraintResult evaluateIncrementally(
+            PartialSolutionContext context,
+            CandidateAssignment candidate,
+            UserConstraintSelection selection
+    ) {
+        PreparedEvaluationData prepared = context.getPreparedEvaluationData();
+        PreparedClassData preparedClass = prepared.getClasses().get(candidate.classIndex());
+        PreparedRoomData preparedRoom = prepared.getRooms().get(candidate.roomIndex());
+
+        Integer students = preparedClass.getStudents();
+        Integer capacity = preparedRoom.getCapacity();
+
+        double rawViolation = (students == null || capacity == null || students > capacity) ? 1.0 : 0.0;
+
+        return new IncrementalConstraintResult(rawViolation);
     }
 
     private double calculateRawViolation(SolutionContext context) {
