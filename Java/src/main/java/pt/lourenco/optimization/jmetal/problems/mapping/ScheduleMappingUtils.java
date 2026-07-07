@@ -35,16 +35,20 @@ public final class ScheduleMappingUtils {
         return getClassValue(classRow, mappingData, "unidade_curricular");
     }
 
+    public static String getDegree(Map<String, Object> classRow, Map<String, Object> mappingData) {
+        return getClassValue(classRow, mappingData, "curso");
+    }
+
     public static String getClassType(Map<String, Object> classRow, Map<String, Object> mappingData) {
         return getClassValue(classRow, mappingData, "tipo_aula");
     }
 
-    public static String getTeacher(Map<String, Object> classRow, Map<String, Object> mappingData) {
-        return getClassValue(classRow, mappingData, "docente");
-    }
-
     public static String getClassGroup(Map<String, Object> classRow, Map<String, Object> mappingData) {
         return getClassValue(classRow, mappingData, "turma");
+    }
+
+    public static String getShift(Map<String, Object> classRow, Map<String, Object> mappingData) {
+        return getClassValue(classRow, mappingData, "turno");
     }
 
     public static String getWeek(Map<String, Object> classRow, Map<String, Object> mappingData) {

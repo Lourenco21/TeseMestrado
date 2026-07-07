@@ -5,10 +5,7 @@ import org.uma.jmetal.problem.integerproblem.impl.AbstractIntegerProblem;
 import org.uma.jmetal.solution.integersolution.IntegerSolution;
 import org.uma.jmetal.solution.integersolution.impl.DefaultIntegerSolution;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
-import pt.lourenco.optimization.jmetal.constraints.model.ConstraintEvaluationResult;
-import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
-import pt.lourenco.optimization.jmetal.constraints.model.PreparedRoomData;
-import pt.lourenco.optimization.jmetal.constraints.model.SolutionContext;
+import pt.lourenco.optimization.jmetal.constraints.model.*;
 import pt.lourenco.optimization.jmetal.constraints.model.incremental.CandidateAssignment;
 import pt.lourenco.optimization.jmetal.constraints.model.incremental.PartialSolutionContext;
 import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationService;
@@ -18,9 +15,8 @@ import pt.lourenco.optimization.jmetal.metrics.PartitionMetrics;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.concurrent.ThreadLocalRandom;
 
 @Slf4j
@@ -362,5 +358,90 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
     public PartitionMetrics getPartitionMetrics() {
         return partitionMetrics;
+    }
+
+    private static final Set<LocalDateTime> DEBUG_TARGET_STARTS = Set.of(
+            LocalDateTime.of(2022, 10, 11, 18, 0),
+            LocalDateTime.of(2022, 11, 3, 9, 30),
+            LocalDateTime.of(2022, 10, 12, 18, 0)
+    );
+
+    private void debugDumpRoomTimeCollisions(
+            List<ClassRoomAssignment> assignments,
+            PreparedEvaluationData prepared
+    ) {
+
+        if (assignments == null || assignments.isEmpty() || prepared == null) {
+            return;
+        }
+
+        List<PreparedClassData> classes = prepared.getClasses();
+        List<PreparedRoomData> rooms = prepared.getRooms();
+
+        Map<String, List<String>> collisionsByKey = new LinkedHashMap<>();
+        for (ClassRoomAssignment assignment : assignments) {
+            if (assignment == null) {
+                continue;
+            }
+            int classIndex = assignment.getClassIndex();
+            int roomIndex = assignment.getRoomIndex();
+
+            if (classIndex < 0 || classIndex >= classes.size()) {
+                continue;
+            }
+            if (roomIndex < 0 || roomIndex >= rooms.size()) {
+                continue;
+            }
+            PreparedClassData preparedClass = classes.get(classIndex);
+            PreparedRoomData preparedRoom = rooms.get(roomIndex);
+
+            LocalDateTime startDateTime = preparedClass.getStartDateTime();
+
+            if (startDateTime == null || !DEBUG_TARGET_STARTS.contains(startDateTime)) {
+                continue;
+            }
+
+            String roomIdentity = safeString(preparedRoom.getRoomIdentity());
+            String start = String.valueOf(preparedClass.getStartDateTime());
+            String end = String.valueOf(preparedClass.getEndDateTime());
+
+            String key = roomIdentity + "|" + start + "|" + end;
+
+            String line = String.format(
+                    "roomIndex=%d room=%s day=%s start=%s end=%s course=%s week=%s students=%s",
+                    roomIndex,
+                    roomIdentity,
+                    String.valueOf(preparedClass.getDay()),
+                    start,
+                    end,
+                    safeString(preparedClass.getCourse()),
+                    safeString(preparedClass.getWeek()),
+                    String.valueOf(preparedClass.getStudents())
+            );
+
+            collisionsByKey.computeIfAbsent(key, k -> new ArrayList<>()).add(line);
+        }
+
+        List<Map.Entry<String, List<String>>> realCollisions = collisionsByKey.entrySet().stream()
+                .filter(entry -> entry.getValue().size() > 1)
+                .toList();
+
+        if (realCollisions.isEmpty()) {
+            return;
+        }
+        System.out.println("AAAAAAAAAAAAAAA");
+
+        log.warn("ROOM_TIME_COLLISIONS totalGroups={}", realCollisions.size());
+
+        for (Map.Entry<String, List<String>> entry : realCollisions) {
+            log.warn("ROOM_TIME_COLLISION key={} size={}", entry.getKey(), entry.getValue().size());
+            for (String item : entry.getValue()) {
+                log.warn("ROOM_TIME_COLLISION_ITEM {}", item);
+            }
+        }
+    }
+
+    private String safeString(String value) {
+        return value == null ? "" : value.trim();
     }
 }

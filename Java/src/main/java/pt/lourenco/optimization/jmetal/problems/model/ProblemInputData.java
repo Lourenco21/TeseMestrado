@@ -32,6 +32,8 @@ public class ProblemInputData {
 
     private Map<String, Object> mappingData;
     private Map<String, Object> roomsMappingData;
+    private Map<String, Object> roomFeatureResolution;
+    private List<Object> resolvedRequestedRoomFeatures;
     private Map<String, Object> constraintsSummary;
     private Map<String, Object> instanceCharacteristics;
 }

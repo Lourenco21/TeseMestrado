@@ -77,7 +77,7 @@ CONSTRAINT_LIBRARY = {
         {
             "id": "student_relocation",
             "label": "Minimizar deslocação dos estudantes",
-            "description": "Deve ser reduzida a deslocação entre edifícios ou salas em aulas consecutivas do mesmo contexto académico."
+            "description": "Deve ser reduzida a deslocação entre edifícios em aulas consecutivas do mesmo contexto académico."
         },
     ],
     "scheduling": [

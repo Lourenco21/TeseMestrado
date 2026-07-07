@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { getProblemDraft } from "../../services/problemsApi";
 import { listProblemSolutions } from "../../services/solutionsApi";
@@ -66,7 +66,78 @@ export default function ProblemDetailPage() {
       ? "1 selecionada"
       : `${selectedConstraintsCount} selecionadas`;
 
+  const roomFeatureResolutionItems = Array.isArray(
+    problem?.room_feature_resolution?.requested_values
+  )
+    ? problem.room_feature_resolution.requested_values
+    : [];
+
+  const hasScheduleFile = !!problem?.uploaded_schedule;
+  const hasRoomsFile = !!problem?.uploaded_rooms_file;
+  const hasScheduleMapping = hasContent(problem?.mapping_data?.mapping);
+  const hasRoomsMapping = hasContent(problem?.rooms_mapping_data);
+  const hasConstraints = selectedConstraintsCount > 0;
+
+    const unresolvedRoomFeatureCount = roomFeatureResolutionItems.filter(
+    (item) => item?.resolution_type === "unresolved"
+  ).length;
+
+  const roomFeatureResolutionRequired = hasScheduleMapping && hasRoomsMapping;
+
+  const hasRoomFeatureResolutionCompleted =
+    roomFeatureResolutionRequired &&
+    roomFeatureResolutionItems.length > 0 &&
+    unresolvedRoomFeatureCount === 0;
+
+  const roomFeatureResolutionStatus = hasRoomFeatureResolutionCompleted
+    ? "Configurado"
+    : "Não configurado";
+
+  const pendingSteps = useMemo(() => {
+    const items = [];
+
+    if (!hasScheduleFile) {
+      items.push("Ficheiro de horário");
+    }
+
+    if (!hasRoomsFile) {
+      items.push("Ficheiro de salas");
+    }
+
+    if (!hasScheduleMapping) {
+      items.push("Mapping de horário");
+    }
+
+    if (!hasRoomsMapping) {
+      items.push("Mapping de salas");
+    }
+
+    if (!hasRoomFeatureResolutionCompleted) {
+      items.push("Resolução de características");
+    }
+
+    if (!hasConstraints) {
+      items.push("Restrições");
+    }
+
+    return items;
+  }, [
+    hasScheduleFile,
+    hasRoomsFile,
+    hasScheduleMapping,
+    hasRoomsMapping,
+    roomFeatureResolutionRequired,
+    hasRoomFeatureResolutionCompleted,
+    hasConstraints,
+  ]);
+
+  const hasPendingSteps = pendingSteps.length > 0;
+
   const handleGoToExecute = () => {
+    if (hasPendingSteps) {
+      return;
+    }
+
     navigate(`/problems/${id}/execute`);
   };
 
@@ -108,12 +179,41 @@ export default function ProblemDetailPage() {
           <span style={styles.problemName}>{solutions.length}</span>
         </div>
 
+        {hasPendingSteps ? (
+          <div style={styles.alertBox}>
+            <p style={styles.alertTitle}>Faltam ainda concluir alguns passos</p>
+            <p style={styles.alertText}>
+              Antes de executar o problema, tem de completar todos os passos obrigatórios.
+            </p>
+
+            <ul style={styles.alertList}>
+              {pendingSteps.map((stepItem) => (
+                <li key={stepItem} style={styles.alertListItem}>
+                  {stepItem}
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+
         <div style={styles.actions}>
           <button style={styles.secondaryButton} onClick={() => navigate("/problems")}>
             Voltar
           </button>
 
-          <button style={styles.primaryButton} onClick={handleGoToExecute}>
+          <button
+            style={{
+              ...styles.primaryButton,
+              ...(hasPendingSteps ? styles.primaryButtonDisabled : {}),
+            }}
+            onClick={handleGoToExecute}
+            disabled={hasPendingSteps}
+            title={
+              hasPendingSteps
+                ? "Completa todos os steps antes de executar o problema."
+                : "Executar problema"
+            }
+          >
             Executar problema
           </button>
         </div>
@@ -124,7 +224,7 @@ export default function ProblemDetailPage() {
             Dados principais do problema atualmente guardado.
           </p>
 
-          <div style={styles.infoGrid}>
+          <div style={styles.infoGridGeneral}>
             <InfoCard label="Nome" value={problem?.name || "-"} />
             <InfoCard
               label="Tipo"
@@ -146,9 +246,9 @@ export default function ProblemDetailPage() {
         </section>
 
         <section style={styles.sectionCard}>
-          <h2 style={styles.sectionTitle}>Ficheiros e mapping</h2>
+          <h2 style={styles.sectionTitle}>Ficheiros e mapeamento</h2>
           <p style={styles.sectionDescription}>
-            Estado dos ficheiros associados ao problema e respetivo mapping.
+            Estado dos ficheiros associados ao problema e respetivo mapeamento.
           </p>
 
           <div style={styles.infoGrid}>
@@ -156,7 +256,8 @@ export default function ProblemDetailPage() {
               tileId="schedule-file"
               label="Ficheiro de horário"
               value={problem?.uploaded_schedule_name || "-"}
-              onClick={() => navigate(`/problems/${id}/upload`)}
+              isIncomplete={!hasScheduleFile}
+              onClick={() => navigate(`/problems/${id}/edit/upload`)}
               hoveredTile={hoveredTile}
               setHoveredTile={setHoveredTile}
             />
@@ -165,7 +266,8 @@ export default function ProblemDetailPage() {
               tileId="rooms-file"
               label="Ficheiro de salas"
               value={problem?.uploaded_rooms_file_name || "-"}
-              onClick={() => navigate(`/problems/${id}/rooms-upload`)}
+              isIncomplete={!hasRoomsFile}
+              onClick={() => navigate(`/problems/${id}/edit/rooms-upload`)}
               hoveredTile={hoveredTile}
               setHoveredTile={setHoveredTile}
             />
@@ -173,10 +275,9 @@ export default function ProblemDetailPage() {
             <EditableTile
               tileId="schedule-mapping"
               label="Mapping de horário"
-              value={
-                hasContent(problem?.mapping_data) ? "Configurado" : "Não configurado"
-              }
-              onClick={() => navigate(`/problems/${id}/mapping`)}
+              value={hasScheduleMapping ? "Configurado" : "Não configurado"}
+              isIncomplete={!hasScheduleMapping}
+              onClick={() => navigate(`/problems/${id}/edit/mapping`)}
               hoveredTile={hoveredTile}
               setHoveredTile={setHoveredTile}
             />
@@ -184,12 +285,21 @@ export default function ProblemDetailPage() {
             <EditableTile
               tileId="rooms-mapping"
               label="Mapping de salas"
-              value={
-                hasContent(problem?.rooms_mapping_data)
-                  ? "Configurado"
-                  : "Não configurado"
+              value={hasRoomsMapping ? "Configurado" : "Não configurado"}
+              isIncomplete={!hasRoomsMapping}
+              onClick={() => navigate(`/problems/${id}/edit/rooms-mapping`)}
+              hoveredTile={hoveredTile}
+              setHoveredTile={setHoveredTile}
+            />
+
+            <EditableTile
+              tileId="room-feature-resolution"
+              label="Resolução de características"
+              value={roomFeatureResolutionStatus}
+              isIncomplete={
+                !hasRoomFeatureResolutionCompleted
               }
-              onClick={() => navigate(`/problems/${id}/rooms-mapping`)}
+              onClick={() => navigate(`/problems/${id}/edit/room-features`)}
               hoveredTile={hoveredTile}
               setHoveredTile={setHoveredTile}
             />
@@ -205,13 +315,14 @@ export default function ProblemDetailPage() {
           <div style={styles.twoColumnSection}>
             <EditableTile
               tileId="constraints-list"
-              label={`Lista de restrições`}
+              label="Lista de restrições"
               value={
                 selectedConstraintsCount > 0
                   ? selectedConstraintsLabel
                   : "Sem restrições selecionadas"
               }
-              onClick={() => navigate(`/problems/${id}/constraints`)}
+              isIncomplete={!hasConstraints}
+              onClick={() => navigate(`/problems/${id}/edit/constraints`)}
               hoveredTile={hoveredTile}
               setHoveredTile={setHoveredTile}
               fullWidth
@@ -242,7 +353,9 @@ export default function ProblemDetailPage() {
 
           <div style={styles.summaryBar}>
             <span style={styles.summaryItem}>
-              {loadingSolutions ? "A carregar soluções..." : `${solutions.length} solução(ões)`}
+              {loadingSolutions
+                ? "A carregar soluções..."
+                : `${solutions.length} solução(ões)`}
             </span>
           </div>
 
@@ -258,7 +371,14 @@ export default function ProblemDetailPage() {
               </p>
 
               <div style={styles.actionsRow}>
-                <button style={styles.primaryButton} onClick={handleGoToExecute}>
+                <button
+                  style={{
+                    ...styles.primaryButton,
+                    ...(hasPendingSteps ? styles.primaryButtonDisabled : {}),
+                  }}
+                  onClick={handleGoToExecute}
+                  disabled={hasPendingSteps}
+                >
                   Ir para execução
                 </button>
               </div>
@@ -330,6 +450,7 @@ function EditableTile({
   children,
   fullWidth = false,
   largeEditBadge = false,
+  isIncomplete = false,
 }) {
   const isHovered = hoveredTile === tileId;
 
@@ -342,7 +463,12 @@ function EditableTile({
       style={{
         ...styles.editableTile,
         ...(fullWidth ? styles.editableTileFullWidth : {}),
-        ...(isHovered ? styles.editableTileHover : {}),
+        ...(isIncomplete ? styles.editableTileIncomplete : {}),
+        ...(isHovered
+          ? isIncomplete
+            ? styles.editableTileHoverIncomplete
+            : styles.editableTileHover
+          : {}),
       }}
     >
       <span
@@ -363,7 +489,21 @@ function EditableTile({
       >
         {label}
       </span>
-      <span style={styles.infoValue}>{formatValue(value)}</span>
+
+      <span
+        style={{
+          ...styles.infoValue,
+          ...(isIncomplete ? styles.infoValueIncomplete : {}),
+        }}
+      >
+        {formatValue(value)}
+      </span>
+
+      {isIncomplete ? (
+        <span style={styles.incompleteBadge}>Por concluir</span>
+      ) : (
+        <span style={styles.completeBadge}>Pronto</span>
+      )}
 
       {children ? <div style={styles.tileContent}>{children}</div> : null}
     </button>
@@ -466,6 +606,36 @@ const styles = {
     fontSize: "15px",
     color: "#b42318",
   },
+  alertBox: {
+    marginBottom: "24px",
+    padding: "16px 18px",
+    borderRadius: "14px",
+    border: "1px solid #fda29b",
+    backgroundColor: "#fef3f2",
+  },
+  alertTitle: {
+    margin: 0,
+    marginBottom: "8px",
+    fontSize: "15px",
+    fontWeight: 700,
+    color: "#b42318",
+  },
+  alertText: {
+    margin: 0,
+    marginBottom: "10px",
+    fontSize: "14px",
+    lineHeight: 1.6,
+    color: "#912018",
+  },
+  alertList: {
+    margin: 0,
+    paddingLeft: "18px",
+    color: "#912018",
+  },
+  alertListItem: {
+    marginBottom: "4px",
+    fontSize: "14px",
+  },
   summaryBar: {
     display: "flex",
     gap: "16px",
@@ -502,10 +672,16 @@ const styles = {
     lineHeight: 1.6,
     color: "#667085",
   },
-  infoGrid: {
+  infoGridGeneral: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))",
     gap: "16px",
+  },
+  infoGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(5, minmax(0, 1fr))",
+    gap: "16px",
+    alignItems: "stretch",
   },
   infoCard: {
     padding: "16px",
@@ -528,15 +704,26 @@ const styles = {
     gap: "8px",
     cursor: "pointer",
     transition: "all 0.18s ease",
+    minWidth: 0,
   },
   editableTileFullWidth: {
     width: "100%",
     minHeight: "145px",
   },
+  editableTileIncomplete: {
+    border: "1px solid #fda29b",
+    backgroundColor: "#fff6f5",
+  },
   editableTileHover: {
     border: "1px solid #b2ddff",
     backgroundColor: "#f5faff",
     boxShadow: "0 8px 20px rgba(16, 24, 40, 0.08)",
+    transform: "translateY(-1px)",
+  },
+  editableTileHoverIncomplete: {
+    border: "1px solid #f97066",
+    backgroundColor: "#fef3f2",
+    boxShadow: "0 8px 20px rgba(145, 32, 24, 0.08)",
     transform: "translateY(-1px)",
   },
   editBadge: {
@@ -578,8 +765,33 @@ const styles = {
     color: "#101828",
     wordBreak: "break-word",
   },
+  infoValueIncomplete: {
+    color: "#b42318",
+  },
   tileContent: {
     marginTop: "10px",
+  },
+  incompleteBadge: {
+    display: "inline-flex",
+    alignSelf: "flex-start",
+    marginTop: "2px",
+    padding: "5px 9px",
+    borderRadius: "999px",
+    backgroundColor: "#fee4e2",
+    color: "#b42318",
+    fontSize: "12px",
+    fontWeight: 700,
+  },
+  completeBadge: {
+    display: "inline-flex",
+    alignSelf: "flex-start",
+    marginTop: "2px",
+    padding: "5px 9px",
+    borderRadius: "999px",
+    backgroundColor: "#dcfae6",
+    color: "#067647",
+    fontSize: "12px",
+    fontWeight: 700,
   },
   actions: {
     display: "flex",
@@ -587,6 +799,11 @@ const styles = {
     gap: "16px",
     flexWrap: "wrap",
     marginBottom: "24px",
+  },
+  actionsRow: {
+    display: "flex",
+    gap: "12px",
+    marginTop: "14px",
   },
   primaryButton: {
     padding: "12px 18px",
@@ -597,6 +814,12 @@ const styles = {
     fontSize: "16px",
     fontWeight: 600,
     cursor: "pointer",
+  },
+  primaryButtonDisabled: {
+    backgroundColor: "#bfc8d6",
+    color: "#ffffff",
+    cursor: "not-allowed",
+    opacity: 0.9,
   },
   secondaryButton: {
     padding: "12px 18px",

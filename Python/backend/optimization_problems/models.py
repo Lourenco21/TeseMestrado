@@ -57,6 +57,8 @@ class ProblemDraft(models.Model):
 
     mapping_data = models.JSONField(default=dict, blank=True)
     rooms_mapping_data = models.JSONField(default=dict, blank=True)
+    
+    room_feature_resolution = models.JSONField(default=dict, blank=True)
 
     selected_constraints = models.JSONField(default=list, blank=True)
 
@@ -101,8 +103,8 @@ class Solution(models.Model):
 
     constraint_values = models.JSONField(default=dict, blank=True)
     penalty_summary = models.JSONField(default=dict, blank=True)
-    execution_result = models.JSONField(default=dict, blank=True)
     partition_count = models.IntegerField(default=0)
+    execution_time_seconds = models.FloatField(default=0.0)
 
     schedule_file = models.FileField(
         upload_to="optimization_problems/solutions/",

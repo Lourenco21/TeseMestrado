@@ -31,7 +31,6 @@ export default function ProblemUploadStepPage() {
             name: draft.uploaded_schedule_name || "Ficheiro sem nome",
             file: draft.uploaded_schedule_file || null,
           });
-          console.log(draft)
         } else {
           setExistingSchedule(null);
         }
@@ -118,7 +117,7 @@ export default function ProblemUploadStepPage() {
         <p style={styles.step}>Passo 3 de 8</p>
         <h1 style={styles.title}>Carregar ficheiro de dados</h1>
         <p style={styles.description}>
-          Faz upload do ficheiro que vai servir de base para este problema de
+          Faça upload do ficheiro que vai servir de base para este problema de
           otimização.
         </p>
 

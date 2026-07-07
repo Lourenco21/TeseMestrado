@@ -5,11 +5,11 @@ import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedEvaluationData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedRoomData;
 import pt.lourenco.optimization.jmetal.partitioning.PreviousPartitionAssignmentsContext;
-import pt.lourenco.optimization.jmetal.problems.mapping.RequestedRoomCharacteristicsUtils;
+import pt.lourenco.optimization.jmetal.partitioning.SchedulePartitionService;
+import pt.lourenco.optimization.jmetal.problems.mapping.RoomFeatureBitSetUtils;
 import pt.lourenco.optimization.jmetal.problems.mapping.RoomsMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.mapping.ScheduleMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
-import pt.lourenco.optimization.jmetal.partitioning.SchedulePartitionService;
 import pt.lourenco.optimization.utils.NumericParsingUtils;
 
 import java.time.LocalDate;
@@ -35,7 +35,20 @@ public class PreparedEvaluationDataBuilderService {
         List<Map<String, Object>> rawRooms =
                 (List<Map<String, Object>>) inputData.getRoomsData().getOrDefault("rooms", List.of());
 
-        List<PreparedClassData> preparedClasses = new ArrayList<>();
+        Map<String, Integer> featureIndex =
+                RoomFeatureBitSetUtils.buildFeatureIndex(
+                        rawRooms,
+                        inputData.getRoomsMappingData(),
+                        inputData.getRoomFeatureResolution()
+                );
+
+        Map<String, BitSet> requirementCache =
+                RoomFeatureBitSetUtils.buildRequirementBitSetCache(
+                        inputData.getRoomFeatureResolution(),
+                        featureIndex
+                );
+
+        List<PreparedClassData> preparedClasses = new ArrayList<>(rawClasses.size());
         for (int i = 0; i < rawClasses.size(); i++) {
             Map<String, Object> classRow = rawClasses.get(i);
 
@@ -52,13 +65,27 @@ public class PreparedEvaluationDataBuilderService {
             LocalDateTime startDateTime = (day != null && start != null) ? LocalDateTime.of(day, start) : null;
             LocalDateTime endDateTime = (day != null && end != null) ? LocalDateTime.of(day, end) : null;
 
+            List<BitSet> requestedRequirementBitSets =
+                    RoomFeatureBitSetUtils.extractRequestedRequirementBitSets(
+                            classRow,
+                            inputData.getMappingData(),
+                            requirementCache
+                    );
+
+            Set<String> debugRequestedCharacteristics =
+                    RoomFeatureBitSetUtils.flattenBitSetRequirementsToDebugSet(
+                            requestedRequirementBitSets,
+                            featureIndex
+                    );
+
             preparedClasses.add(new PreparedClassData(
                     i,
                     classRow,
                     ScheduleMappingUtils.getCourse(classRow, inputData.getMappingData()),
+                    ScheduleMappingUtils.getDegree(classRow, inputData.getMappingData()),
                     ScheduleMappingUtils.getClassType(classRow, inputData.getMappingData()),
-                    ScheduleMappingUtils.getTeacher(classRow, inputData.getMappingData()),
                     ScheduleMappingUtils.getClassGroup(classRow, inputData.getMappingData()),
+                    ScheduleMappingUtils.getShift(classRow, inputData.getMappingData()),
                     ScheduleMappingUtils.getWeek(classRow, inputData.getMappingData()),
                     day,
                     start,
@@ -69,14 +96,12 @@ public class PreparedEvaluationDataBuilderService {
                             ScheduleMappingUtils.getStudents(classRow, inputData.getMappingData())
                     ),
                     ScheduleMappingUtils.getRequestedRoomName(classRow, inputData.getMappingData()),
-                    RequestedRoomCharacteristicsUtils.extractRequestedCharacteristics(
-                            classRow,
-                            inputData.getMappingData()
-                    )
+                    debugRequestedCharacteristics,
+                    requestedRequirementBitSets
             ));
         }
 
-        List<PreparedRoomData> preparedRooms = new ArrayList<>();
+        List<PreparedRoomData> preparedRooms = new ArrayList<>(rawRooms.size());
         for (int i = 0; i < rawRooms.size(); i++) {
             Map<String, Object> roomRow = rawRooms.get(i);
 
@@ -84,6 +109,12 @@ public class PreparedEvaluationDataBuilderService {
             String roomIdentity = roomName != null && !roomName.trim().isBlank()
                     ? normalizeRoomIdentity(roomName)
                     : "room_index_" + i;
+
+            Set<String> roomCharacteristics =
+                    RoomsMappingUtils.extractRoomCharacteristics(roomRow, inputData.getRoomsMappingData());
+
+            BitSet roomCharacteristicsBitSet =
+                    RoomFeatureBitSetUtils.toBitSet(roomCharacteristics, featureIndex);
 
             preparedRooms.add(new PreparedRoomData(
                     i,
@@ -94,7 +125,8 @@ public class PreparedEvaluationDataBuilderService {
                     NumericParsingUtils.parseIntegerSafely(
                             RoomsMappingUtils.getCapacity(roomRow, inputData.getRoomsMappingData())
                     ),
-                    RoomsMappingUtils.extractRoomCharacteristics(roomRow, inputData.getRoomsMappingData())
+                    roomCharacteristics,
+                    roomCharacteristicsBitSet
             ));
         }
 

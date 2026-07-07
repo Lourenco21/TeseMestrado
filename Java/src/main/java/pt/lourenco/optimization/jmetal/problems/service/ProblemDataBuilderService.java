@@ -114,6 +114,8 @@ public class ProblemDataBuilderService {
         inputData.setMetadata(request.getMetadata());
         inputData.setMappingData(request.getMapping_data());
         inputData.setRoomsMappingData(request.getRooms_mapping_data());
+        inputData.setRoomFeatureResolution(request.getRoom_feature_resolution());
+        inputData.setResolvedRequestedRoomFeatures(request.getResolved_requested_room_features());
         inputData.setConstraintsSummary(request.getConstraints_summary());
         inputData.setInstanceCharacteristics(request.getInstance_characteristics());
 

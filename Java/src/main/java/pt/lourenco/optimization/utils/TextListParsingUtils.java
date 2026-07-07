@@ -1,8 +1,6 @@
 package pt.lourenco.optimization.utils;
 
-import java.util.Arrays;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public final class TextListParsingUtils {
@@ -20,9 +18,22 @@ public final class TextListParsingUtils {
         String regex = buildSplitRegex(configuredSeparator);
 
         return Arrays.stream(rawValue.split(regex))
-                .map(String::trim)
-                .filter(item -> !item.isBlank())
+                .map(TextListParsingUtils::normalizeToken)
+                .filter(NestedMapUtils::hasText)
                 .collect(java.util.stream.Collectors.toCollection(LinkedHashSet::new));
+    }
+
+    public static List<String> splitToNormalizedList(String rawValue, String configuredSeparator) {
+        if (!NestedMapUtils.hasText(rawValue)) {
+            return List.of();
+        }
+
+        String regex = buildSplitRegex(configuredSeparator);
+
+        return Arrays.stream(rawValue.split(regex))
+                .map(TextListParsingUtils::normalizeToken)
+                .filter(NestedMapUtils::hasText)
+                .toList();
     }
 
     private static String buildSplitRegex(String configuredSeparator) {
@@ -31,5 +42,13 @@ public final class TextListParsingUtils {
         }
 
         return DEFAULT_MULTI_DELIMITER_REGEX;
+    }
+
+    public static String normalizeToken(String value) {
+        if (value == null) {
+            return "";
+        }
+
+        return value.trim().toLowerCase();
     }
 }

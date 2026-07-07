@@ -364,15 +364,14 @@ export default function ProblemSendToJavaPage() {
     <div style={styles.page}>
       <div style={styles.container}>
         <p style={styles.step}>Execução</p>
-        <h1 style={styles.title}>Recomendar e executar algoritmo</h1>
+        <h1 style={styles.title}>Execução do problema</h1>
         <p style={styles.description}>
-          Configura a forma de resolução do problema, pede ao backend Java uma
-          recomendação de algoritmos e seleciona depois o algoritmo a executar.
+          Configure a forma de resolução do problema e selecione depois o algoritmo a executar.
         </p>
 
         <CollapsibleSection
           title="Configuração do pedido"
-          subtitle="Define o nível de resolução e, quando necessário, o tratamento de instâncias equivalentes."
+          subtitle="Defina o nível de resolução e, quando necessário, o tratamento de instâncias equivalentes."
           isCollapsed={collapsedSections.requestConfig}
           onToggle={() => toggleSection("requestConfig")}
         >
@@ -445,7 +444,7 @@ export default function ProblemSendToJavaPage() {
           <div style={styles.actions}>
             <button
               type="button"
-              onClick={() => navigate(`/problems/${id}`)}
+              onClick={() => navigate(`/problems/${id}/detail`)}
               style={styles.secondaryButton}
             >
               Voltar
@@ -471,7 +470,7 @@ export default function ProblemSendToJavaPage() {
         {responseData ? (
           <CollapsibleSection
             title="Algoritmos recomendados"
-            subtitle="Lista compacta de candidatos sugeridos pelo backend."
+            subtitle="Lista de candidatos sugeridos."
             badge={`${recommendedAlgorithms.length} encontrados`}
             isCollapsed={collapsedSections.algorithms}
             onToggle={() => toggleSection("algorithms")}
@@ -640,7 +639,7 @@ export default function ProblemSendToJavaPage() {
               <div style={styles.actions}>
                 <button
                   type="button"
-                  onClick={() => navigate(`/problems/${id}`)}
+                  onClick={() => navigate(`/problems/${id}/detail`)}
                   style={styles.secondaryButton}
                 >
                   Voltar ao problema

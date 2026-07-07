@@ -133,6 +133,8 @@ public class ProblemExecutionOrchestratorService {
                 );
 
         log.info("=== END problem execution ===");
+        long totalElapsedNs = System.nanoTime() - totalStartNs;
+        double totalElapsedSeconds = totalElapsedNs / 1_000_000_000.0 ;
 
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("message", "Problem executed successfully.");
@@ -144,12 +146,11 @@ public class ProblemExecutionOrchestratorService {
         response.put("partition_count", executionResult.get("partitionCount"));
         response.put("constraint_values", aggregatedConstraintValues);
         response.put("penalty_summary", aggregatedPenaltySummary);
-        response.put("execution_result", executionResult);
+        response.put("execution_time_seconds", totalElapsedSeconds);
 
-        long totalElapsedNs = System.nanoTime() - totalStartNs;
-        double totalElapsedMs = totalElapsedNs / 1_000_000.0;
 
-        log.info("Total problem execution time: {} ms", String.format("%.3f", totalElapsedMs));
+
+        log.info("Total problem execution time: {} seconds", String.format("%.3f", totalElapsedSeconds));
 
         return response;
     }

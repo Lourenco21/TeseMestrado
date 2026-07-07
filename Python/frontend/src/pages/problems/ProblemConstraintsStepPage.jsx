@@ -190,12 +190,23 @@ export default function ProblemConstraintsStepPage() {
             return;
         }
 
+        const enrichedConstraints = validConstraints.map((item) => {
+            const catalogConstraint = availableConstraints.find(
+                (constraint) => constraint.id === item.id
+            );
+
+            return {
+                ...item,
+                label: catalogConstraint?.label || item.id,
+            };
+        });
+
         try {
             setLocalError("");
 
             await saveDraft({
                 status: "constraints_selected",
-                selected_constraints: validConstraints,
+                selected_constraints: enrichedConstraints,
                 current_step: 6,
             });
 
@@ -204,7 +215,7 @@ export default function ProblemConstraintsStepPage() {
             console.error("Erro ao guardar restrições:", err);
             setLocalError(err.message || "Não foi possível guardar as restrições.");
         }
-    }, [selectedConstraints, id, saveDraft, navigate]);
+    }, [selectedConstraints, availableConstraints, id, saveDraft, navigate]);
 
     const handleBack = useCallback(() => {
         navigate(`/problems/${id}/mapping`);
@@ -224,10 +235,10 @@ export default function ProblemConstraintsStepPage() {
         <div style={styles.page}>
             <div style={styles.container}>
                 <div style={styles.header}>
-                    <p style={styles.step}>Passo 5 de 7</p>
+                    <p style={styles.step}>Passo 5 de 8</p>
                     <h1 style={styles.title}>Selecionar restrições</h1>
                     <p style={styles.description}>
-                        Escolhe as regras a aplicar ao problema, defina se cada uma é obrigatória
+                        Escolha as regras a aplicar ao problema, defina se cada uma é obrigatória
                         ou preferencial, e indique a sua importância relativa dentro desse tipo.
                     </p>
                 </div>
@@ -736,7 +747,7 @@ const styles = {
         fontSize: "13px",
         lineHeight: 1.5,
         color: "#667085",
-        maxWidth: "340px",
+        maxWidth: "400px",
     },
     validationHint: {
         margin: 0,

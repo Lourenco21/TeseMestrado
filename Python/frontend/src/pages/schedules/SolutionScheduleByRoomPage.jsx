@@ -194,10 +194,6 @@ export default function SolutionScheduleByRoomPage() {
     return filteredEvents.filter((event) => event.hasOverlap).length;
   }, [filteredEvents]);
 
-  const totalRoomOverlaps = countTotalRoomOverlaps(normalizedEvents);
-
-  console.log("totalRoomOverlaps:", totalRoomOverlaps);
-
   const selectedWeekIndex = weekOptions.findIndex((item) => item.id === selectedWeek);
 
   function handlePreviousWeek() {
@@ -1298,51 +1294,3 @@ const styles = {
   },
 };
 
-
-function countTotalRoomOverlaps(events) {
-  const groups = new Map();
-  let totalOverlaps = 0;
-
-  for (const event of events) {
-    const key = `${event.weekKey}__${event.room}__${event.day}`;
-
-    if (!groups.has(key)) {
-      groups.set(key, []);
-    }
-
-    groups.get(key).push(event);
-  }
-
-  for (const groupEvents of groups.values()) {
-    const sorted = [...groupEvents].sort((a, b) => {
-      const startDiff = convertTimeToMinutes(a.start) - convertTimeToMinutes(b.start);
-      if (startDiff !== 0) {
-        return startDiff;
-      }
-
-      return convertTimeToMinutes(a.end) - convertTimeToMinutes(b.end);
-    });
-
-    for (let i = 0; i < sorted.length; i += 1) {
-      const current = sorted[i];
-      const currentStart = convertTimeToMinutes(current.start);
-      const currentEnd = convertTimeToMinutes(current.end);
-
-      for (let j = i + 1; j < sorted.length; j += 1) {
-        const next = sorted[j];
-        const nextStart = convertTimeToMinutes(next.start);
-        const nextEnd = convertTimeToMinutes(next.end);
-
-        if (nextStart >= currentEnd) {
-          break;
-        }
-
-        if (currentStart < nextEnd && nextStart < currentEnd) {
-          totalOverlaps += 1;
-        }
-      }
-    }
-  }
-
-  return totalOverlaps;
-}

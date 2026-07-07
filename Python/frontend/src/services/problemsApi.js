@@ -159,6 +159,22 @@ export async function executeProblemWithAlgorithm(problemId, executionConfig = {
   return data;
 }
 
+export async function getProblemRoomFeatureResolutionAnalysis(problemId) {
+  const response = await fetch(
+    `http://localhost:8000/optimization_problems/${problemId}/room-feature-resolution-analysis/`
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(
+      data?.error || "Não foi possível analisar as características pedidas."
+    );
+  }
+
+  return data;
+}
+
 
 
 

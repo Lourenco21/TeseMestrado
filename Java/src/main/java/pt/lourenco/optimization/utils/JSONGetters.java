@@ -50,6 +50,12 @@ public class JSONGetters {
     @JsonProperty("rooms_mapping_data")
     private Map<String, Object> rooms_mapping_data;
 
+    @JsonProperty("room_feature_resolution")
+    private Map<String, Object> room_feature_resolution;
+
+    @JsonProperty("resolved_requested_room_features")
+    private List<Object> resolved_requested_room_features;
+
     @JsonProperty("constraints_summary")
     private Map<String, Object> constraints_summary;
 

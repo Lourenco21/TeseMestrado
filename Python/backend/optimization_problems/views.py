@@ -1,9 +1,11 @@
 import csv
 import os
+import re
 import traceback
 from datetime import datetime, time
 from io import StringIO
 
+import unicodedata
 from django.core.files.base import ContentFile
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
@@ -960,6 +962,13 @@ class ProblemExecuteView(APIView):
 
         try:
             df = load_schedule_dataframe(problem_draft.uploaded_schedule.file.path)
+
+            df = apply_room_feature_resolution(
+                df,
+                problem_draft.mapping_data,
+                problem_draft.room_feature_resolution or {},
+            )
+
             mapping = (problem_draft.mapping_data or {}).get("mapping", {}) or {}
 
             analysis = analyze_schedule_dataframe(df, mapping, resolution_scope)
@@ -975,6 +984,12 @@ class ProblemExecuteView(APIView):
                 "selected_algorithm": selected_algorithm_name,
                 "constraints_summary": constraints_summary,
                 "selected_constraints": problem_draft.selected_constraints or [],
+                "room_feature_resolution": problem_draft.room_feature_resolution or {},
+                "resolved_requested_room_features": (
+                    df["_resolved_requested_room_features"].tolist()
+                    if "_resolved_requested_room_features" in df.columns
+                    else []
+                ),
                 "instance_characteristics": {
                     "total_classes": int(len(df)),
                     "selected_partition_statistics": analysis["selected_partition_statistics"],
@@ -986,6 +1001,7 @@ class ProblemExecuteView(APIView):
                 "mapping_data": problem_draft.mapping_data,
                 "rooms_mapping_data": getattr(problem_draft, "rooms_mapping_data", None),
             }
+            print(payload)
 
         except Exception as exc:
             return Response(
@@ -1039,8 +1055,8 @@ class ProblemExecuteView(APIView):
                 reuse_solution=bool(java_data.get("reuse_solution", False)),
                 constraint_values=java_data.get("constraint_values", {}),
                 penalty_summary=java_data.get("penalty_summary", {}),
-                execution_result=java_data.get("execution_result", {}),
                 partition_count=int(java_data.get("partition_count", 0) or 0),
+                execution_time_seconds=float(java_data.get("execution_time_seconds", 0.0)),
             )
 
             schedule_rows = java_data.get("schedule", [])
@@ -1547,3 +1563,379 @@ class SolutionDetailView(APIView):
 
         serializer = SolutionDetailSerializer(solution, context={"request": request})
         return Response(serializer.data)
+
+
+class ProblemRoomFeatureResolutionAnalysisView(APIView):
+    def get(self, request, problem_id, *args, **kwargs):
+        try:
+            problem_draft = ProblemDraft.objects.get(pk=problem_id)
+        except ProblemDraft.DoesNotExist:
+            return Response(
+                {"error": "Problem draft not found."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if not problem_draft.uploaded_schedule:
+            return Response(
+                {"error": "O problema não tem ficheiro de horário associado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        if not problem_draft.uploaded_rooms_file:
+            return Response(
+                {"error": "O problema não tem ficheiro de salas associado."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            schedule_df = load_schedule_dataframe(
+                problem_draft.uploaded_schedule.file.path
+            )
+            rooms_df = read_schedule_file(
+                problem_draft.uploaded_rooms_file.file.path
+            )
+
+            schedule_mapping = (problem_draft.mapping_data or {}).get("mapping", {}) or {}
+            rooms_mapping_data = problem_draft.rooms_mapping_data or {}
+            existing_resolution = problem_draft.room_feature_resolution or {}
+
+            requested_values = extract_requested_room_feature_values(
+                schedule_df,
+                schedule_mapping,
+            )
+            available_room_features = extract_room_features_from_rooms_dataframe(
+                rooms_df,
+                rooms_mapping_data,
+            )
+
+            response_data = build_missing_room_feature_resolution_analysis(
+                requested_values=requested_values,
+                room_features=available_room_features,
+                existing_resolution=existing_resolution,
+            )
+
+            return Response(
+                {
+                    "problem_id": problem_draft.id,
+                    "requested_values": response_data["requested_values"],
+                    "available_room_features": response_data["available_room_features"],
+                    "summary": response_data["summary"],
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        except Exception as exc:
+            return Response(
+                {
+                    "error": "Não foi possível analisar as características em falta.",
+                    "details": str(exc),
+                    "trace": traceback.format_exc(),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+
+def normalize_text(value):
+    if value is None:
+        return ""
+
+    text = str(value).strip().lower()
+    if not text:
+        return ""
+
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    text = text.replace("-", "_").replace("/", "_")
+    text = re.sub(r"\s+", "_", text)
+    text = re.sub(r"[^a-z0-9_]+", "", text)
+    text = re.sub(r"_+", "_", text).strip("_")
+    return text
+
+
+def get_column_from_mapping(df, mapping, canonical_key):
+    mapped_column = mapping.get(canonical_key)
+    if mapped_column and mapped_column in df.columns:
+        return mapped_column
+
+    if not mapped_column:
+        return None
+
+    normalized_lookup = {
+        normalize_text(column): column
+        for column in df.columns
+    }
+
+    normalized_mapped_column = normalize_text(mapped_column)
+    return normalized_lookup.get(normalized_mapped_column)
+
+
+def split_feature_tokens(value):
+    if value is None:
+        return []
+
+    text = str(value).strip()
+    if not text:
+        return []
+
+    parts = re.split(r"[;,|]+", text)
+    return [part.strip() for part in parts if part.strip()]
+
+
+def extract_requested_room_feature_values(schedule_df, schedule_mapping):
+    requested_column = get_column_from_mapping(
+        schedule_df,
+        schedule_mapping,
+        "caracteristicas_pedidas_para_sala",
+    )
+
+    if not requested_column:
+        return []
+
+    seen = set()
+    values = []
+
+    for raw_cell_value in schedule_df[requested_column].dropna().tolist():
+        tokens = split_feature_tokens(raw_cell_value)
+
+        for token in tokens:
+            normalized = normalize_text(token)
+            if not normalized or normalized in seen:
+                continue
+
+            seen.add(normalized)
+            values.append({
+                "label": token,
+                "normalized": normalized,
+            })
+
+    values.sort(key=lambda item: item["normalized"])
+    return values
+
+
+def extract_room_features_from_rooms_dataframe(rooms_df, rooms_mapping_data):
+    if rooms_df is None or rooms_df.empty:
+        return []
+
+    characteristics = (rooms_mapping_data or {}).get("characteristics", {}) or {}
+    char_format = characteristics.get("format")
+    config = characteristics.get("config", {}) or {}
+
+    seen = set()
+    features = []
+
+    def register_feature(raw_feature):
+        normalized = normalize_text(raw_feature)
+        if not normalized or normalized in seen:
+            return
+
+        seen.add(normalized)
+        features.append({
+            "label": str(raw_feature).strip(),
+            "normalized": normalized,
+        })
+
+    if char_format == "single_column_list":
+        source_column = config.get("source_column")
+        separator = config.get("separator", ",")
+
+        if source_column and source_column in rooms_df.columns:
+            for raw_value in rooms_df[source_column].dropna().tolist():
+                text = str(raw_value).strip()
+                if not text:
+                    continue
+
+                parts = [part.strip() for part in text.split(separator) if part.strip()]
+                for part in parts:
+                    register_feature(part)
+
+    elif char_format == "multiple_columns":
+        selected_columns = config.get("selected_columns", []) or []
+
+        for column in selected_columns:
+            if column in rooms_df.columns:
+                register_feature(column)
+
+    elif char_format == "range_columns":
+        start_column = config.get("start_column")
+        end_column = config.get("end_column")
+
+        if (
+            start_column
+            and end_column
+            and start_column in rooms_df.columns
+            and end_column in rooms_df.columns
+        ):
+            ranged_df = rooms_df.loc[:, start_column:end_column]
+            for column in ranged_df.columns:
+                register_feature(column)
+
+    features.sort(key=lambda item: item["normalized"])
+    return features
+
+
+def suggest_room_feature_targets(requested_normalized, available_room_features):
+    exact_matches = [
+        item for item in available_room_features
+        if item["normalized"] == requested_normalized
+    ]
+    if exact_matches:
+        return exact_matches
+
+    contains_matches = [
+        item for item in available_room_features
+        if requested_normalized in item["normalized"]
+        or item["normalized"] in requested_normalized
+    ]
+    if contains_matches:
+        return contains_matches
+
+    requested_parts = set(requested_normalized.split("_"))
+    scored = []
+
+    for item in available_room_features:
+        target_parts = set(item["normalized"].split("_"))
+        overlap = requested_parts.intersection(target_parts)
+
+        if overlap:
+            scored.append((len(overlap), item))
+
+    scored.sort(key=lambda entry: (-entry[0], entry[1]["normalized"]))
+    return [item for _, item in scored]
+
+
+def build_missing_room_feature_resolution_analysis(
+    requested_values,
+    room_features,
+    existing_resolution,
+):
+    available_normalized = {
+        item["normalized"]
+        for item in room_features
+    }
+
+    existing_items = (existing_resolution or {}).get("requested_values", []) or []
+    existing_by_normalized = {}
+
+    for item in existing_items:
+        source_value = item.get("source_value")
+        if not source_value:
+            continue
+        existing_by_normalized[normalize_text(source_value)] = item
+
+    missing_items = []
+
+    for requested in requested_values:
+        normalized = requested["normalized"]
+
+        if normalized in available_normalized:
+            continue
+
+        existing_item = existing_by_normalized.get(normalized)
+
+        missing_items.append({
+            "source_value": requested["label"],
+            "source_value_normalized": normalized,
+            "resolution_type": (
+                existing_item.get("resolution_type", "unresolved")
+                if existing_item
+                else "unresolved"
+            ),
+            "target_values": (
+                existing_item.get("target_values", [])
+                if existing_item
+                else []
+            ),
+        })
+
+    unresolved_count = len([
+        item for item in missing_items
+        if item.get("resolution_type") == "unresolved"
+    ])
+
+    return {
+        "requested_values": missing_items,
+        "available_room_features": [item["label"] for item in room_features],
+        "summary": {
+            "missing_count": len(missing_items),
+            "available_count": len(room_features),
+            "unresolved_count": unresolved_count,
+        },
+    }
+
+
+def apply_room_feature_resolution(df, mapping_data, room_feature_resolution):
+    if df is None or df.empty:
+        return df
+
+    mapping = (mapping_data or {}).get("mapping", {}) or {}
+    requested_column = get_mapped_column(
+        df,
+        mapping,
+        "caracteristicas_pedidas_para_aula"
+    )
+
+    if not requested_column or requested_column not in df.columns:
+        return df
+
+    resolution_items = (room_feature_resolution or {}).get("requested_values", []) or []
+    if not resolution_items:
+        return df
+
+    resolution_by_normalized = {}
+
+    for item in resolution_items:
+        source_value = item.get("source_value")
+        if not source_value:
+            continue
+        resolution_by_normalized[normalize_text(source_value)] = item
+
+    def resolve_value(raw_value):
+        tokens = split_feature_tokens(raw_value)
+        if not tokens:
+            return []
+
+        resolved_tokens = []
+
+        for token in tokens:
+            normalized_token = normalize_text(token)
+            resolution = resolution_by_normalized.get(normalized_token)
+
+            if not resolution:
+                resolved_tokens.append({
+                    "source_value": token,
+                    "resolution_type": "original",
+                    "target_values": [token],
+                })
+                continue
+
+            resolution_type = resolution.get("resolution_type", "unresolved")
+            target_values = resolution.get("target_values", []) or []
+
+            if resolution_type == "none_required":
+                continue
+
+            if resolution_type == "map_to_room_feature":
+                resolved_tokens.append({
+                    "source_value": token,
+                    "resolution_type": "map_to_room_feature",
+                    "target_values": target_values,
+                })
+            elif resolution_type == "no_match":
+                resolved_tokens.append({
+                    "source_value": token,
+                    "resolution_type": "no_match",
+                    "target_values": [],
+                })
+            else:
+                resolved_tokens.append({
+                    "source_value": token,
+                    "resolution_type": "unresolved",
+                    "target_values": [],
+                })
+
+        return resolved_tokens
+
+    working_df = df.copy()
+    working_df["_resolved_requested_room_features"] = working_df[requested_column].apply(resolve_value)
+
+    return working_df

@@ -30,7 +30,7 @@ export default function ProblemWizardStartPage() {
         <p style={styles.step}>Novo problema</p>
         <h1 style={styles.title}>Começar modelação do problema</h1>
         <p style={styles.description}>
-          Este wizard vai ajudar-te a descrever o problema de otimização passo a
+          Este wizard vai ajudar a descrever o problema de otimização passo a
           passo, de forma guiada.
         </p>
 

@@ -37,32 +37,6 @@ public class RoomExclusivityConstraint implements ConstraintRule, IncrementalCon
     public ConstraintResult evaluate(SolutionContext context, UserConstraintSelection selection) {
         RoomConflictStats stats = calculateStats(context);
 
-//        if (TRACE_SUMMARY) {
-//            log.info(
-//                    "[ROOM_EXCLUSIVITY] currentOccupations={} previousAssignments={} internalPairs={} previousHits={} violatingCurrentClasses={} topRooms={}",
-//                    stats.currentOccupationCount,
-//                    stats.previousAssignmentCount,
-//                    stats.internalConflictPairs,
-//                    stats.previousConflictHits,
-//                    stats.violatingCurrentClassIndexes.size(),
-//                    stats.topRoomSummary()
-//            );
-//        }
-//
-//        if (TRACE_DETAILS && !stats.detailedConflicts.isEmpty()) {
-//            int limit = Math.min(MAX_DETAILED_CONFLICTS, stats.detailedConflicts.size());
-//            for (int i = 0; i < limit; i++) {
-//                log.warn("[ROOM_EXCLUSIVITY][DETAIL {}] {}", i + 1, stats.detailedConflicts.get(i));
-//            }
-//
-//            if (stats.detailedConflicts.size() > limit) {
-//                log.warn(
-//                        "[ROOM_EXCLUSIVITY] {} additional conflicts omitted from detailed log",
-//                        stats.detailedConflicts.size() - limit
-//                );
-//            }
-//        }
-
         double rawViolation = stats.violatingCurrentClassIndexes.size();
 
         return new ConstraintResult(

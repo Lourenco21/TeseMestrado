@@ -590,11 +590,12 @@ public class PartitionExecutionCoordinatorService {
 
         return String.join("|",
                 Objects.toString(ScheduleMappingUtils.getCourse(classData, inputData.getMappingData()), ""),
+                Objects.toString(ScheduleMappingUtils.getDegree(classData, inputData.getMappingData()), ""),
                 Objects.toString(ScheduleMappingUtils.getClassGroup(classData, inputData.getMappingData()), ""),
+                Objects.toString(ScheduleMappingUtils.getShift(classData, inputData.getMappingData()), ""),
                 Objects.toString(ScheduleMappingUtils.getDay(classData, inputData.getMappingData()), ""),
                 Objects.toString(ScheduleMappingUtils.getStartTime(classData, inputData.getMappingData()), ""),
-                Objects.toString(ScheduleMappingUtils.getEndTime(classData, inputData.getMappingData()), ""),
-                Objects.toString(ScheduleMappingUtils.getTeacher(classData, inputData.getMappingData()), "")
+                Objects.toString(ScheduleMappingUtils.getEndTime(classData, inputData.getMappingData()), "")
         );
     }
 

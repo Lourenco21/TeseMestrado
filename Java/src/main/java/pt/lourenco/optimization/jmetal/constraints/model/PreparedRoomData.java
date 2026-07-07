@@ -3,6 +3,7 @@ package pt.lourenco.optimization.jmetal.constraints.model;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 
+import java.util.BitSet;
 import java.util.Map;
 import java.util.Set;
 
@@ -17,4 +18,5 @@ public class PreparedRoomData {
     private final String building;
     private final Integer capacity;
     private final Set<String> characteristics;
+    private final BitSet characteristicsBitSet;
 }

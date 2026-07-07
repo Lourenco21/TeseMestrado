@@ -53,8 +53,9 @@ public class ScheduleResponseBuilderService {
                 + normalize(ScheduleMappingUtils.getEndTime(row, mappingData)) + "|"
                 + normalize(ScheduleMappingUtils.getCourse(row, mappingData)) + "|"
                 + normalize(ScheduleMappingUtils.getClassGroup(row, mappingData)) + "|"
-                + normalize(ScheduleMappingUtils.getClassType(row, mappingData)) + "|"
-                + normalize(ScheduleMappingUtils.getTeacher(row, mappingData));
+                + normalize(ScheduleMappingUtils.getShift(row, mappingData)) + "|"
+                + normalize(ScheduleMappingUtils.getDegree(row, mappingData)) + "|"
+                + normalize(ScheduleMappingUtils.getClassType(row, mappingData));
     }
 
     private String normalize(String value) {

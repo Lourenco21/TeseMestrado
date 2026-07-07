@@ -49,6 +49,8 @@ export default function ProblemHomePage() {
       case 7:
         return `/problems/${problemId}/rooms-mapping`;
       case 8:
+        return `/problems/${problemId}/room-features`;
+      case 9:
         return `/problems/${problemId}/detail`;
       default:
         return `/problems/${problemId}/type`;
@@ -83,9 +85,9 @@ export default function ProblemHomePage() {
 
       {!loading && !error && problems.length === 0 ? (
         <div style={styles.emptyState}>
-          <h2 style={styles.emptyTitle}>Ainda não tens problemas criados</h2>
+          <h2 style={styles.emptyTitle}>Ainda não tem problemas criados</h2>
           <p style={styles.emptyText}>
-            Começa por criar um novo problema para iniciar o wizard de modelação.
+            Comece por criar um novo problema para iniciar o wizard de modelação.
           </p>
           <button
             type="button"

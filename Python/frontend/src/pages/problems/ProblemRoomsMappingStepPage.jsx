@@ -510,7 +510,7 @@ export default function ProblemRoomsMappingStepPage() {
       });
 
       await saveProblemRoomsMapping(id, payload);
-      navigate(`/problems/${id}/detail`);
+      navigate(`/problems/${id}/room-features`);
     } catch (err) {
       console.error("Erro ao guardar mapping das salas:", err);
       setLocalError(err.message || "Não foi possível guardar o mapping.");
@@ -536,10 +536,10 @@ export default function ProblemRoomsMappingStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 7 de 7</p>
+        <p style={styles.step}>Passo 7 de 8</p>
         <h1 style={styles.title}>Mapping do ficheiro de salas</h1>
         <p style={styles.description}>
-          Associa as colunas do ficheiro de salas aos campos necessários e define
+          Associe as colunas do ficheiro de salas aos campos necessários e define
           como as características estão representadas.
         </p>
 

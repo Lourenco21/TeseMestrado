@@ -25,7 +25,6 @@ export default function ProblemMappingStepPage() {
       const draft = await loadDraft(id);
 
       if (draft.mapping_data?.mapping && Object.keys(draft.mapping_data.mapping).length > 0) {
-        console.log("A carregar mapping salvo:", draft.mapping_data);
         setSelectedMappings(draft.mapping_data.mapping);
         setManualChanges(draft.mapping_data.manual_changes || {});
 
@@ -153,10 +152,10 @@ export default function ProblemMappingStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 4 de 7</p>
+        <p style={styles.step}>Passo 4 de 8</p>
         <h1 style={styles.title}>Confirmar mapping do ficheiro</h1>
         <p style={styles.description}>
-          Associa cada variável do schema à coluna correspondente no ficheiro carregado.
+          Associe cada variável do sistema à coluna correspondente no ficheiro carregado. Pode optar por deixar variáveis sem valores atribuídos.
         </p>
 
         {problemDraft?.name ? (

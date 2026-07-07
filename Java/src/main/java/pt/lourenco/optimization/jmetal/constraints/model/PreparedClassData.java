@@ -6,6 +6,8 @@ import lombok.Getter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.BitSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -16,9 +18,10 @@ public class PreparedClassData {
     private final Map<String, Object> classData;
 
     private final String course;
+    private final String degree;
     private final String classType;
-    private final String teacher;
     private final String classGroup;
+    private final String shift;
     private final String week;
 
     private final LocalDate day;
@@ -30,4 +33,5 @@ public class PreparedClassData {
     private final Integer students;
     private final String requestedRoomName;
     private final Set<String> requestedCharacteristics;
+    private final List<BitSet> requestedCharacteristicRequirementBitSets;
 }

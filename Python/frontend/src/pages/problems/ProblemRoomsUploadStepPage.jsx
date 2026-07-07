@@ -145,10 +145,10 @@ export default function ProblemRoomsUploadStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 6 de 7</p>
+        <p style={styles.step}>Passo 6 de 8</p>
         <h1 style={styles.title}>Carregar ficheiro adicional de salas</h1>
         <p style={styles.description}>
-          Faz upload do ficheiro com as características das salas que vais ligar ao horário.
+          Faça upload do ficheiro com as características das salas que vais ligar ao horário.
         </p>
 
         {problemDraft?.name ? (
