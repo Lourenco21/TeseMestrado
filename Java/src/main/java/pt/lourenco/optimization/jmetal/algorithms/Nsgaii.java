@@ -15,6 +15,7 @@ import pt.lourenco.optimization.jmetal.constraints.service.ConstraintEvaluationS
 import pt.lourenco.optimization.jmetal.constraints.service.IncrementalConstraintEvaluationService;
 import pt.lourenco.optimization.jmetal.constraints.service.SolutionContextBuilderService;
 import pt.lourenco.optimization.jmetal.metrics.PartitionMetrics;
+import pt.lourenco.optimization.jmetal.partitioning.GlobalRoomOccupationTracker;
 import pt.lourenco.optimization.jmetal.problems.model.ClassRoomAssignment;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
 import pt.lourenco.optimization.jmetal.problems.problems.ScheduleOptimizationProblem;
@@ -47,11 +48,19 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
     public Map<String, Object> run(ProblemInputData inputData, Map<String, Object> inputParameters) {
         long algorithmStartNs = System.nanoTime();
 
+        Object trackerObj = inputData.getMetadata() == null
+                ? null
+                : inputData.getMetadata().get("globalRoomOccupationTracker");
+
+        GlobalRoomOccupationTracker globalRoomOccupationTracker =
+                trackerObj instanceof GlobalRoomOccupationTracker tracker ? tracker : null;
+
         ScheduleOptimizationProblem problem = new ScheduleOptimizationProblem(
                 inputData,
                 solutionContextBuilderService,
                 constraintEvaluationService,
-                incrementalConstraintEvaluationService
+                incrementalConstraintEvaluationService,
+                globalRoomOccupationTracker
         );
 
         int numberOfVariables = problem.numberOfVariables();
@@ -94,7 +103,7 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
                                 new RankingAndCrowdingDistanceComparator<>()
                         )
                 )
-                .setMaxEvaluations(1000/*maxEvaluations*/)
+                .setMaxEvaluations(5000/*maxEvaluations*/)
                 .build();
 
         algorithm.run();

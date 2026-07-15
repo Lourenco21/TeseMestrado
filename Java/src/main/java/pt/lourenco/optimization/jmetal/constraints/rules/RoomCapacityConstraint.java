@@ -2,6 +2,7 @@ package pt.lourenco.optimization.jmetal.constraints.rules;
 
 import org.springframework.stereotype.Component;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
+import pt.lourenco.optimization.jmetal.constraints.model.ConstraintGoal;
 import pt.lourenco.optimization.jmetal.constraints.model.ConstraintResult;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedEvaluationData;
@@ -26,6 +27,10 @@ public class RoomCapacityConstraint implements ConstraintRule, IncrementalConstr
 
     @Override
     public ConstraintResult evaluate(SolutionContext context, UserConstraintSelection selection) {
+        if (selection.getGoal() == ConstraintGoal.HARD) {
+            return new ConstraintResult(CONSTRAINT_ID, ConstraintGoal.HARD, 0.0, 0.0);
+        }
+
         double rawViolation = calculateRawViolation(context);
 
         return new ConstraintResult(

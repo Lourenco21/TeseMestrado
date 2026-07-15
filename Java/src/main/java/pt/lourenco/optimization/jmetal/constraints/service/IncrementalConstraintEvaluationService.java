@@ -2,14 +2,13 @@ package pt.lourenco.optimization.jmetal.constraints.service;
 
 import org.springframework.stereotype.Service;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
-import pt.lourenco.optimization.jmetal.constraints.model.ConstraintGoal;
-import pt.lourenco.optimization.jmetal.constraints.model.ConstraintImportance;
 import pt.lourenco.optimization.jmetal.constraints.model.incremental.CandidateAssignment;
 import pt.lourenco.optimization.jmetal.constraints.model.incremental.IncrementalConstraintResult;
 import pt.lourenco.optimization.jmetal.constraints.model.incremental.PartialSolutionContext;
 import pt.lourenco.optimization.jmetal.constraints.rules.ConstraintRule;
 import pt.lourenco.optimization.jmetal.constraints.rules.IncrementalConstraintRule;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -21,19 +20,26 @@ public class IncrementalConstraintEvaluationService {
         this.constraintRuleRegistry = constraintRuleRegistry;
     }
 
-    public CandidateScore evaluateCandidate(
+    public boolean isHardFeasible(
             PartialSolutionContext context,
             CandidateAssignment candidate,
-            List<UserConstraintSelection> selectedConstraints
+            List<UserConstraintSelection> hardConstraints
     ) {
-        double hardScore = 0.0;
-        double softScore = 0.0;
+        return checkHardConstraints(context, candidate, hardConstraints).satisfied();
+    }
 
-        if (selectedConstraints == null || selectedConstraints.isEmpty()) {
-            return new CandidateScore(0.0, 0.0);
+    public HardConstraintCheckResult checkHardConstraints(
+            PartialSolutionContext context,
+            CandidateAssignment candidate,
+            List<UserConstraintSelection> hardConstraints
+    ) {
+        List<String> violatedConstraintIds = new ArrayList<>();
+
+        if (hardConstraints == null || hardConstraints.isEmpty()) {
+            return new HardConstraintCheckResult(true, violatedConstraintIds);
         }
 
-        for (UserConstraintSelection selection : selectedConstraints) {
+        for (UserConstraintSelection selection : hardConstraints) {
             if (selection == null || selection.getId() == null || selection.getId().isBlank()) {
                 continue;
             }
@@ -47,27 +53,17 @@ public class IncrementalConstraintEvaluationService {
                     incrementalRule.evaluateIncrementally(context, candidate, selection);
 
             double rawViolation = result == null ? 0.0 : result.rawViolation();
-            double weightedViolation = applyImportanceWeight(rawViolation, selection.getImportance());
+            if (rawViolation > 0.0) {
+                violatedConstraintIds.add(selection.getId());
 
-            if (selection.getGoal() == ConstraintGoal.HARD) {
-                hardScore += weightedViolation;
-            } else {
-                softScore += weightedViolation;
             }
         }
 
-        return new CandidateScore(hardScore, softScore);
+        return new HardConstraintCheckResult(violatedConstraintIds.isEmpty(), violatedConstraintIds);
     }
 
-    private double applyImportanceWeight(double rawViolation, ConstraintImportance importance) {
-        if (importance == null) {
-            return rawViolation;
-        }
-        return rawViolation * importance.getWeight();
-    }
-
-    public record CandidateScore(
-            double hardScore,
-            double softScore
+    public record HardConstraintCheckResult(
+            boolean satisfied,
+            List<String> violatedConstraintIds
     ) {}
 }

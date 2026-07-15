@@ -8,7 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import pt.lourenco.optimization.jmetal.algorithms.AlgorithmMetadataProvider;
 import pt.lourenco.optimization.jmetal.algorithms.AlgorithmMetadataRegistry;
-import pt.lourenco.optimization.jmetal.partitioning.PartitionReuseStrategy;
 import pt.lourenco.optimization.jmetal.partitioning.PartitionType;
 import pt.lourenco.optimization.jmetal.problems.mapping.RoomsMappingUtils;
 import pt.lourenco.optimization.jmetal.problems.model.ProblemInputData;
@@ -106,15 +105,12 @@ public class ProblemExecutionOrchestratorService {
         log.debug("Selected constraints count: {}", inputData.getSelectedConstraints() == null ? 0 : inputData.getSelectedConstraints().size());
 
         PartitionType partitionType = resolvePartitionType(request.getResolution_scope());
-        PartitionReuseStrategy reuseStrategy =
-                resolveReuseStrategy(request.getRepeated_instance_strategy());
 
         Map<String, Object> executionResult =
                 partitionExecutionCoordinatorService.execute(
                         inputData,
                         algorithmParameters,
-                        partitionType,
-                        reuseStrategy
+                        partitionType
                 );
 
         List<Map<String, Object>> originalSchedule = extractOriginalScheduleRows(inputData.getScheduleData());
@@ -142,7 +138,6 @@ public class ProblemExecutionOrchestratorService {
         response.put("algorithm_used", selectedAlgorithmName);
         response.put("used_parameters", algorithmParameters);
         response.put("partition_type", partitionType.name());
-        response.put("reuse_solution", reuseStrategy == PartitionReuseStrategy.REUSE_EQUAL_PARTITION_SOLUTION);
         response.put("partition_count", executionResult.get("partitionCount"));
         response.put("constraint_values", aggregatedConstraintValues);
         response.put("penalty_summary", aggregatedPenaltySummary);
@@ -260,18 +255,6 @@ public class ProblemExecutionOrchestratorService {
             case "day" -> PartitionType.DAY;
             case "start_half_hour" -> PartitionType.START_HALF_HOUR;
             default -> throw new IllegalArgumentException("Unsupported partition type: " + value);
-        };
-    }
-
-    private PartitionReuseStrategy resolveReuseStrategy(String value) {
-        if (value == null || value.isBlank()) {
-            return PartitionReuseStrategy.INDEPENDENT;
-        }
-
-        return switch (value.trim().toLowerCase()) {
-            case "reuse_solution" -> PartitionReuseStrategy.REUSE_EQUAL_PARTITION_SOLUTION;
-            case "generate_new" -> PartitionReuseStrategy.INDEPENDENT;
-            default -> throw new IllegalArgumentException("Unsupported repeated instance strategy: " + value);
         };
     }
 

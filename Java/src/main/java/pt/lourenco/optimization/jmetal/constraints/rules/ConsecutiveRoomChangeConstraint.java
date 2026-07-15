@@ -137,7 +137,8 @@ public class ConsecutiveRoomChangeConstraint implements ConstraintRule, Incremen
 
             String bucketKey = buildBucketKey(groupKey, day);
 
-            slotsByBucket.computeIfAbsent(bucketKey, k -> new ArrayList<>())
+            slotsByBucket
+                    .computeIfAbsent(bucketKey, k -> new ArrayList<>())
                     .add(new AssignedSlot(classIndex, start, end, roomIdentity));
         }
 
@@ -164,21 +165,17 @@ public class ConsecutiveRoomChangeConstraint implements ConstraintRule, Incremen
     }
 
     private String buildGroupKey(PreparedClassData preparedClass) {
-        String subject = normalizeText(resolveSubject(preparedClass));
+        String degree = normalizeText(preparedClass.getDegree());
+        String course = normalizeText(preparedClass.getCourse());
         String classGroup = normalizeText(preparedClass.getClassGroup());
-        String shift = normalizeText(resolveShift(preparedClass));
+        String shift = normalizeText(preparedClass.getShift());
 
-        if (subject == null || classGroup == null || shift == null) {
+        if (degree == null || course == null || classGroup == null || shift == null) {
             return null;
         }
 
-        String degree = normalizeText(preparedClass.getDegree());
-        if (degree == null) {
-            return "subject::" + subject + "||group::" + classGroup + "||shift::" + shift;
-        }
-
         return "degree::" + degree
-                + "||subject::" + subject
+                + "||course::" + course
                 + "||group::" + classGroup
                 + "||shift::" + shift;
     }
@@ -197,14 +194,6 @@ public class ConsecutiveRoomChangeConstraint implements ConstraintRule, Incremen
 
     private String buildBucketKey(String groupKey, LocalDate day) {
         return groupKey + "##" + day;
-    }
-
-    private String resolveSubject(PreparedClassData preparedClass) {
-        return preparedClass.getCourse();
-    }
-
-    private String resolveShift(PreparedClassData preparedClass) {
-        return preparedClass.getShift();
     }
 
     private String normalizeText(String value) {

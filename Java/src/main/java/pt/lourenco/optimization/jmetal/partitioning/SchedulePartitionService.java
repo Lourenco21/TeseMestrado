@@ -313,6 +313,8 @@ public class SchedulePartitionService {
                 : new LinkedHashMap<>(original.getMetadata()));
         copy.setMappingData(original.getMappingData());
         copy.setRoomsMappingData(original.getRoomsMappingData());
+        copy.setRoomFeatureResolution(original.getRoomFeatureResolution());
+        copy.setResolvedRequestedRoomFeatures(original.getResolvedRequestedRoomFeatures());
         copy.setConstraintsSummary(original.getConstraintsSummary());
         copy.setInstanceCharacteristics(original.getInstanceCharacteristics());
         return copy;

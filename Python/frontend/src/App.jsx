@@ -13,7 +13,7 @@ import ProblemRoomsMappingStepPage from "./pages/problems/ProblemRoomsMappingSte
 import ProblemExecutePage from "./pages/problems/ProblemExecutePage.jsx";
 import ProblemConstraintsStepPage from "./pages/problems/ProblemConstraintsStepPage.jsx";
 import ProblemDetailPage from "./pages/problems/ProblemDetailPage.jsx"
-import SolutionScheduleByRoomPage from "./pages/schedules/SolutionScheduleByRoomPage.jsx"
+import SolutionScheduleByRoomPage from "./pages/solution/SolutionScheduleByRoomPage.jsx"
 import ProblemRoomFeatureResolutionStepPage from "./pages/problems/ProblemRoomFeatureResolutionStepPage.jsx";
 import ProblemUploadEditPage from "./pages/problems/editSteps/ProblemUploadEditPage.jsx";
 import ProblemRoomsUploadEditPage from "./pages/problems/editSteps/ProblemRoomsUploadEditPage.jsx"
@@ -21,6 +21,7 @@ import ProblemMappingEditPage from "./pages/problems/editSteps/ProblemMappingEdi
 import ProblemRoomsMappingEditPage from "./pages/problems/editSteps/ProblemRoomsMappingEditPage.jsx"
 import ProblemRoomFeatureResolutionEditPage from "./pages/problems/editSteps/ProblemRoomFeatureResolutionEditPage.jsx"
 import ProblemConstraintsEditPage from "./pages/problems/editSteps/ProblemConstraintEditPage.jsx"
+import SolutionMetricsPage from "./pages/solution/SolutionMetricsPage.jsx";
 
 export default function App() {
   return (
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/problems/:id/edit/rooms-mapping" element={<ProblemRoomsMappingEditPage />}/>
           <Route path="/problems/:id/edit/room-features" element={<ProblemRoomFeatureResolutionEditPage />}/>
           <Route path="/problems/:id/edit/constraints" element={<ProblemConstraintsEditPage />}/>
+          <Route path="/problems/:id/solutions/:solutionId/metrics" element={<SolutionMetricsPage />}/>
         </Routes>
       </ProblemWizardProvider>
     </BrowserRouter>

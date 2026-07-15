@@ -1,11 +1,16 @@
 package pt.lourenco.optimization.utils;
 
+import java.text.Normalizer;
 import java.util.*;
 import java.util.regex.Pattern;
 
 public final class TextListParsingUtils {
 
-    private static final String DEFAULT_MULTI_DELIMITER_REGEX = "[,;|/]+";
+    private static final String DEFAULT_MULTI_DELIMITER_REGEX = "[,;]+";
+    private static final Pattern DIACRITICS_PATTERN = Pattern.compile("\\p{M}+");
+    private static final Pattern WHITESPACE_PATTERN = Pattern.compile("\\s+");
+    private static final Pattern NON_ALNUM_UNDERSCORE_PATTERN = Pattern.compile("[^a-z0-9_]+");
+    private static final Pattern MULTIPLE_UNDERSCORES_PATTERN = Pattern.compile("_+");
 
     private TextListParsingUtils() {
     }
@@ -49,6 +54,19 @@ public final class TextListParsingUtils {
             return "";
         }
 
-        return value.trim().toLowerCase();
+        String text = value.trim().toLowerCase(Locale.ROOT);
+        if (text.isBlank()) {
+            return "";
+        }
+
+        text = Normalizer.normalize(text, Normalizer.Form.NFKD);
+        text = DIACRITICS_PATTERN.matcher(text).replaceAll("");
+        text = text.replace("-", "_").replace("/", "_");
+        text = WHITESPACE_PATTERN.matcher(text).replaceAll("_");
+        text = NON_ALNUM_UNDERSCORE_PATTERN.matcher(text).replaceAll("");
+        text = MULTIPLE_UNDERSCORES_PATTERN.matcher(text).replaceAll("_");
+        text = text.replaceAll("^_+|_+$", "");
+
+        return text;
     }
 }

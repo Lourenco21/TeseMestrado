@@ -3,7 +3,7 @@ from .views import ScheduleUploadView, ProblemMappingSuggestionsView, ScheduleLi
     ProblemDraftListCreateView, ProblemDraftDetailView, ProblemCatalogView, RoomDataFileUploadView, \
     ProblemRoomsFilePreviewView, ProblemRoomsMappingSaveView, ProblemRoomsMappingSuggestionsView, ProblemSendToJavaView, \
     ProblemRequestAlgorithmsView, ProblemExecuteView, FilesForJavaView, ProblemSolutionsListView, SolutionDetailView, \
-    ProblemRoomFeatureResolutionAnalysisView
+    ProblemRoomFeatureResolutionAnalysisView, SolutionMetricsView
 
 urlpatterns = [
     path("", ProblemDraftListCreateView.as_view(), name="problem-draft-list-create"),
@@ -22,4 +22,5 @@ urlpatterns = [
     path("<int:problem_id>/solutions/", ProblemSolutionsListView.as_view(), name="problem-solutions-list"),
     path("<int:problem_id>/solutions/<int:solution_id>/", SolutionDetailView.as_view(), name="solution-detail"),
     path("<int:problem_id>/room-feature-resolution-analysis/", ProblemRoomFeatureResolutionAnalysisView.as_view(),name="problem-room-feature-resolution-analysis",),
+    path("<int:problem_id>/solutions/<int:solution_id>/metrics/", SolutionMetricsView.as_view(), name="solution-metrics"),
 ]

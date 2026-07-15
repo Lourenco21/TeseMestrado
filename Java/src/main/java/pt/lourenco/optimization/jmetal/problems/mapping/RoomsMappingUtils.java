@@ -125,7 +125,10 @@ public final class RoomsMappingUtils {
             String cellValue = rawValue == null ? null : String.valueOf(rawValue);
 
             if (matchesSelectedValue(cellValue, selectedValues)) {
-                result.add(columnName);
+                String normalized = TextListParsingUtils.normalizeToken(columnName);
+                if (NestedMapUtils.hasText(normalized)) {
+                    result.add(normalized);
+                }
             }
         }
 
@@ -163,7 +166,10 @@ public final class RoomsMappingUtils {
             if (insideRange) {
                 String cellValue = entry.getValue() == null ? null : String.valueOf(entry.getValue());
                 if (matchesSelectedValue(cellValue, selectedValues)) {
-                    result.add(columnName);
+                    String normalized = TextListParsingUtils.normalizeToken(columnName);
+                    if (NestedMapUtils.hasText(normalized)) {
+                        result.add(normalized);
+                    }
                 }
             }
 

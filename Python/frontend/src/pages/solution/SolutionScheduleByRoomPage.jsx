@@ -239,6 +239,12 @@ export default function SolutionScheduleByRoomPage() {
 
         <div style={styles.switcher}>
           <NavLink
+            to={`/problems/${id}/solutions/${solutionId}/metrics`}
+            style={styles.switcherButton}
+          >
+            Dados
+          </NavLink>
+          <NavLink
             to={`/problems/${id}/solutions/${solutionId}/schedule/full`}
             style={styles.switcherButton}
           >

@@ -69,7 +69,8 @@ public class PreparedEvaluationDataBuilderService {
                     RoomFeatureBitSetUtils.extractRequestedRequirementBitSets(
                             classRow,
                             inputData.getMappingData(),
-                            requirementCache
+                            requirementCache,
+                            featureIndex
                     );
 
             Set<String> debugRequestedCharacteristics =

@@ -2,6 +2,7 @@ package pt.lourenco.optimization.jmetal.constraints.rules;
 
 import org.springframework.stereotype.Component;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
+import pt.lourenco.optimization.jmetal.constraints.model.ConstraintGoal;
 import pt.lourenco.optimization.jmetal.constraints.model.ConstraintResult;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedEvaluationData;
@@ -30,7 +31,7 @@ public class RoomWastedSeatsConstraint implements ConstraintRule, IncrementalCon
 
         return new ConstraintResult(
                 CONSTRAINT_ID,
-                selection.getGoal(),
+                ConstraintGoal.SOFT,
                 rawViolation,
                 rawViolation
         );
@@ -46,7 +47,10 @@ public class RoomWastedSeatsConstraint implements ConstraintRule, IncrementalCon
         PreparedClassData preparedClass = prepared.getClasses().get(candidate.classIndex());
         PreparedRoomData preparedRoom = prepared.getRooms().get(candidate.roomIndex());
 
-        double rawViolation = calculateWastedSeats(preparedClass.getStudents(),preparedRoom.getCapacity());
+        double rawViolation = calculateWastedSeats(
+                preparedClass.getStudents(),
+                preparedRoom.getCapacity()
+        );
 
         return new IncrementalConstraintResult(rawViolation);
     }
@@ -79,7 +83,10 @@ public class RoomWastedSeatsConstraint implements ConstraintRule, IncrementalCon
             PreparedClassData preparedClass = preparedClasses.get(classIndex);
             PreparedRoomData preparedRoom = preparedRooms.get(roomIndex);
 
-            totalViolation += calculateWastedSeats(preparedClass.getStudents(),preparedRoom.getCapacity());
+            totalViolation += calculateWastedSeats(
+                    preparedClass.getStudents(),
+                    preparedRoom.getCapacity()
+            );
         }
 
         return totalViolation;
@@ -94,6 +101,6 @@ public class RoomWastedSeatsConstraint implements ConstraintRule, IncrementalCon
             return 0.0;
         }
 
-        return Math.max(0, (roomCapacity - students + 10) * 0.01);
+        return Math.max(0.0, (roomCapacity - students + 10) * 0.01);
     }
 }

@@ -142,7 +142,8 @@ public final class RoomFeatureBitSetUtils {
     public static List<BitSet> extractRequestedRequirementBitSets(
             Map<String, Object> classRow,
             Map<String, Object> mappingData,
-            Map<String, BitSet> requirementCache
+            Map<String, BitSet> requirementCache,
+            Map<String, Integer> featureIndex
     ) {
         String rawValue = ScheduleMappingUtils.getRequestedRoomCharacteristics(classRow, mappingData);
         String separator = extractConfiguredSeparator(mappingData);
@@ -160,12 +161,20 @@ public final class RoomFeatureBitSetUtils {
             }
 
             BitSet cached = requirementCache.get(token);
-            if (cached == null) {
-                result.add(new BitSet());
+            if (cached != null) {
+                result.add((BitSet) cached.clone());
                 continue;
             }
 
-            result.add((BitSet) cached.clone());
+            Integer directIdx = featureIndex.get(token);
+            if (directIdx != null) {
+                BitSet direct = new BitSet();
+                direct.set(directIdx);
+                result.add(direct);
+                continue;
+            }
+
+            System.out.println("WARN Unknown requested room characteristic token: " + token);
         }
 
         return List.copyOf(result);

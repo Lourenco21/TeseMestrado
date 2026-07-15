@@ -138,7 +138,8 @@ public class StudentRelocationConstraint implements ConstraintRule, IncrementalC
 
             String bucketKey = buildBucketKey(groupKey, day);
 
-            slotsByBucket.computeIfAbsent(bucketKey, k -> new ArrayList<>())
+            slotsByBucket
+                    .computeIfAbsent(bucketKey, k -> new ArrayList<>())
                     .add(new AssignedSlot(classIndex, start, end, building));
         }
 
@@ -165,14 +166,11 @@ public class StudentRelocationConstraint implements ConstraintRule, IncrementalC
     }
 
     private String buildGroupKey(PreparedClassData preparedClass) {
-        String classGroup = normalizeText(preparedClass.getClassGroup());
-        if (classGroup == null) {
-            return null;
-        }
-
         String degree = normalizeText(preparedClass.getDegree());
-        if (degree == null) {
-            return "group::" + classGroup;
+        String classGroup = normalizeText(preparedClass.getClassGroup());
+
+        if (degree == null || classGroup == null) {
+            return null;
         }
 
         return "degree::" + degree + "||group::" + classGroup;

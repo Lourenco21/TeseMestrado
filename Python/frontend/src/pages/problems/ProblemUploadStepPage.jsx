@@ -75,13 +75,6 @@ export default function ProblemUploadStepPage() {
         file: selectedFile,
       });
 
-      const updatedDraft = await saveDraft({
-        uploaded_schedule: uploadedSchedule.id,
-        status: "file_uploaded",
-        current_step: 4,
-        mapping_data: {},
-      });
-
       setExistingSchedule(uploadedSchedule);
       setIsReplacingFile(false);
       setSelectedFile(null);

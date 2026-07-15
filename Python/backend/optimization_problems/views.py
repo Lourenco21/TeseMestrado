@@ -29,6 +29,8 @@ from .serializers import ScheduleSerializer, ScheduleListSerializer, ProblemDraf
 from .models import Schedule, ProblemDraft, RoomDataFile, Solution
 from .services.file_reader import read_schedule_file, extract_columns_and_preview
 from .services.column_matcher import match_canonical_fields_to_source_columns
+from .services.metrics import build_events, calculate_all_metrics
+from .services.schedule_loading import load_schedule_dataframe
 
 
 class ScheduleUploadView(APIView):
@@ -646,7 +648,7 @@ class ProblemSendToJavaView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(10,6000),
+                timeout=(30,6000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -813,7 +815,7 @@ class ProblemRequestAlgorithmsView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(10,6000),
+                timeout=(30,6000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -1017,7 +1019,7 @@ class ProblemExecuteView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(10, 6000),
+                timeout=(30, 6000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -1094,51 +1096,6 @@ class ProblemExecuteView(APIView):
             },
             status=status.HTTP_200_OK
         )
-
-
-def load_schedule_dataframe(file_path):
-    lower_path = file_path.lower()
-
-    if lower_path.endswith(".csv"):
-        attempts = [
-            {"encoding": "utf-8", "sep": ","},
-            {"encoding": "utf-8-sig", "sep": ","},
-            {"encoding": "latin1", "sep": ","},
-            {"encoding": "utf-8", "sep": ";"},
-            {"encoding": "utf-8-sig", "sep": ";"},
-            {"encoding": "latin1", "sep": ";"},
-        ]
-
-        last_error = None
-
-        for attempt in attempts:
-            try:
-                df = pd.read_csv(
-                    file_path,
-                    encoding=attempt["encoding"],
-                    sep=attempt["sep"],
-                    engine="python",
-                )
-                if df.shape[1] > 1:
-                    return df
-            except Exception as exc:
-                last_error = exc
-
-        raise ValueError(f"Não foi possível ler o CSV. Último erro: {last_error}")
-
-    if lower_path.endswith(".xlsx"):
-        try:
-            return pd.read_excel(file_path, engine="openpyxl")
-        except Exception as exc:
-            raise ValueError(f"Erro ao ler XLSX: {exc}")
-
-    if lower_path.endswith(".xls"):
-        try:
-            return pd.read_excel(file_path)
-        except Exception as exc:
-            raise ValueError(f"Erro ao ler XLS: {exc}")
-
-    raise ValueError("Formato de ficheiro não suportado.")
 
 
 def build_constraints_summary(selected_constraints):
@@ -1939,3 +1896,77 @@ def apply_room_feature_resolution(df, mapping_data, room_feature_resolution):
     working_df["_resolved_requested_room_features"] = working_df[requested_column].apply(resolve_value)
 
     return working_df
+
+
+class SolutionMetricsView(APIView):
+    def get(self, request, problem_id, solution_id, *args, **kwargs):
+        try:
+            solution = Solution.objects.select_related("problem").get(
+                pk=solution_id, problem_id=problem_id
+            )
+        except Solution.DoesNotExist:
+            return Response(
+                {"error": "Solução não encontrada."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        problem_draft = solution.problem
+
+        try:
+            rooms_df = None
+            if problem_draft.uploaded_rooms_file:
+                rooms_df = load_schedule_dataframe(
+                    problem_draft.uploaded_rooms_file.file.path
+                )
+
+            selected_ids = _extract_constraint_ids(
+                solution.constraint_values
+            )
+
+            # --- Métricas da solução otimizada (lazy, cache em Solution) ---
+            if not solution.metrics:
+                if not solution.schedule_file:
+                    return Response(
+                        {"error": "A solução não tem ficheiro de horário associado."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+                if rooms_df is None:
+                    return Response(
+                        {"error": "O problema não tem ficheiro de salas associado."},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                schedule_df = load_schedule_dataframe(solution.schedule_file.path)
+                events = build_events(
+                    schedule_df=schedule_df,
+                    rooms_df=rooms_df,
+                    mapping_data=problem_draft.mapping_data,
+                    rooms_mapping_data=problem_draft.rooms_mapping_data,
+                    room_feature_resolution=problem_draft.room_feature_resolution,
+                )
+                solution.metrics = calculate_all_metrics(events, selected_ids)
+                solution.save(update_fields=["metrics"])
+
+        except Exception as exc:
+            return Response(
+                {
+                    "error": "Não foi possível calcular as métricas.",
+                    "details": str(exc),
+                    "trace": traceback.format_exc(),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
+
+        serialized = SolutionDetailSerializer(
+            solution, context={"request": request}
+        ).data
+
+        return Response(serialized, status=status.HTTP_200_OK)
+
+def _extract_constraint_ids(constraint_values):
+    ids = []
+    for item in constraint_values or []:
+        if isinstance(item, str):
+            ids.append(item)
+    return [i for i in ids if i]
+

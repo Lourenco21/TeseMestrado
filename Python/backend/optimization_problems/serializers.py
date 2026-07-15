@@ -2,6 +2,7 @@ from pathlib import Path
 
 from rest_framework import serializers
 from .models import Schedule, ProblemDraft, RoomDataFile, Solution
+from .services.baseline_metrics import calculate_baseline_metrics_for_draft
 
 
 class ScheduleSerializer(serializers.ModelSerializer):
@@ -72,6 +73,7 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
             "rooms_mapping_data",
             "room_feature_resolution",
             "selected_constraints",
+            "baseline_metrics",
             "created_at",
             "updated_at",
         ]
@@ -105,6 +107,20 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
             return Path(rooms_file.file.name).name
         return None
 
+    def update(self, instance, validated_data):
+        resolution_touched = "room_feature_resolution" in validated_data
+
+        instance = super().update(instance, validated_data)
+
+        if resolution_touched:
+            try:
+                instance.baseline_metrics = calculate_baseline_metrics_for_draft(instance)
+            except Exception as exc:
+                instance.baseline_metrics = {"error": str(exc)}
+            instance.save(update_fields=["baseline_metrics"])
+
+        return instance
+
 
 class SolutionListSerializer(serializers.ModelSerializer):
     class Meta:
@@ -137,6 +153,7 @@ class SolutionDetailSerializer(serializers.ModelSerializer):
             "penalty_summary",
             "partition_count",
             "execution_time_seconds",
+            "metrics",
             "schedule_file",
             "schedule_file_url",
             "created_at",

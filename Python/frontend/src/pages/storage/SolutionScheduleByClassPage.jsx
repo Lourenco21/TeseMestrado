@@ -4,7 +4,7 @@ import Papa from "papaparse";
 import { format, parse, startOfWeek } from "date-fns";
 import { getProblemDraft } from "../../services/problemsApi.js";
 import { getProblemSolutionDetail } from "../../services/solutionsApi.js";
-import SearchableSelect from "../schedules/SearchableSelect.jsx";
+import SearchableSelect from "../solution/SearchableSelect.jsx";
 
 const DAYS = [
   { id: 1, label: "Segunda-feira" },

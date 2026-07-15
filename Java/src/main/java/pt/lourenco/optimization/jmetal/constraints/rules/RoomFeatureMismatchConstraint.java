@@ -2,6 +2,7 @@ package pt.lourenco.optimization.jmetal.constraints.rules;
 
 import org.springframework.stereotype.Component;
 import pt.lourenco.optimization.jmetal.constraints.dto.UserConstraintSelection;
+import pt.lourenco.optimization.jmetal.constraints.model.ConstraintGoal;
 import pt.lourenco.optimization.jmetal.constraints.model.ConstraintResult;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedClassData;
 import pt.lourenco.optimization.jmetal.constraints.model.PreparedEvaluationData;
@@ -27,6 +28,10 @@ public class RoomFeatureMismatchConstraint implements ConstraintRule, Incrementa
 
     @Override
     public ConstraintResult evaluate(SolutionContext context, UserConstraintSelection selection) {
+        if (selection.getGoal() == ConstraintGoal.HARD) {
+            return new ConstraintResult(CONSTRAINT_ID, ConstraintGoal.HARD, 0.0, 0.0);
+        }
+
         double rawViolation = calculateRawViolation(context);
 
         return new ConstraintResult(
@@ -72,13 +77,8 @@ public class RoomFeatureMismatchConstraint implements ConstraintRule, Incrementa
             int classIndex = assignment.getClassIndex();
             int roomIndex = assignment.getRoomIndex();
 
-            if (classIndex < 0 || classIndex >= preparedClasses.size()) {
-                continue;
-            }
-
-            if (roomIndex < 0 || roomIndex >= preparedRooms.size()) {
-                continue;
-            }
+            if (classIndex < 0 || classIndex >= preparedClasses.size()) continue;
+            if (roomIndex < 0 || roomIndex >= preparedRooms.size()) continue;
 
             PreparedClassData preparedClass = preparedClasses.get(classIndex);
             PreparedRoomData preparedRoom = preparedRooms.get(roomIndex);
@@ -102,10 +102,20 @@ public class RoomFeatureMismatchConstraint implements ConstraintRule, Incrementa
 
         BitSet available = roomCharacteristicsBitSet == null ? new BitSet() : roomCharacteristicsBitSet;
 
-        long missingCount = requestedRequirementBitSets.stream()
-                .filter(bitSet -> bitSet != null && !bitSet.isEmpty())
-                .filter(bitSet -> !bitSet.intersects(available))
-                .count();
+        long missingCount = 0L;
+
+        for (BitSet requirement : requestedRequirementBitSets) {
+            if (requirement == null) {
+                missingCount++;
+                continue;
+            }
+            if (requirement.isEmpty()) {
+                continue;
+            }
+            if (!requirement.intersects(available)) {
+                missingCount++;
+            }
+        }
 
         return (double) missingCount;
     }

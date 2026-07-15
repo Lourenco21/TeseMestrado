@@ -37,3 +37,16 @@ export async function getProblemSolutionDetail(problemId, solutionId) {
   );
   return handleResponse(response);
 }
+
+export async function getProblemSolutionMetrics(problemId, solutionId) {
+  const response = await fetch(
+    `${API_BASE_URL}${problemId}/solutions/${solutionId}/metrics/`
+  );
+
+  if (!response.ok) {
+    const errorBody = await response.json().catch(() => ({}));
+    throw new Error(errorBody.error || "Erro ao carregar métricas da solução.");
+  }
+
+  return response.json();
+}

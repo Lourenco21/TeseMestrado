@@ -8,7 +8,7 @@ from django.utils.timezone import now
 # Create your models here.
 class Schedule(models.Model):
     name = models.CharField(max_length=255, blank=True)
-    file = models.FileField(upload_to='optimization_problems/schedules/',
+    file = models.FileField(upload_to='optimization_problems/solution/',
                             validators=[FileExtensionValidator(allowed_extensions=['csv', 'xlsx', 'xls'])])
     uploaded_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -62,6 +62,8 @@ class ProblemDraft(models.Model):
 
     selected_constraints = models.JSONField(default=list, blank=True)
 
+    baseline_metrics = models.JSONField(default=dict, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -105,6 +107,7 @@ class Solution(models.Model):
     penalty_summary = models.JSONField(default=dict, blank=True)
     partition_count = models.IntegerField(default=0)
     execution_time_seconds = models.FloatField(default=0.0)
+    metrics = models.JSONField(default=dict, blank=True)
 
     schedule_file = models.FileField(
         upload_to="optimization_problems/solutions/",
