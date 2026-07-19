@@ -47,11 +47,6 @@ public class SchedulePartitionService {
             throw new IllegalArgumentException("rooms_data.rooms is missing or is not a list.");
         }
 
-        //Object classesObject = originalInput.getScheduleData().get("classes");
-        //if (!(classesObject instanceof List<?> rawClasses)) {
-        //    return List.of();
-        //}
-
         List<Map<String, Object>> classes = rawClasses.stream()
                 .filter(Map.class::isInstance)
                 .map(item -> (Map<String, Object>) item)
@@ -59,17 +54,6 @@ public class SchedulePartitionService {
 
         if (classes.isEmpty()) {
             return List.of();
-        }
-
-        if (partitionType == PartitionType.SEMESTER) {
-            ProblemInputData cloned = cloneWithClasses(originalInput, classes);
-            return List.of(new PartitionedProblemInputData(
-                    "semester",
-                    PartitionType.SEMESTER,
-                    0,
-                    cloned,
-                    classes
-            ));
         }
 
         Map<String, List<Map<String, Object>>> grouped = classes.stream()

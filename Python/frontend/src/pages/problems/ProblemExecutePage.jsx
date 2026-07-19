@@ -32,70 +32,6 @@ const RESOLUTION_OPTIONS = [
   },
 ];
 
-function getRepeatedInstanceOptions(resolutionScope) {
-  switch (resolutionScope) {
-    case "week":
-      return [
-        {
-          value: "reuse_solution",
-          label: "Guardar a mesma solução para semanas iguais",
-          description:
-            "Reutiliza a mesma solução sempre que forem detetadas semanas equivalentes.",
-        },
-        {
-          value: "generate_new",
-          label: "Gerar nova solução para cada semana",
-          description:
-            "Volta a gerar a solução em cada semana, mesmo quando o padrão é idêntico.",
-        },
-      ];
-    case "day":
-      return [
-        {
-          value: "reuse_solution",
-          label: "Guardar a mesma solução para dias iguais",
-          description:
-            "Reutiliza a mesma solução sempre que forem detetados dias equivalentes.",
-        },
-        {
-          value: "generate_new",
-          label: "Gerar nova solução para cada dia",
-          description:
-            "Volta a gerar a solução em cada dia, mesmo quando o padrão é idêntico.",
-        },
-      ];
-    case "start_half_hour":
-      return [
-        {
-          value: "reuse_solution",
-          label: "Guardar a mesma solução para blocos iguais",
-          description:
-            "Reutiliza a mesma solução para blocos de meia hora com o mesmo padrão.",
-        },
-        {
-          value: "generate_new",
-          label: "Gerar nova solução para cada bloco",
-          description:
-            "Volta a gerar a solução para cada bloco de meia hora, mesmo quando o padrão é idêntico.",
-        },
-      ];
-    default:
-      return [];
-  }
-}
-
-function getRepeatedStrategySectionTitle(resolutionScope) {
-  switch (resolutionScope) {
-    case "week":
-      return "Tratamento de semanas iguais";
-    case "day":
-      return "Tratamento de dias iguais";
-    case "start_half_hour":
-      return "Tratamento de blocos de meia hora iguais";
-    default:
-      return "";
-  }
-}
 
 function extractAlgorithms(result) {
   const candidates = [
@@ -189,8 +125,8 @@ export default function ProblemSendToJavaPage() {
   const [executionMessage, setExecutionMessage] = useState("");
   const [responseData, setResponseData] = useState(null);
   const [executionResponseData, setExecutionResponseData] = useState(null);
-  const [resolutionScope, setResolutionScope] = useState("");
-  const [repeatedInstanceStrategy, setRepeatedInstanceStrategy] = useState("");
+  const [resolutionScope] = useState("");
+  const [repeatedInstanceStrategy] = useState("");
   const [selectedAlgorithmIndex, setSelectedAlgorithmIndex] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState({
     requestConfig: false,
@@ -201,14 +137,6 @@ export default function ProblemSendToJavaPage() {
 
   const requiresRepeatedStrategy = useMemo(() => {
     return ["week", "day", "start_half_hour"].includes(resolutionScope);
-  }, [resolutionScope]);
-
-  const repeatedInstanceOptions = useMemo(() => {
-    return getRepeatedInstanceOptions(resolutionScope);
-  }, [resolutionScope]);
-
-  const repeatedStrategyTitle = useMemo(() => {
-    return getRepeatedStrategySectionTitle(resolutionScope);
   }, [resolutionScope]);
 
   const recommendedAlgorithms = useMemo(() => {
@@ -252,27 +180,7 @@ export default function ProblemSendToJavaPage() {
     setExecutionResponseData(null);
   }
 
-  function resetAlgorithmResults() {
-    setResponseData(null);
-    setExecutionResponseData(null);
-    setSelectedAlgorithmIndex(null);
-    setExpandedAlgorithms({});
-    setSuccessMessage("");
-    setExecutionMessage("");
-  }
-
   async function handleSend() {
-    if (!resolutionScope) {
-      setLocalError("Selecione primeiro como quer tentar resolver o problema.");
-      return;
-    }
-
-    if (requiresRepeatedStrategy && !repeatedInstanceStrategy) {
-      setLocalError(
-        "Indique o que fazer quando existirem semanas, dias ou blocos equivalentes."
-      );
-      return;
-    }
 
     try {
       setSending(true);
@@ -284,12 +192,7 @@ export default function ProblemSendToJavaPage() {
       setExpandedAlgorithms({});
       setResponseData(null);
 
-      const data = await requestProblemAlgorithms(id, {
-        resolution_scope: resolutionScope,
-        repeated_instance_strategy: requiresRepeatedStrategy
-          ? repeatedInstanceStrategy
-          : null,
-      });
+      const data = await requestProblemAlgorithms(id);
 
       setSuccessMessage("Recomendação de algoritmos recebida com sucesso.");
       setResponseData(data);
@@ -369,105 +272,8 @@ export default function ProblemSendToJavaPage() {
           Configure a forma de resolução do problema e selecione depois o algoritmo a executar.
         </p>
 
-        <CollapsibleSection
-          title="Configuração do pedido"
-          subtitle="Defina o nível de resolução e, quando necessário, o tratamento de instâncias equivalentes."
-          isCollapsed={collapsedSections.requestConfig}
-          onToggle={() => toggleSection("requestConfig")}
-        >
-          <div style={styles.section}>
-            <p style={styles.sectionTitle}>Nível de resolução</p>
-            <div style={styles.optionGrid}>
-              {RESOLUTION_OPTIONS.map((option) => {
-                const selected = resolutionScope === option.value;
 
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => {
-                      setResolutionScope(option.value);
-                      setLocalError("");
-                      resetAlgorithmResults();
 
-                      if (option.value === "semester") {
-                        setRepeatedInstanceStrategy("");
-                      }
-                    }}
-                    style={{
-                      ...styles.optionCard,
-                      ...(selected ? styles.optionCardActive : {}),
-                    }}
-                  >
-                    <span style={styles.optionTitle}>{option.label}</span>
-                    <span style={styles.optionDescription}>
-                      {option.description}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {requiresRepeatedStrategy ? (
-            <div style={styles.section}>
-              <p style={styles.sectionTitle}>{repeatedStrategyTitle}</p>
-              <div style={styles.optionGrid}>
-                {repeatedInstanceOptions.map((option) => {
-                  const selected = repeatedInstanceStrategy === option.value;
-
-                  return (
-                    <button
-                      key={option.value}
-                      type="button"
-                      onClick={() => {
-                        setRepeatedInstanceStrategy(option.value);
-                        setLocalError("");
-                        resetAlgorithmResults();
-                      }}
-                      style={{
-                        ...styles.optionCard,
-                        ...(selected ? styles.optionCardActive : {}),
-                      }}
-                    >
-                      <span style={styles.optionTitle}>{option.label}</span>
-                      <span style={styles.optionDescription}>
-                        {option.description}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          ) : null}
-
-          <div style={styles.actions}>
-            <button
-              type="button"
-              onClick={() => navigate(`/problems/${id}/detail`)}
-              style={styles.secondaryButton}
-            >
-              Voltar
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSend}
-              disabled={sending}
-              style={{
-                ...styles.primaryButton,
-                ...(sending ? styles.primaryButtonDisabled : {}),
-              }}
-            >
-              {sending ? "A analisar..." : "Obter recomendação"}
-            </button>
-          </div>
-
-          {localError ? <p style={styles.error}>{localError}</p> : null}
-          {successMessage ? <p style={styles.success}>{successMessage}</p> : null}
-        </CollapsibleSection>
-
-        {responseData ? (
           <CollapsibleSection
             title="Algoritmos recomendados"
             subtitle="Lista de candidatos sugeridos."
@@ -609,8 +415,29 @@ export default function ProblemSendToJavaPage() {
                 </p>
               </div>
             )}
+            <div style={styles.actions}>
+              <button
+                type="button"
+                onClick={() => navigate(`/problems/${id}/detail`)}
+                style={styles.secondaryButton}
+              >
+                Voltar
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSend}
+                disabled={sending}
+                style={{
+                  ...styles.primaryButton,
+                  ...(sending ? styles.primaryButtonDisabled : {}),
+                }}
+              >
+                {sending ? "A analisar..." : "Obter recomendação"}
+              </button>
+            </div>
+
           </CollapsibleSection>
-        ) : null}
 
         {responseData && recommendedAlgorithms.length > 0 ? (
           <CollapsibleSection
@@ -828,7 +655,7 @@ const styles = {
     gap: "12px",
     justifyContent: "space-between",
     flexWrap: "wrap",
-    marginTop: "8px",
+    marginTop: "20px",
   },
   secondaryButton: {
     padding: "12px 18px",

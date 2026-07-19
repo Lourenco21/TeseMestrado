@@ -84,7 +84,7 @@ export async function sendProblemToJava(problemId, executionConfig = {}) {
   return data;
 }
 
-export async function requestProblemAlgorithms(problemId, executionConfig = {}) {
+export async function requestProblemAlgorithms(problemId) {
   const response = await fetch(
     `http://127.0.0.1:8000/optimization_problems/${problemId}/request-algorithms/`,
     {
@@ -92,7 +92,6 @@ export async function requestProblemAlgorithms(problemId, executionConfig = {}) 
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(executionConfig),
     }
   );
 

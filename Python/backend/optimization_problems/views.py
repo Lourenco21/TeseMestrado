@@ -733,8 +733,8 @@ class ProblemRequestAlgorithmsView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        resolution_scope = request.data.get("resolution_scope")
-        repeated_instance_strategy = request.data.get("repeated_instance_strategy")
+        resolution_scope = "start_half_hour"
+        repeated_instance_strategy = "generate_new"
 
         if resolution_scope not in self.VALID_RESOLUTION_SCOPES:
             return Response(
@@ -908,8 +908,8 @@ class ProblemExecuteView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        resolution_scope = request.data.get("resolution_scope")
-        repeated_instance_strategy = request.data.get("repeated_instance_strategy")
+        resolution_scope = "start_half_hour"
+        repeated_instance_strategy = "generate_new"
         selected_algorithm_name = request.data.get("selected_algorithm")
 
         if resolution_scope not in self.VALID_RESOLUTION_SCOPES:
