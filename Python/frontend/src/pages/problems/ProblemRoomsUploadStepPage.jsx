@@ -96,7 +96,7 @@ export default function ProblemRoomsUploadStepPage() {
       await saveDraft({
         uploaded_rooms_file: uploadedRoomsFile.id,
         rooms_mapping_data: {},
-        current_step: 7,
+        current_step: 4,
       });
 
       setExistingRoomsFile({
@@ -145,7 +145,7 @@ export default function ProblemRoomsUploadStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 6 de 8</p>
+        <p style={styles.step}>Passo 4 de 7</p>
         <h1 style={styles.title}>Carregar ficheiro adicional de salas</h1>
         <p style={styles.description}>
           Faça upload do ficheiro com as características das salas que vais ligar ao horário.

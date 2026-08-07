@@ -212,18 +212,7 @@ export default function ProblemSendToJavaPage() {
   }
 
   async function handleExecute() {
-    if (!resolutionScope) {
-      setLocalError("Selecione primeiro o nível de resolução.");
-      return;
-    }
-
-    if (requiresRepeatedStrategy && !repeatedInstanceStrategy) {
-      setLocalError(
-        "Indique o tratamento das instâncias equivalentes antes de executar."
-      );
-      return;
-    }
-
+    
     if (!effectiveSelectedAlgorithmName) {
       setLocalError("Não foi possível determinar um algoritmo para executar.");
       return;
@@ -442,7 +431,7 @@ export default function ProblemSendToJavaPage() {
         {responseData && recommendedAlgorithms.length > 0 ? (
           <CollapsibleSection
             title="Execução"
-            subtitle="Seleciona um dos algoritmos recomendados e envia a execução final."
+            subtitle="Selecione um dos algoritmos recomendados e envia a execução final."
             badge={
               effectiveSelectedAlgorithmName
                 ? effectiveSelectedAlgorithmName
@@ -458,7 +447,7 @@ export default function ProblemSendToJavaPage() {
                   {effectiveSelectedAlgorithmName || "Ainda não disponível"}
                 </p>
                 <p style={styles.executionSummaryHint}>
-                  Se não escolheres manualmente um algoritmo, será usado
+                  Se não escolher manualmente um algoritmo, será usado
                   automaticamente o primeiro algoritmo recomendado.
                 </p>
               </div>

@@ -54,6 +54,8 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
         read_only=True
     )
 
+    solutions_count = serializers.IntegerField(read_only=True)
+
     class Meta:
         model = ProblemDraft
         fields = [
@@ -76,6 +78,7 @@ class ProblemDraftSerializer(serializers.ModelSerializer):
             "baseline_metrics",
             "created_at",
             "updated_at",
+            "solutions_count",
         ]
         read_only_fields = [
             "id",

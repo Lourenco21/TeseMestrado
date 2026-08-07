@@ -2,6 +2,34 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { listProblemDrafts } from "../../services/problemsApi";
 
+const READY_TO_EXECUTE_STEP = 7;
+
+const STEP_LABELS = {
+  1: "Carregar aulas",
+  2: "Mapping do horário",
+  3: "Carregar salas",
+  4: "Mapping de salas",
+  5: "Características das salas",
+  6: "Selecionar restrições",
+  7: "Pronto a executar",
+};
+
+function getStepLabel(step) {
+  return STEP_LABELS[step] || "Selecionar tipo de problema";
+}
+
+function getSolutionsCount(problem) {
+  if (typeof problem.solutions_count === "number") {
+    return problem.solutions_count;
+  }
+
+  if (Array.isArray(problem.solutions)) {
+    return problem.solutions.length;
+  }
+
+  return 0;
+}
+
 export default function ProblemHomePage() {
   const navigate = useNavigate();
 
@@ -33,24 +61,18 @@ export default function ProblemHomePage() {
   function routeForStep(step, problemId) {
     switch (step) {
       case 1:
-        return `/problems/${problemId}/type`;
-      case 2:
-        return `/problems/${problemId}/subtype`;
-      case 3:
         return `/problems/${problemId}/upload`;
-      case 4:
+      case 2:
         return `/problems/${problemId}/mapping`;
-      //case 5:
-        //return `/problems/${problemId}/objectives`;
-      case 5:
-        return `/problems/${problemId}/constraints`;
-      case 6:
+      case 3:
         return `/problems/${problemId}/rooms-upload`;
-      case 7:
+      case 4:
         return `/problems/${problemId}/rooms-mapping`;
-      case 8:
+      case 5:
         return `/problems/${problemId}/room-features`;
-      case 9:
+      case 6:
+        return `/problems/${problemId}/constraints`;
+      case 7:
         return `/problems/${problemId}/detail`;
       default:
         return `/problems/${problemId}/type`;
@@ -94,42 +116,49 @@ export default function ProblemHomePage() {
             onClick={handleCreateProblem}
             style={styles.button}
           >
-            Criar primeiro problema
+            Crie primeiro problema
           </button>
         </div>
       ) : null}
 
       {!loading && !error && problems.length > 0 ? (
         <div style={styles.grid}>
-          {problems.map((problem) => (
-            <div key={problem.id} style={styles.card}>
-              <p style={styles.cardStatus}>{problem.status || "created"}</p>
+          {problems.map((problem) => {
+            const isReadyToExecute = problem.current_step === READY_TO_EXECUTE_STEP;
 
-              <h2 style={styles.cardTitle}>
-                {problem.name || `Problema #${problem.id}`}
-              </h2>
+            return (
+              <div key={problem.id} style={styles.card}>
+                <p style={styles.cardStatus}>{problem.status || "created"}</p>
 
-              <p style={styles.cardText}>
-                Família: {problem.problem_family || "Ainda não definida"}
-              </p>
+                <h2 style={styles.cardTitle}>
+                  {problem.name || `Problema #${problem.id}`}
+                </h2>
 
-              <p style={styles.cardText}>
-                Subtipo: {problem.problem_subtype || "Ainda não definido"}
-              </p>
+                <p style={styles.cardText}>
+                  Step atual: {getStepLabel(problem.current_step)}
+                </p>
 
-              <p style={styles.cardText}>
-                Step atual: {problem.current_step ?? "-"}
-              </p>
+                {isReadyToExecute ? (
+                  <p style={styles.cardText}>
+                    Soluções: {getSolutionsCount(problem)}
+                  </p>
+                ) :
+                (
+                  <p style={styles.cardText}>
+                    Soluções: Não está pronto para executar
+                  </p>
+                )}
 
-              <button
-                type="button"
-                onClick={() => handleOpenProblem(problem)}
-                style={styles.secondaryButton}
-              >
-                Abrir problema
-              </button>
-            </div>
-          ))}
+                <button
+                  type="button"
+                  onClick={() => handleOpenProblem(problem)}
+                  style={styles.secondaryButton}
+                >
+                  Abrir problema
+                </button>
+              </div>
+            );
+          })}
         </div>
       ) : null}
     </div>

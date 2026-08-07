@@ -12,13 +12,15 @@ export default function ProblemWizardStartPage() {
     try {
       const draft = await createDraft({
         name: problemName.trim(),
+        problem_family: "timetabling",
+        problem_subtype: "university_course_timetabling",
         status: "created",
         current_step: 1,
         last_completed_step: 0,
         wizard_data: {},
       });
 
-      navigate(`/problems/${draft.id}/type`);
+      navigate(`/problems/${draft.id}/upload`);
     } catch (err) {
       console.error("Erro ao criar problem draft:", err);
     }

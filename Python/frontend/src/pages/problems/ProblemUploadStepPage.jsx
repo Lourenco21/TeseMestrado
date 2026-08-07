@@ -49,7 +49,7 @@ export default function ProblemUploadStepPage() {
 
         await saveDraft({
           status: "file_uploaded",
-          current_step: 4,
+          current_step: 2,
         });
 
         navigate(`/problems/${id}/mapping`);
@@ -75,7 +75,25 @@ export default function ProblemUploadStepPage() {
         file: selectedFile,
       });
 
-      setExistingSchedule(uploadedSchedule);
+      if (!uploadedSchedule?.id) {
+        throw new Error("Não foi possível obter o ID do ficheiro carregado.");
+      }
+
+      await saveDraft({
+        status: "file_uploaded",
+        current_step: 2,
+        uploaded_schedule: uploadedSchedule.id,
+        uploaded_schedule_name: uploadedSchedule.name || selectedFile.name,
+        mapping_data: {},
+        rooms_mapping_data: {},
+        room_feature_resolution: {},
+      });
+
+      setExistingSchedule({
+        id: uploadedSchedule.id,
+        name: uploadedSchedule.name || selectedFile.name,
+        file: uploadedSchedule.file || null,
+      });
       setIsReplacingFile(false);
       setSelectedFile(null);
 
@@ -89,7 +107,7 @@ export default function ProblemUploadStepPage() {
   }
 
   function handleBack() {
-    navigate(`/problems/${id}/subtype`);
+    navigate(`/problems/`);
   }
 
   function handleStartReplacing() {
@@ -107,7 +125,7 @@ export default function ProblemUploadStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 3 de 8</p>
+        <p style={styles.step}>Passo 2 de 7</p>
         <h1 style={styles.title}>Carregar ficheiro de dados</h1>
         <p style={styles.description}>
           Faça upload do ficheiro que vai servir de base para este problema de

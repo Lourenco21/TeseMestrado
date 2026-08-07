@@ -25,12 +25,16 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
     private static final String ROOM_EXCLUSIVITY_CONSTRAINT_ID = "room_exclusivity";
     private static final String CAPACITY_WASTE_CONSTRAINT_ID = "capacity_waste";
+    private static final String CONSECUTIVE_ROOM_CHANGE_CONSTRAINT_ID = "consecutive_room_change";
+
+    private static final int CAPACITY_TOLERANCE = 5;
 
     private final ProblemInputData inputData;
     private final ConstraintEvaluationService constraintEvaluationService;
@@ -53,6 +57,8 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
     private final GlobalRoomOccupationTracker globalRoomOccupationTracker;
 
+    private final boolean consecutiveRoomChangeSelected;
+
     public ScheduleOptimizationProblem(
             ProblemInputData inputData,
             SolutionContextBuilderService solutionContextBuilderService,
@@ -73,6 +79,10 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         this.selectedConstraints = inputData.getSelectedConstraints() == null
                 ? List.of()
                 : inputData.getSelectedConstraints();
+
+        this.consecutiveRoomChangeSelected = this.selectedConstraints.stream()
+                .filter(selection -> selection != null)
+                .anyMatch(selection -> CONSECUTIVE_ROOM_CHANGE_CONSTRAINT_ID.equalsIgnoreCase(selection.getId()));
 
         this.hardConstraints = this.selectedConstraints.stream()
                 .filter(selection -> selection != null)
@@ -109,8 +119,8 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         }
 
         Object classesObject = inputData.getScheduleData().get("classes");
-        if (classesObject instanceof List<?> classes) {
-            log.info("Classes in problem input: {}", classes.size());
+        if (classesObject instanceof List<?> classesList) {
+            log.info("Classes in problem input: {}", classesList.size());
         } else {
             log.warn("Classes in problem input are missing or invalid");
         }
@@ -124,18 +134,21 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         fallbackHardViolations.clear();
 
         IntegerSolution solution = new DefaultIntegerSolution(
-                variableBounds(),
-                numberOfObjectives(),
-                numberOfConstraints()
+                variableBounds(), numberOfObjectives(), numberOfConstraints()
         );
 
         PreparedEvaluationData prepared = baseContext.getPreparedEvaluationData();
         PartialSolutionContext partialContext = new PartialSolutionContext(prepared, globalRoomOccupationTracker);
+        Map<Integer, Integer> assignedRoomByClassIndex = new java.util.HashMap<>();
 
         List<Integer> orderedClassIndexes = orderClassesByDifficulty();
 
         for (Integer classIndex : orderedClassIndexes) {
-            Integer selectedRoomIndex = findFirstFeasibleRoom(classIndex, partialContext);
+            Integer previousRoomInPair = consecutiveRoomChangeSelected
+                    ? findPreviousConsecutiveRoom(classIndex, assignedRoomByClassIndex)
+                    : null;
+
+            Integer selectedRoomIndex = findFirstFeasibleRoom(classIndex, partialContext, previousRoomInPair, false);
 
             if (selectedRoomIndex == null) {
                 selectedRoomIndex = fallbackRoomIndex(classIndex, partialContext);
@@ -144,6 +157,7 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
             solution.variables().set(classIndex, selectedRoomIndex);
             registerAssignment(partialContext, classIndex, selectedRoomIndex);
+            assignedRoomByClassIndex.put(classIndex, selectedRoomIndex);
         }
 
         return solution;
@@ -187,10 +201,11 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
         return solution;
     }
 
-    private Integer findFirstFeasibleRoom(int classIndex, PartialSolutionContext partialContext) {
+    private Integer findFirstFeasibleRoom(Integer classIndex, PartialSolutionContext partialContext,
+                                          Integer preferredRoomIndex, boolean randomizeOrder) {
+
         PreparedEvaluationData prepared = baseContext.getPreparedEvaluationData();
         PreparedClassData preparedClass = prepared.getClasses().get(classIndex);
-
         LocalDateTime start = preparedClass.getStartDateTime();
         LocalDateTime end = preparedClass.getEndDateTime();
 
@@ -198,10 +213,12 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
             return null;
         }
 
-        Integer bestAvailableRoomIndex = null;
-        int bestViolationCount = Integer.MAX_VALUE;
+        List<Integer> roomOrder = orderRoomsByFit(classIndex);
 
-        for (int roomIndex = 0; roomIndex < rooms.size(); roomIndex++) {
+        int bestScore = Integer.MAX_VALUE;
+        List<Integer> bestTierCandidates = new ArrayList<>();
+
+        for (Integer roomIndex : roomOrder) {
             if (!partialContext.isRoomAvailable(roomIndex, start, end)) {
                 continue;
             }
@@ -215,17 +232,31 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
             int violationCount = result.violatedConstraintIds().size();
 
-            if (violationCount == 0) {
-                return roomIndex;
+            if (violationCount > 0) {
+                continue;
             }
 
-            if (violationCount < bestViolationCount) {
-                bestViolationCount = violationCount;
-                bestAvailableRoomIndex = roomIndex;
+            int fitScore = capacityFitScore(classIndex, roomIndex);
+
+            if (fitScore < bestScore) {
+                bestScore = fitScore;
+                bestTierCandidates.clear();
+                bestTierCandidates.add(roomIndex);
+            } else if (fitScore <= bestScore + CAPACITY_TOLERANCE) { // <- linha alterada
+                bestTierCandidates.add(roomIndex);
             }
         }
 
-        return bestAvailableRoomIndex;
+        if (bestTierCandidates.isEmpty()) {
+            return null;
+        }
+
+        if (consecutiveRoomChangeSelected && preferredRoomIndex != null
+                && bestTierCandidates.contains(preferredRoomIndex)) {
+            return preferredRoomIndex;
+        }
+
+        return bestTierCandidates.get(0);
     }
 
     public IntegerSolution repairSolution(IntegerSolution solution) {
@@ -238,6 +269,7 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
         PreparedEvaluationData prepared = baseContext.getPreparedEvaluationData();
         PartialSolutionContext partialContext = new PartialSolutionContext(prepared, globalRoomOccupationTracker);
+        Map<Integer, Integer> assignedRoomByClassIndex = new java.util.HashMap<>();
 
         for (ClassRoomAssignment assignment : buildAssignments(solution)) {
             partialContext.addAssignment(assignment);
@@ -249,7 +281,11 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
             Integer currentRoomIndex = solution.variables().get(classIndex);
 
             if (currentRoomIndex == null || currentRoomIndex < 0 || currentRoomIndex >= rooms.size()) {
-                Integer repairedRoomIndex = findFirstFeasibleRoom(classIndex, partialContext);
+                Integer previousRoomInPair = consecutiveRoomChangeSelected
+                        ? findPreviousConsecutiveRoom(classIndex, assignedRoomByClassIndex)
+                        : null;
+
+                Integer repairedRoomIndex = findFirstFeasibleRoom(classIndex, partialContext, previousRoomInPair, false);
 
                 if (repairedRoomIndex == null) {
                     repairedRoomIndex = fallbackRoomIndex(classIndex, partialContext);
@@ -258,6 +294,7 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
                 solution.variables().set(classIndex, repairedRoomIndex);
                 registerAssignment(partialContext, classIndex, repairedRoomIndex);
+                assignedRoomByClassIndex.put(classIndex, repairedRoomIndex);
                 continue;
             }
 
@@ -276,31 +313,129 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
                 CandidateAssignment currentCandidate = new CandidateAssignment(classIndex, currentRoomIndex);
 
                 boolean currentIsFeasible = incrementalConstraintEvaluationService.isHardFeasible(
-                        partialContext,
-                        currentCandidate,
-                        hardConstraints
+                        partialContext, currentCandidate, hardConstraints
                 );
 
                 if (currentIsFeasible) {
                     registerAssignment(partialContext, classIndex, currentRoomIndex);
+                    assignedRoomByClassIndex.put(classIndex, currentRoomIndex);
                     continue;
                 }
             }
 
-            Integer repairedRoomIndex = findFirstFeasibleRoom(classIndex, partialContext);
+            Integer previousRoomInPair = consecutiveRoomChangeSelected
+                    ? findPreviousConsecutiveRoom(classIndex, assignedRoomByClassIndex)
+                    : null;
+
+            Integer repairedRoomIndex = findFirstFeasibleRoom(classIndex, partialContext, previousRoomInPair, false);
 
             if (repairedRoomIndex == null) {
-                log.warn("No room available at all for classIndex={} (start={}, end={}). " +
-                                "This means concurrent demand exceeds room count for this slot.",
+                log.warn("No room available at all for classIndex={} (start={}, end={}).",
                         classIndex, preparedClass.getStartDateTime(), preparedClass.getEndDateTime());
                 repairedRoomIndex = fallbackRoomIndex(classIndex, partialContext);
             }
 
             solution.variables().set(classIndex, repairedRoomIndex);
             registerAssignment(partialContext, classIndex, repairedRoomIndex);
+            assignedRoomByClassIndex.put(classIndex, repairedRoomIndex);
         }
 
         return solution;
+    }
+
+    private List<Integer> orderRoomsByFit(int classIndex) {
+        PreparedEvaluationData prepared = baseContext.getPreparedEvaluationData();
+        PreparedClassData preparedClass = prepared.getClasses().get(classIndex);
+        Integer students = preparedClass.getStudents();
+
+        List<Integer> roomIndexes = new ArrayList<>();
+        for (int i = 0; i < rooms.size(); i++) {
+            roomIndexes.add(i);
+        }
+
+        roomIndexes.sort((a, b) -> {
+            int gapA = capacityGap(students, prepared.getRooms().get(a).getCapacity());
+            int gapB = capacityGap(students, prepared.getRooms().get(b).getCapacity());
+            return Integer.compare(gapA, gapB);
+        });
+
+        return roomIndexes;
+    }
+
+    private int capacityFitScore(int classIndex, int roomIndex) {
+        PreparedEvaluationData prepared = baseContext.getPreparedEvaluationData();
+        PreparedClassData preparedClass = prepared.getClasses().get(classIndex);
+        PreparedRoomData preparedRoom = prepared.getRooms().get(roomIndex);
+        return capacityGap(preparedClass.getStudents(), preparedRoom.getCapacity());
+    }
+
+    private int capacityGap(Integer students, Integer capacity) {
+        if (students == null || capacity == null) {
+            return Integer.MAX_VALUE / 4;
+        }
+        return Math.abs(capacity - students);
+    }
+
+    private Integer findPreviousConsecutiveRoom(int classIndex, Map<Integer, Integer> assignedRoomByClassIndex) {
+        PreparedEvaluationData prepared = baseContext.getPreparedEvaluationData();
+        PreparedClassData currentClass = prepared.getClasses().get(classIndex);
+
+        LocalDateTime currentStart = currentClass.getStartDateTime();
+        if (currentStart == null) {
+            return null;
+        }
+
+        for (int otherIndex = 0; otherIndex < prepared.getClasses().size(); otherIndex++) {
+            if (otherIndex == classIndex) {
+                continue;
+            }
+
+            PreparedClassData otherClass = prepared.getClasses().get(otherIndex);
+
+            boolean sameGroup = isSameClassGroup(currentClass, otherClass);
+            LocalDateTime otherEnd = otherClass.getEndDateTime();
+
+            boolean isImmediatelyBefore = sameGroup && otherEnd != null
+                    && otherEnd.equals(currentStart);
+
+            if (isImmediatelyBefore) {
+                Integer assignedRoomIndex = assignedRoomByClassIndex.get(otherIndex);
+                if (assignedRoomIndex != null) {
+                    return assignedRoomIndex;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isSameClassGroup(PreparedClassData classA, PreparedClassData classB) {
+        String degreeA = normalizeText(classA.getDegree());
+        String courseA = normalizeText(classA.getCourse());
+        String classGroupA = normalizeText(classA.getClassGroup());
+        String shiftA = normalizeText(classA.getShift());
+
+        String degreeB = normalizeText(classB.getDegree());
+        String courseB = normalizeText(classB.getCourse());
+        String classGroupB = normalizeText(classB.getClassGroup());
+        String shiftB = normalizeText(classB.getShift());
+
+        if (degreeA == null || courseA == null || classGroupA == null || shiftA == null) {
+            return false;
+        }
+
+        return Objects.equals(degreeA, degreeB)
+                && Objects.equals(courseA, courseB)
+                && Objects.equals(classGroupA, classGroupB)
+                && Objects.equals(shiftA, shiftB);
+    }
+
+    private String normalizeText(String value) {
+        if (value == null) {
+            return null;
+        }
+        String normalized = value.trim().toLowerCase();
+        return normalized.isBlank() ? null : normalized;
     }
 
     private int fallbackRoomIndex(int classIndex, PartialSolutionContext partialContext) {
@@ -319,9 +454,7 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
             }
 
             PreparedRoomData preparedRoom = prepared.getRooms().get(roomIndex);
-            Integer students = preparedClass.getStudents();
-            Integer capacity = preparedRoom.getCapacity();
-            int gap = (students == null || capacity == null) ? Integer.MAX_VALUE / 4 : Math.abs(capacity - students);
+            int gap = capacityGap(preparedClass.getStudents(), preparedRoom.getCapacity());
 
             if (bestRoomIndex == null || gap < bestCapacityGap) {
                 bestRoomIndex = roomIndex;
@@ -347,16 +480,7 @@ public class ScheduleOptimizationProblem extends AbstractIntegerProblem {
 
         for (int roomIndex = 0; roomIndex < prepared.getRooms().size(); roomIndex++) {
             PreparedRoomData preparedRoom = prepared.getRooms().get(roomIndex);
-
-            Integer students = preparedClass.getStudents();
-            Integer capacity = preparedRoom.getCapacity();
-
-            int gap;
-            if (students == null || capacity == null) {
-                gap = Integer.MAX_VALUE / 4;
-            } else {
-                gap = Math.abs(capacity - students);
-            }
+            int gap = capacityGap(preparedClass.getStudents(), preparedRoom.getCapacity());
 
             if (bestRoomIndex == null || gap < bestCapacityGap) {
                 bestRoomIndex = roomIndex;

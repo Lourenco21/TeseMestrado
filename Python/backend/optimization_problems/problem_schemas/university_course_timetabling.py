@@ -25,7 +25,7 @@ PROBLEM_SCHEMA = {
             "description": "Turma ou grupo associado à aula.",
             "required": False,
             "data_type": "string",
-            "aliases": ["turma", "class", "group", "class_group"],
+            "aliases": ["turma", "class", "group", "class group"],
         },
         {
             "key": "turno",
@@ -33,15 +33,7 @@ PROBLEM_SCHEMA = {
             "description": "Turno da aula.",
             "required": False,
             "data_type": "string",
-            "aliases": ["turno"],
-        },
-        {
-            "key": "tipo_aula",
-            "label": "Tipo de aula",
-            "description": "Tipo de aula, por exemplo TP, PL ou T.",
-            "required": False,
-            "data_type": "string",
-            "aliases": ["tipo aula", "tipo_aula", "tipo", "lesson_type", "class_type"],
+            "aliases": ["turno, shift"],
         },
         {
             "key": "sala",
@@ -71,7 +63,7 @@ PROBLEM_SCHEMA = {
             "description": "Dia da aula.",
             "required": True,
             "data_type": "string",
-            "aliases": ["dia", "day", "weekday"],
+            "aliases": ["dia", "day"],
         },
         {
             "key": "hora_inicio",
@@ -79,7 +71,7 @@ PROBLEM_SCHEMA = {
             "description": "Hora de início da aula.",
             "required": True,
             "data_type": "time",
-            "aliases": ["hora inicio", "hora_inicio", "inicio", "start time", "start_time", "begin", "start"],
+            "aliases": ["hora inicio", "inicio", "start time", "begin", "start"],
         },
         {
             "key": "hora_fim",
@@ -87,7 +79,7 @@ PROBLEM_SCHEMA = {
             "description": "Hora de fim da aula.",
             "required": True,
             "data_type": "time",
-            "aliases": ["hora fim", "hora_fim", "fim", "end time", "end_time", "end"],
+            "aliases": ["hora fim", "fim", "end time", "end"],
         },
         {
             "key": "numero_estudantes",
@@ -95,7 +87,7 @@ PROBLEM_SCHEMA = {
             "description": "Número de alunos inscritos ou esperados.",
             "required": False,
             "data_type": "number",
-            "aliases": ["numero estudantes", "número estudantes", "alunos", "inscritos", "students", "num_students"],
+            "aliases": ["numero estudantes", "estudantes", "alunos", "inscritos", "students", "number of students"],
         },
     ],
 }

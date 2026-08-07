@@ -14,6 +14,9 @@ const GOAL_OPTIONS = [
     { value: "soft", label: "Preferencial" },
 ];
 
+// Restrição que deve estar sempre selecionada e fixa como obrigatória (hard).
+const FORCED_HARD_CONSTRAINT_ID = "room_exclusivity";
+
 export default function ProblemConstraintsStepPage() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -60,9 +63,11 @@ export default function ProblemConstraintsStepPage() {
         const draftConstraints = problemDraft.selected_constraints || [];
         const normalizedConstraints = draftConstraints.map((item) => ({
             ...item,
-            goal: item.goal || null,
+            goal:
+                item.id === FORCED_HARD_CONSTRAINT_ID ? "hard" : item.goal || null,
             importance: item.importance || null,
-            enabled: item.enabled !== false,
+            enabled:
+                item.id === FORCED_HARD_CONSTRAINT_ID ? true : item.enabled !== false,
         }));
 
         setSelectedConstraints(normalizedConstraints);
@@ -100,6 +105,44 @@ export default function ProblemConstraintsStepPage() {
         return constraintLibrary[family] || [];
     }, [constraintLibrary, problemDraft?.problem_family, catalogLoaded]);
 
+    // Garante que, sempre que a restrição room_exclusivity estiver disponível
+    // para a família do problema, fica sempre selecionada e fixa como "hard".
+    useEffect(() => {
+        const hasForcedConstraint = availableConstraints.some(
+            (constraint) => constraint.id === FORCED_HARD_CONSTRAINT_ID
+        );
+
+        if (!hasForcedConstraint) return;
+
+        setSelectedConstraints((prev) => {
+            const existing = prev.find(
+                (item) => item.id === FORCED_HARD_CONSTRAINT_ID
+            );
+
+            if (existing) {
+                if (existing.enabled && existing.goal === "hard") {
+                    return prev;
+                }
+
+                return prev.map((item) =>
+                    item.id === FORCED_HARD_CONSTRAINT_ID
+                        ? { ...item, enabled: true, goal: "hard" }
+                        : item
+                );
+            }
+
+            return [
+                ...prev,
+                {
+                    id: FORCED_HARD_CONSTRAINT_ID,
+                    enabled: true,
+                    goal: "hard",
+                    importance: null,
+                },
+            ];
+        });
+    }, [availableConstraints]);
+
     const enabledConstraints = useMemo(() => {
         return selectedConstraints.filter((item) => item.enabled);
     }, [selectedConstraints]);
@@ -117,13 +160,15 @@ export default function ProblemConstraintsStepPage() {
             let missing = 0;
 
             if (!item.goal) missing += 1;
-            if (!item.importance) missing += 1;
+            if (item.goal === "soft" && !item.importance) missing += 1;
 
             return total + missing;
         }, 0);
     }, [enabledConstraints]);
 
     const toggleConstraint = useCallback((constraintId) => {
+        if (constraintId === FORCED_HARD_CONSTRAINT_ID) return;
+
         setSelectedConstraints((prev) => {
             const exists = prev.some((item) => item.id === constraintId);
 
@@ -144,6 +189,8 @@ export default function ProblemConstraintsStepPage() {
     }, []);
 
     const updateGoal = useCallback((constraintId, goal) => {
+        if (constraintId === FORCED_HARD_CONSTRAINT_ID) return;
+
         setSelectedConstraints((prev) =>
             prev.map((item) =>
                 item.id === constraintId ? { ...item, goal } : item
@@ -180,7 +227,7 @@ export default function ProblemConstraintsStepPage() {
         }
 
         const incompleteConstraints = validConstraints.filter(
-            (item) => !item.goal || !item.importance
+            (item) => !item.goal || (item.goal === "soft" && !item.importance)
         );
 
         if (incompleteConstraints.length > 0) {
@@ -207,10 +254,10 @@ export default function ProblemConstraintsStepPage() {
             await saveDraft({
                 status: "constraints_selected",
                 selected_constraints: enrichedConstraints,
-                current_step: 6,
+                current_step: 7,
             });
 
-            navigate(`/problems/${id}/rooms-upload`);
+            navigate(`/problems/${id}/detail`);
         } catch (err) {
             console.error("Erro ao guardar restrições:", err);
             setLocalError(err.message || "Não foi possível guardar as restrições.");
@@ -218,7 +265,7 @@ export default function ProblemConstraintsStepPage() {
     }, [selectedConstraints, availableConstraints, id, saveDraft, navigate]);
 
     const handleBack = useCallback(() => {
-        navigate(`/problems/${id}/mapping`);
+        navigate(`/problems/${id}/room-features`);
     }, [id, navigate]);
 
     if (loading && !problemDraft) {
@@ -235,7 +282,7 @@ export default function ProblemConstraintsStepPage() {
         <div style={styles.page}>
             <div style={styles.container}>
                 <div style={styles.header}>
-                    <p style={styles.step}>Passo 5 de 8</p>
+                    <p style={styles.step}>Passo 7 de 7</p>
                     <h1 style={styles.title}>Selecionar restrições</h1>
                     <p style={styles.description}>
                         Escolha as regras a aplicar ao problema, defina se cada uma é obrigatória
@@ -265,7 +312,8 @@ export default function ProblemConstraintsStepPage() {
                         importância baixa continua a ser obrigatória.
                     </p>
                     <p style={styles.infoText}>
-                        Nenhuma opção é pré-selecionada. Para continuar, tem de completar o tipo
+                        Apenas a restrição "Sala não pode ter duas aulas ao mesmo tempo" é sempre selecionada.
+                        Para continuar, tem de completar o tipo
                         e a importância de todas as restrições que escolher.
                     </p>
                 </div>
@@ -295,6 +343,9 @@ export default function ProblemConstraintsStepPage() {
 
                         <div style={styles.list}>
                             {availableConstraints.map((constraint) => {
+                                const isForcedHard =
+                                    constraint.id === FORCED_HARD_CONSTRAINT_ID;
+
                                 const selected = selectedConstraints.some(
                                     (item) => item.id === constraint.id && item.enabled
                                 );
@@ -304,7 +355,9 @@ export default function ProblemConstraintsStepPage() {
                                 );
 
                                 const isIncomplete =
-                                    selected && (!current?.goal || !current?.importance);
+                                    selected &&
+                                    (!current?.goal ||
+                                        (current?.goal === "soft" && !current?.importance));
 
                                 return (
                                     <div
@@ -320,6 +373,7 @@ export default function ProblemConstraintsStepPage() {
                                                 <input
                                                     type="checkbox"
                                                     checked={selected}
+                                                    disabled={isForcedHard}
                                                     onChange={() => toggleConstraint(constraint.id)}
                                                     style={styles.checkbox}
                                                 />
@@ -369,6 +423,7 @@ export default function ProblemConstraintsStepPage() {
                                                                     <button
                                                                         key={option.value}
                                                                         type="button"
+                                                                        disabled={isForcedHard}
                                                                         onClick={() =>
                                                                             updateGoal(
                                                                                 constraint.id,
@@ -389,36 +444,38 @@ export default function ProblemConstraintsStepPage() {
                                                         </div>
                                                     </div>
 
-                                                    <div style={styles.controlsGroup}>
-                                                        <span style={styles.compactLabel}>Importância</span>
-                                                        <div style={styles.segmentedControl}>
-                                                            {IMPORTANCE_OPTIONS.map((option) => {
-                                                                const active =
-                                                                    current?.importance === option.value;
+                                                    {current?.goal === "soft" ? (
+                                                        <div style={styles.controlsGroup}>
+                                                            <span style={styles.compactLabel}>Importância</span>
+                                                            <div style={styles.segmentedControl}>
+                                                                {IMPORTANCE_OPTIONS.map((option) => {
+                                                                    const active =
+                                                                        current?.importance === option.value;
 
-                                                                return (
-                                                                    <button
-                                                                        key={option.value}
-                                                                        type="button"
-                                                                        onClick={() =>
-                                                                            updateImportance(
-                                                                                constraint.id,
-                                                                                option.value
-                                                                            )
-                                                                        }
-                                                                        style={{
-                                                                            ...styles.segmentButton,
-                                                                            ...(active
-                                                                                ? styles.segmentButtonActive
-                                                                                : {}),
-                                                                        }}
-                                                                    >
-                                                                        {option.label}
-                                                                    </button>
-                                                                );
-                                                            })}
+                                                                    return (
+                                                                        <button
+                                                                            key={option.value}
+                                                                            type="button"
+                                                                            onClick={() =>
+                                                                                updateImportance(
+                                                                                    constraint.id,
+                                                                                    option.value
+                                                                                )
+                                                                            }
+                                                                            style={{
+                                                                                ...styles.segmentButton,
+                                                                                ...(active
+                                                                                    ? styles.segmentButtonActive
+                                                                                    : {}),
+                                                                            }}
+                                                                        >
+                                                                            {option.label}
+                                                                        </button>
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
-                                                    </div>
+                                                    ) : null}
 
                                                     <div style={styles.helperBlock}>
                                                         <span style={styles.helperBadge}>Nota</span>
@@ -431,7 +488,8 @@ export default function ProblemConstraintsStepPage() {
                                                 {isIncomplete ? (
                                                     <p style={styles.validationHint}>
                                                         Faltam selecionar{" "}
-                                                        {(!current?.goal && !current?.importance)
+                                                        {(!current?.goal &&
+                                                            current?.goal !== "soft")
                                                             ? "2 opções"
                                                             : "1 opção"}{" "}
                                                         nesta restrição.

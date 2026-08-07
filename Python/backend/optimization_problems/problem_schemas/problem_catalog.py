@@ -50,14 +50,14 @@ OBJECTIVE_LIBRARY = {
 CONSTRAINT_LIBRARY = {
     "timetabling": [
         {
-            "id": "room_capacity_sufficiency",
-            "label": "Capacidade da sala suficiente",
-            "description": "A sala atribuída deve ter capacidade igual ou superior ao número de estudantes inscritos."
-        },
-        {
             "id": "room_exclusivity",
             "label": "Sala não pode ter duas aulas ao mesmo tempo",
             "description": "Duas aulas que decorram no mesmo intervalo temporal não podem ser atribuídas à mesma sala."
+        },
+        {
+            "id": "room_capacity_sufficiency",
+            "label": "Capacidade da sala suficiente",
+            "description": "A sala atribuída deve ter capacidade igual ou superior ao número de estudantes inscritos."
         },
         {
             "id": "capacity_waste",

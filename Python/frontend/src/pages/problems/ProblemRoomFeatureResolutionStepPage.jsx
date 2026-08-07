@@ -335,10 +335,10 @@ export default function ProblemRoomFeatureResolutionStepPage() {
             target_values: item.target_values || [],
           })),
         },
-        current_step: 9,
+        current_step: 6,
       });
 
-      navigate(`/problems/${id}/detail`);
+      navigate(`/problems/${id}/constraints`);
     } catch (err) {
       console.error("Erro ao guardar resolução de características:", err);
       setLocalError(
@@ -367,7 +367,7 @@ export default function ProblemRoomFeatureResolutionStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 8 de 8</p>
+        <p style={styles.step}>Passo 6 de 7</p>
         <h1 style={styles.title}>Resolução de características pedidas</h1>
         <p style={styles.description}>
           Associe cada característica pedida nas aulas, que não existe no ficheiro de salas, às características

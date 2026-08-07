@@ -121,14 +121,14 @@ export default function ProblemMappingStepPage() {
     try {
       await saveDraft({
         status: "mapping_completed",
-        current_step: 5,
+        current_step: 3,
         mapping_data: {
           ...(problemDraft?.mapping_data || {}),
           mapping: selectedMappings,
         },
       });
 
-      navigate(`/problems/${id}/constraints`);
+      navigate(`/problems/${id}/rooms-upload`);
     } catch (err) {
       console.error("Erro ao guardar mapping:", err);
       setLocalError(err.message || "Não foi possível guardar o mapping.");
@@ -152,7 +152,7 @@ export default function ProblemMappingStepPage() {
   return (
     <div style={styles.page}>
       <div style={styles.container}>
-        <p style={styles.step}>Passo 4 de 8</p>
+        <p style={styles.step}>Passo 3 de 7</p>
         <h1 style={styles.title}>Confirmar mapping do ficheiro</h1>
         <p style={styles.description}>
           Associe cada variável do sistema à coluna correspondente no ficheiro carregado. Pode optar por deixar variáveis sem valores atribuídos.

@@ -103,7 +103,7 @@ public class Nsgaii implements AlgorithmMetadataProvider, AlgorithmExecutor {
                                 new RankingAndCrowdingDistanceComparator<>()
                         )
                 )
-                .setMaxEvaluations(5000/*maxEvaluations*/)
+                .setMaxEvaluations(100/*maxEvaluations*/)
                 .build();
 
         algorithm.run();

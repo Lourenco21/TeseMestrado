@@ -173,6 +173,13 @@ export default function ProblemDetailPage() {
         <p style={styles.description}>
           Página de detalhe do problema e respetivas soluções.
         </p>
+        <p style={styles.description}>
+          Última atualização - {
+                problem?.updated_at
+                  ? new Date(problem.updated_at).toLocaleString("pt-PT")
+                  : "-"
+              }
+        </p>
 
         <div style={styles.problemInfo}>
           <span style={styles.problemLabel}>Número de Soluções:</span>
@@ -218,32 +225,7 @@ export default function ProblemDetailPage() {
           </button>
         </div>
 
-        <section style={styles.sectionCard}>
-          <h2 style={styles.sectionTitle}>Informação geral</h2>
-          <p style={styles.sectionDescription}>
-            Dados principais do problema atualmente guardado.
-          </p>
-
-          <div style={styles.infoGridGeneral}>
-            <InfoCard label="Nome" value={problem?.name || "-"} />
-            <InfoCard
-              label="Tipo"
-              value={problem?.problem_family || problem?.type || "-"}
-            />
-            <InfoCard
-              label="Subtipo"
-              value={problem?.problem_subtype || problem?.subtype || "-"}
-            />
-            <InfoCard
-              label="Última atualização"
-              value={
-                problem?.updated_at
-                  ? new Date(problem.updated_at).toLocaleString("pt-PT")
-                  : "-"
-              }
-            />
-          </div>
-        </section>
+        
 
         <section style={styles.sectionCard}>
           <h2 style={styles.sectionTitle}>Ficheiros e mapeamento</h2>
@@ -397,7 +379,7 @@ export default function ProblemDetailPage() {
                   <div style={styles.solutionCardTop}>
                     <h3 style={styles.solutionTitle}>Solução #{solution.id}</h3>
                     <span style={styles.solutionStatus}>
-                      {solution.status || "-"}
+                      {solution.status === "completed" ? "Completa" : "Não completa"}
                     </span>
                   </div>
 
@@ -405,17 +387,11 @@ export default function ProblemDetailPage() {
                     <span>
                       <strong>Algoritmo:</strong> {solution.algorithm_used || "-"}
                     </span>
-                    <span>
-                      <strong>Partição:</strong> {solution.partition_type || "-"}
-                    </span>
-                    <span>
-                      <strong>Reuse:</strong> {solution.reuse_solution ? "Sim" : "Não"}
-                    </span>
                   </div>
 
                   <div style={styles.solutionFooter}>
                     <span>
-                      <strong>Criada em:</strong>{" "}
+                      <strong>Criada a:</strong>{" "}
                       {solution.created_at
                         ? new Date(solution.created_at).toLocaleString("pt-PT")
                         : "-"}

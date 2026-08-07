@@ -7,6 +7,7 @@ from io import StringIO
 
 import unicodedata
 from django.core.files.base import ContentFile
+from django.db.models import Count
 from django.shortcuts import get_object_or_404
 from django.utils.text import slugify
 from openpyxl import load_workbook
@@ -162,7 +163,7 @@ class ScheduleListView(ListAPIView):
 
 
 class ProblemDraftListCreateView(generics.ListCreateAPIView):
-    queryset = ProblemDraft.objects.all().order_by("-updated_at")
+    queryset = ProblemDraft.objects.all().order_by("-updated_at").annotate(solutions_count=Count("solutions"))
     serializer_class = ProblemDraftSerializer
 
 
