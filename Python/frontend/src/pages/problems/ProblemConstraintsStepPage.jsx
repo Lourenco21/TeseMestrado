@@ -17,6 +17,9 @@ const GOAL_OPTIONS = [
 // Restrição que deve estar sempre selecionada e fixa como obrigatória (hard).
 const FORCED_HARD_CONSTRAINT_ID = "room_exclusivity";
 
+// Restrição que, quando selecionada, só pode assumir o valor preferencial (soft).
+const FORCED_SOFT_CONSTRAINT_ID = "capacity_waste";
+
 export default function ProblemConstraintsStepPage() {
     const { id } = useParams();
     const navigate = useNavigate();
@@ -61,14 +64,25 @@ export default function ProblemConstraintsStepPage() {
         if (!problemDraft || hasSyncedRef.current) return;
 
         const draftConstraints = problemDraft.selected_constraints || [];
-        const normalizedConstraints = draftConstraints.map((item) => ({
-            ...item,
-            goal:
-                item.id === FORCED_HARD_CONSTRAINT_ID ? "hard" : item.goal || null,
-            importance: item.importance || null,
-            enabled:
-                item.id === FORCED_HARD_CONSTRAINT_ID ? true : item.enabled !== false,
-        }));
+        const normalizedConstraints = draftConstraints.map((item) => {
+            let goal = item.goal || null;
+
+            if (item.id === FORCED_HARD_CONSTRAINT_ID) {
+                goal = "hard";
+            } else if (item.id === FORCED_SOFT_CONSTRAINT_ID) {
+                goal = "soft";
+            }
+
+            return {
+                ...item,
+                goal,
+                importance: item.importance || null,
+                enabled:
+                    item.id === FORCED_HARD_CONSTRAINT_ID
+                        ? true
+                        : item.enabled !== false,
+            };
+        });
 
         setSelectedConstraints(normalizedConstraints);
         hasSyncedRef.current = true;
@@ -181,7 +195,7 @@ export default function ProblemConstraintsStepPage() {
                 {
                     id: constraintId,
                     enabled: true,
-                    goal: null,
+                    goal: constraintId === FORCED_SOFT_CONSTRAINT_ID ? "soft" : null,
                     importance: null,
                 },
             ];
@@ -190,6 +204,7 @@ export default function ProblemConstraintsStepPage() {
 
     const updateGoal = useCallback((constraintId, goal) => {
         if (constraintId === FORCED_HARD_CONSTRAINT_ID) return;
+        if (constraintId === FORCED_SOFT_CONSTRAINT_ID) return;
 
         setSelectedConstraints((prev) =>
             prev.map((item) =>
@@ -308,11 +323,11 @@ export default function ProblemConstraintsStepPage() {
                     <p style={styles.infoText}>
                         <strong>Importância relativa</strong> serve para comparar a prioridade de
                         uma restrição com outras do <strong>mesmo tipo</strong>. Uma restrição preferencial com
-                        importância alta continua a ser preferencial. Uma restrição obrigatória com
-                        importância baixa continua a ser obrigatória.
+                        importância alta continua a ser preferencial.
                     </p>
                     <p style={styles.infoText}>
                         Apenas a restrição "Sala não pode ter duas aulas ao mesmo tempo" é sempre selecionada.
+                        Quando selecionada, a restrição "Minimizar desperdício de capacidade" é obrigatoriamente definida como preferencial.
                         Para continuar, tem de completar o tipo
                         e a importância de todas as restrições que escolher.
                     </p>
@@ -345,6 +360,9 @@ export default function ProblemConstraintsStepPage() {
                             {availableConstraints.map((constraint) => {
                                 const isForcedHard =
                                     constraint.id === FORCED_HARD_CONSTRAINT_ID;
+
+                                const isForcedSoft =
+                                    constraint.id === FORCED_SOFT_CONSTRAINT_ID;
 
                                 const selected = selectedConstraints.some(
                                     (item) => item.id === constraint.id && item.enabled
@@ -423,7 +441,7 @@ export default function ProblemConstraintsStepPage() {
                                                                     <button
                                                                         key={option.value}
                                                                         type="button"
-                                                                        disabled={isForcedHard}
+                                                                        disabled={isForcedHard || isForcedSoft}
                                                                         onClick={() =>
                                                                             updateGoal(
                                                                                 constraint.id,
@@ -476,13 +494,14 @@ export default function ProblemConstraintsStepPage() {
                                                             </div>
                                                         </div>
                                                     ) : null}
-
-                                                    <div style={styles.helperBlock}>
-                                                        <span style={styles.helperBadge}>Nota</span>
-                                                        <p style={styles.compactHelperText}>
-                                                            {getImportanceHelpText(current?.goal)}
-                                                        </p>
-                                                    </div>
+                                                    {current?.goal === "soft" ? (
+                                                        <div style={styles.helperBlock}>
+                                                            <span style={styles.helperBadge}>Nota</span>
+                                                            <p style={styles.compactHelperText}>
+                                                                {getImportanceHelpText(current?.goal)}
+                                                            </p>
+                                                        </div>
+                                                    ) : null}
                                                 </div>
 
                                                 {isIncomplete ? (

@@ -1,5 +1,5 @@
 ROLE:
-You are an expert in optimization, metaheuristics, and the jMetal library.
+You are an expert in optimization problem modelling, metaheuristics, and the jMetal Java library.
 
 TASK:
 Analyze the problem data and select appropriate configuration parameters for the {{ALGORITHM_NAME}} algorithm in jMetal 6.1.
@@ -16,8 +16,8 @@ INSTRUCTIONS/REQUIREMENTS:
 - Consider the problem data when choosing the parameter values.
 - Provide a brief justification for the selected configuration.
 - Do not invent parameters outside the requested list.
-- The parameter values should be suitable for practical execution on a local machine with limited computational resources.
-- If the problem data is insufficient to choose reliable parameter values, set the parameter values to null where necessary and explain the limitation briefly in "Justification".
+- The parameter values should be suitable for practical execution on a local machine with very limited computational resources.
+- The response must be directly parseable by Jackson.
 - Reply ONLY with valid JSON and no extra text in the following format.
 {{PARAMETERS_JSON}}
 
