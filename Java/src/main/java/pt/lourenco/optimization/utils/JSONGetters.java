@@ -44,6 +44,9 @@ public class JSONGetters {
     @JsonProperty("repeated_instance_strategy")
     private String repeated_instance_strategy;
 
+    @JsonProperty("total_rooms")
+    private String total_rooms;
+
     @JsonProperty("mapping_data")
     private Map<String, Object> mapping_data;
 

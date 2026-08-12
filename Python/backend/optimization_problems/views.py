@@ -734,23 +734,6 @@ class ProblemRequestAlgorithmsView(APIView):
                 status=status.HTTP_404_NOT_FOUND
             )
 
-        resolution_scope = "start_half_hour"
-        repeated_instance_strategy = "generate_new"
-
-        if resolution_scope not in self.VALID_RESOLUTION_SCOPES:
-            return Response(
-                {"error": "resolution_scope inválido."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
-        if resolution_scope == "semester":
-            repeated_instance_strategy = None
-        elif repeated_instance_strategy not in self.VALID_REPEATED_INSTANCE_STRATEGIES:
-            return Response(
-                {"error": "repeated_instance_strategy inválido para o nível selecionado."},
-                status=status.HTTP_400_BAD_REQUEST
-            )
-
         if not problem_draft.uploaded_schedule:
             return Response(
                 {"error": "O problema não tem ficheiro de horário associado."},
@@ -781,9 +764,10 @@ class ProblemRequestAlgorithmsView(APIView):
 
         try:
             df = load_schedule_dataframe(problem_draft.uploaded_schedule.file.path)
+            r_df = load_schedule_dataframe(problem_draft.uploaded_rooms_file.file.path)
             mapping = (problem_draft.mapping_data or {}).get("mapping", {}) or {}
 
-            analysis = analyze_schedule_dataframe(df, mapping, resolution_scope)
+            analysis = analyze_schedule_dataframe(df, mapping, "start_half_hour")
             constraints_summary = build_constraints_summary(
                 problem_draft.selected_constraints or []
             )
@@ -793,9 +777,8 @@ class ProblemRequestAlgorithmsView(APIView):
                 "name": problem_draft.name,
                 "problem_type": problem_draft.problem_family,
                 "problem_subtype": problem_draft.problem_subtype,
-                "resolution_scope": resolution_scope,
-                "repeated_instance_strategy": repeated_instance_strategy,
                 "constraints_summary": constraints_summary,
+                "total_rooms": int(len(r_df)),
                 "instance_characteristics": {
                     "total_classes": int(len(df)),
                     "selected_partition_statistics": analysis["selected_partition_statistics"],

@@ -17,6 +17,7 @@ public class PromptBuilderService {
         System.out.println(basePrompt.replace("PROBLEM DATA:", "PROBLEM DATA:\n" + problemData));
         return basePrompt.replace("PROBLEM DATA:", "PROBLEM DATA:\n" + problemData);
     }
+    
     public String buildPromptWithPlaceholders(
             String promptResourcePath,
             Map<String, String> placeholders

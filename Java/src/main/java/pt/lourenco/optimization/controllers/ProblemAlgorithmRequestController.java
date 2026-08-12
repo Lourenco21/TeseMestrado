@@ -30,7 +30,7 @@ public class ProblemAlgorithmRequestController {
     }
 
     @PostMapping("/request-algorithms")
-    public ResponseEntity<Object> testProblemAlgorithmRequest(
+    public ResponseEntity<Object> problemAlgorithmRequest(
             @RequestBody JSONGetters request
     ) {
         try {
