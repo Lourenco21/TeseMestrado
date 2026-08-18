@@ -16,6 +16,7 @@ public enum ConstraintImportance {
     }
 
     public static ConstraintImportance fromString(String value) {
+
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException("Constraint importance is required.");
         }

@@ -137,12 +137,14 @@ export default function ProblemConstraintsStepPage() {
     return enabledConstraints.filter((item) => item.goal === "soft").length;
   }, [enabledConstraints]);
 
+  // Restrições obrigatórias (hard) não precisam de importância — só as
+  // preferenciais (soft) precisam, pois é entre elas que a importância é comparada.
   const missingSelectionsCount = useMemo(() => {
     return enabledConstraints.reduce((total, item) => {
       let missing = 0;
 
       if (!item.goal) missing += 1;
-      if (!item.importance) missing += 1;
+      if (item.goal === "soft" && !item.importance) missing += 1;
 
       return total + missing;
     }, 0);
@@ -171,7 +173,14 @@ export default function ProblemConstraintsStepPage() {
   const updateGoal = useCallback((constraintId, goal) => {
     setSelectedConstraints((prev) =>
       prev.map((item) =>
-        item.id === constraintId ? { ...item, goal } : item
+        item.id === constraintId
+          ? {
+              ...item,
+              goal,
+              // Se passar a "hard", a importância deixa de ser aplicável.
+              importance: goal === "hard" ? null : item.importance,
+            }
+          : item
       )
     );
   }, []);
@@ -185,10 +194,6 @@ export default function ProblemConstraintsStepPage() {
   }, []);
 
   const getImportanceHelpText = useCallback((goal) => {
-    if (goal === "hard") {
-      return "A importância é comparada com as restantes restrições obrigatórias.";
-    }
-
     if (goal === "soft") {
       return "A importância é comparada com as restantes restrições preferenciais.";
     }
@@ -205,12 +210,12 @@ export default function ProblemConstraintsStepPage() {
     }
 
     const incompleteConstraints = validConstraints.filter(
-      (item) => !item.goal || !item.importance
+      (item) => !item.goal || (item.goal === "soft" && !item.importance)
     );
 
     if (incompleteConstraints.length > 0) {
       setLocalError(
-        "Preencha o tipo e a importância de todas as restrições selecionadas antes de continuar."
+        "Preencha o tipo (e a importância, quando preferencial) de todas as restrições selecionadas antes de continuar."
       );
       return;
     }
@@ -322,15 +327,16 @@ export default function ProblemConstraintsStepPage() {
             global melhor.
           </p>
           <p style={styles.infoText}>
-            <strong>Importância relativa</strong> serve para comparar a
-            prioridade de uma restrição com outras do <strong>mesmo tipo</strong>.
-            Uma restrição preferencial com importância alta continua a ser
-            preferencial. Uma restrição obrigatória com importância baixa
-            continua a ser obrigatória.
+            <strong>Importância relativa</strong> só se aplica a restrições{" "}
+            <strong>preferenciais</strong>, servindo para comparar a sua
+            prioridade com outras restrições preferenciais. Restrições
+            obrigatórias não têm importância, pois têm de ser sempre
+            satisfeitas, independentemente de qualquer prioridade.
           </p>
           <p style={styles.infoText}>
-            Nenhuma opção é pré-selecionada. Para continuar, tem de completar o
-            tipo e a importância de todas as restrições que escolher.
+            Nenhuma opção é pré-selecionada. Para continuar, tem de indicar o
+            tipo de todas as restrições que escolher e, no caso das
+            preferenciais, também a importância.
           </p>
         </div>
 
@@ -367,7 +373,9 @@ export default function ProblemConstraintsStepPage() {
                 );
 
                 const isIncomplete =
-                  selected && (!current?.goal || !current?.importance);
+                  selected &&
+                  (!current?.goal ||
+                    (current?.goal === "soft" && !current?.importance));
 
                 return (
                   <div
@@ -448,51 +456,53 @@ export default function ProblemConstraintsStepPage() {
                             </div>
                           </div>
 
-                          <div style={styles.controlsGroup}>
-                            <span style={styles.compactLabel}>Importância</span>
-                            <div style={styles.segmentedControl}>
-                              {IMPORTANCE_OPTIONS.map((option) => {
-                                const active =
-                                  current?.importance === option.value;
+                          {current?.goal === "soft" ? (
+                            <div style={styles.controlsGroup}>
+                              <span style={styles.compactLabel}>Importância</span>
+                              <div style={styles.segmentedControl}>
+                                {IMPORTANCE_OPTIONS.map((option) => {
+                                  const active =
+                                    current?.importance === option.value;
 
-                                return (
-                                  <button
-                                    key={option.value}
-                                    type="button"
-                                    onClick={() =>
-                                      updateImportance(
-                                        constraint.id,
-                                        option.value
-                                      )
-                                    }
-                                    style={{
-                                      ...styles.segmentButton,
-                                      ...(active
-                                        ? styles.segmentButtonActive
-                                        : {}),
-                                    }}
-                                  >
-                                    {option.label}
-                                  </button>
-                                );
-                              })}
+                                  return (
+                                    <button
+                                      key={option.value}
+                                      type="button"
+                                      onClick={() =>
+                                        updateImportance(
+                                          constraint.id,
+                                          option.value
+                                        )
+                                      }
+                                      style={{
+                                        ...styles.segmentButton,
+                                        ...(active
+                                          ? styles.segmentButtonActive
+                                          : {}),
+                                      }}
+                                    >
+                                      {option.label}
+                                    </button>
+                                  );
+                                })}
+                              </div>
                             </div>
-                          </div>
+                          ) : null}
 
-                          <div style={styles.helperBlock}>
-                            <span style={styles.helperBadge}>Nota</span>
-                            <p style={styles.compactHelperText}>
-                              {getImportanceHelpText(current?.goal)}
-                            </p>
-                          </div>
+                          {current?.goal === "soft" ? (
+                            <div style={styles.helperBlock}>
+                              <span style={styles.helperBadge}>Nota</span>
+                              <p style={styles.compactHelperText}>
+                                {getImportanceHelpText(current?.goal)}
+                              </p>
+                            </div>
+                          ) : null}
                         </div>
 
                         {isIncomplete ? (
                           <p style={styles.validationHint}>
                             Faltam selecionar{" "}
-                            {!current?.goal && !current?.importance
-                              ? "2 opções"
-                              : "1 opção"}{" "}
+                            {!current?.goal ? "2 opções" : "1 opção"}{" "}
                             nesta restrição.
                           </p>
                         ) : null}

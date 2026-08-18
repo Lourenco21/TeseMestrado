@@ -1,0 +1,666 @@
+=== BENCHMARK: algorithms ===
+Modelo: phi4-mini:3.8b
+Timestamp: 2026-08-14T11:58:55.1644528
+Numero de repeticoes: 20
+Tempo TOTAL gasto neste modelo (segundos): 99,683
+Tempo MEDIO por prompt (segundos): 4,984
+
+--- PROMPT ENVIADA (igual em todas as repeticoes) ---
+ROLE:
+You are an expert in optimization problem modelling, metaheuristics, and the jMetal Java library.
+
+TASK:
+Analyze the problem data and select the most adequate algorithms from the jMetalJava library version 6.1 to solve it.
+
+INSTRUCTIONS/REQUIREMENTS:
+- Answer the algorithm in English and the key pointers in Portuguese from Portugal.
+- Do not invent information that is not present in the problem data.
+- The chosen algorithms must exist in the jMetal Java library version 6.1.
+- The chosen algorithms must be sorted by order of suitability for the problem characteristics.
+- The chosen algorithms must be in their abbreviated names.
+- When possible, relate the algorithm choice to the problem characteristics.
+- You must select at least one algorithm, but you can select more if they are suitable for the problem.
+- For each selected algorithm, provide a brief list of key points for a user to choose one of the algorithms.
+- Provide a brief justification for the selected algorithm.
+- Do not mention algorithms that are not part of jMetal.
+- If the problem data is insufficient to choose a clear algorithm, set "Algorithm" to null and explain the limitation briefly in "Justification".
+- Do not include literal line breaks inside JSON string values.
+- The response must be directly parseable by Jackson.
+- Reply ONLY with valid JSON in the following format.
+{
+"algorithms":[{
+"name":"",
+"key_points":[{"point":""}]}],
+"justification":""
+}
+
+PROBLEM DATA:
+This is a single-objective optimization problem.
+
+Soft constraints enter the objective function weighted by their importance, while hard constraints are used only to ensure solution feasibility (applied during solution creation and repair), and do not contribute directly to the objective function value, however they go into the constraint vector.
+
+Before running the selected algorithm, an initial feasible solution is generated using a heuristic construction method (createSolution), which the algorithm then uses as its starting point or as part of its initial population.
+
+The problem has a total of 6 constraints: 2 hard and 4 soft.
+
+The problem has 1 objective and 2 constraints in the constraint vector.
+
+The problem is solved by partitions: each partition corresponds to a group of classes starting at the same time, in 30 minute intervals. Each partition is solved in an independent execution of the chosen algorithm, however, constraints related to overlaps or to consecutive classes may depend on the solution of adjacent time partitions.
+
+Instance size:
+- Number of rooms: 101
+- Number of classes: 24748
+
+Partition statistics:
+- Total number of partitions: 1334
+- Average classes per partition: 18.55
+- Minimum classes per partition: 1
+- Maximum classes per partition: 72
+
+
+==================== REPETICAO 1/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 8,383
+Tokens/segundo (eval): 121.54937506080556
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NSGAII",
+      "key_points": [{"point": "Handles multi-objective optimization, but can be adapted for single objective by focusing on one goal."}]
+    },
+    {
+      "name": "MOJA-Guided Search (MOGA)",
+      "key_points": [{"point": "Can handle a large number of objectives and constraints well. Adaptable to soft/hard constraint scenarios."}]
+    },
+    {
+      "name": "CMA-ES",
+      "key_points": [{"point": "Good for continuous optimization problems; may require adaptation for discrete or mixed-variable cases like this problem with classes as partitions."}]
+    }
+  ],
+  "justification": "The chosen algorithms are NSGAII and MOGA, which can handle multi-objective scenarios but have been adapted to focus on single objectives. They also support soft/hard constraints effectively through their constraint-handling capabilities in the jMetal library. CMA-ES is included for its strong performance with continuous optimization problems; however, it may need adaptation due to this problem's nature involving discrete partitions of classes and time intervals."
+}
+```
+
+==================== REPETICAO 2/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,707
+Tokens/segundo (eval): 121.33516493801645
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "GeneticAlgorithm",
+      "key_points": ["Evolução natural de soluções", "Adaptável a problemas com grandes conjuntos de dados"],
+      "justification": "Given the large instance size and numerous partitions, Genetic Algorithm can efficiently handle this problem by exploring a diverse set of feasible solutions. Its evolutionary approach is well-suited to manage both hard constraints (solution feasibility) through repair mechanisms during iterations."
+    },
+    {
+      "name": "ParticleSwarmOptimization",
+      "key_points": ["Social learning", "Simple implementation and tuning"],
+      "justification": "The problem involves partitions that may depend on adjacent time solutions, making Particle Swarm Optimization a good choice for its ability to handle complex search spaces through social behavior of particles. It's also relatively simple compared to other metaheuristics."
+    },
+    {
+      "name": "AntColonyOptimizer",
+      "key_points": ["Inspired by ant pheromone trails", "Effective in solving combinatorial optimization problems"],
+      "justification": "The problem's nature with overlapping constraints and partitions makes Ant Colony Optimization effective. It's capable of finding good solutions through continuous improvement, leveraging the historical path success to explore efficient routes."
+    }
+  ],
+  "Justification": null
+}
+```
+
+==================== REPETICAO 3/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 1,953
+Tokens/segundo (eval): 121.46776817793769
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "jMetalCS",
+      "key_points": ["Handles mixed-integer programming", "Supports soft and hard constraints appropriately", "Can be used for a large number of variables (101 rooms, many classes)"]
+    },
+    {
+      "name": "DEoptJME",
+      "key_points": ["Global search method suitable for non-linear problems with continuous attributes", "Does not natively handle mixed-integer programming or soft constraints directly but can work well in combination with other methods like jMetalCS" ]
+    }
+  ],
+  "justification": "jMetalCS is chosen as it specifically handles both hard and soft constraints, which are crucial for this problem. DEoptJME's global search method may complement the mixed-integer programming approach of jMetalCS by providing a diverse set of solutions to explore in conjunction with partitioning strategies."
+}
+```
+
+==================== REPETICAO 4/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,279
+Tokens/segundo (eval): 118.22671746474626
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "jMetalPy/SimpleRandomSearch",
+      "key_points": ["Generates random solutions", "Does not require complex constraints handling"],
+      "justification": null
+    },
+    {
+      "name": "jMetalJava/LocalSearch"
+    },
+    {
+      "name": "jMetalPython/ACO (Ant Colony Optimization)",
+      "key_points": ["Effective for combinatorial problems like partitioning", "Can handle complex constraints and soft/hard constraint differentiation"],
+      "justification": "The problem involves partitions with overlapping classes that may depend on adjacent time slots, suggesting the need for an algorithm capable of handling such complexities. ACO is suitable due to its success in solving similar discrete optimization challenges.",
+      "key_points_pt": ["Gera soluções aleatórias", "Não requer tratamento complexo de restrições"],
+      "justification_pt": null
+    },
+    {
+      "name": "jMetalPython/Genetic Algorithm",
+      "key_points": ["Handles both combinatorial and continuous problems effectively", "Can manage multiple objectives, though here it's for a single objective with soft/hard constraints"],
+      "justification": "The problem's complexity due to partitioning into 1334 parts suggests the need for an evolutionary approach that can efficiently explore large search spaces. Genetic algorithms are well-suited for such scenarios.",
+      "key_points_pt": ["Lida com problemas combinatórios e contínuos efetivamente", "Pode lidar com múltiplas metaobjetivas, embora aqui seja um único objetivo de otimização com restrições suaves/duras"],
+      "justification_pt": null
+    }
+  ],
+  "justification": "Given the problem's characteristics of partitioning with overlaps and constraints in soft/hard categories across numerous partitions (1334), selecting an algorithm that can efficiently handle complex, combinatorial problems is crucial. ACO has demonstrated effectiveness for similar optimization challenges involving discrete variables such as class schedules or resource allocation within time slots. It offers mechanisms to explore the search space while respecting both hard restrictions and adjusting objectives based on soft constraints' weights.\nGenetic Algorithms (GA) are also considered due to their versatility in handling a wide range of problem types, including those with multiple objective functions like ours have one but still involve partitioning complexities that GA can navigate through evolutionary strategies. While Random Search could theoretically serve as an initial solution generation method or explore areas where other methods might struggle initially, it lacks the sophistication needed for effective optimization given our constraints and objectives."
+}
+```
+
+==================== REPETICAO 5/20 ====================
+Sucesso: true
+JSON parseavel: false
+Tempo desta repeticao (segundos): 10,497
+Tokens/segundo (eval): 110.35300938482
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NSGAII",
+      "key_points": ["Multi-objective optimization", "Generational algorithm with elitism and crowding distance assignment.", "Suitable for problems where a diverse set of solutions is desired."],
+      "justification": null
+    },
+    {
+      "name": "SA",
+      "key_points": ["Simple, widely used heuristic search method that can be adapted to multi-objective optimization by treating soft constraints as additional objectives or penalties in the objective function.", "Effective for unimodal landscapes with good local performance."],
+      "justification": null
+    },
+    {
+      "name": "GMO",
+      "key_points": ["Genetic Algorithm framework from jMetal", "Handles both discrete and continuous decision variables, making it versatile but may require custom encoding of the problem.", "Effective for problems where a good approximation is sufficient."],
+      "justification": null
+    },
+    {
+      "name": "ACO",
+      "key_points": ["Ant Colony Optimization framework from jMetal", "Good at solving discrete optimization and combinatorial problems, especially those that can be modeled as graphs or networks.", "Requires problem to fit into a graph-based model which might not directly apply here."],
+      "justification": null
+    },
+    {
+      "name": "IPOP",
+      "key_points": ["Improved Particle Swarm Optimization framework from jMetal", "Suitable for problems with continuous variables and able to handle multi-objective optimization.", "Requires careful tuning of parameters like inertia, acceleration coefficients, etc."],
+      "justification": null
+    },
+    {
+      "name": "DE",
+      "key_points": ["Differential Evolution is a simple yet robust evolutionary algorithm that works well for global search in continuous domains.", "Not directly applicable to discrete optimization without modifications or discretization of the problem space.", "Good option if there are no good mappings from constraints and objectives into numeric values."],
+      "justification": null
+    }
+  ],
+  "justification": "The provided data suggests a complex multi-dimensional combinatorial scheduling/hierarchical clustering-like structure with both soft (weighted in objective) and hard constraint satisfaction. None of the algorithms listed above are directly suitable for this problem, as they all pertain to optimization problems typically defined over continuous domains or graph-based structures rather than hierarchical time-partitioned constraints involving discrete room/class arrangements. NSGAII is primarily a multi-objective evolutionary algorithm designed not specifically with partitioning in mind nor handling hard and soft constraint differences explicitly; SA does not handle such complex, combinatorial constructs naturally due to its simplicity for unimodal landscapes; GMO could potentially be adapted but would require significant rethinking of the problem encoding into genetic terms (discrete classes as genes); ACO is generally used on graphs or network structures which this instance lacks a clear mapping onto; IPOP works with continuous variables and does not directly apply here without discretization, while DE struggles to handle discrete combinatorial problems effectively. This suggests that none of these are the best fit for solving such an optimization problem as described (Algorithm: null). The limitation is due to mismatched algorithm characteristics against this hierarchical constraint partitioning scheduling type, which may require a custom or more specialized metaheuristic approach beyond those listed in jMetal 6.1."```json
+{
+  "algorithms": [
+    {
+      "name": "NSGAII",
+      "key_points": ["Handles soft constraints naturally by adjusting weights", "Suitable for maintaining diversity among solutions with regard to multiple objectives.", "Can be adapted for partitioned problem-solving scenarios through careful initialization and constraint handling."],
+      "justification": null
+    },
+    {
+      "name": "SA",
+      "key_points": ["Simple, adaptable heuristic search method that can handle a wide range of problems", "Effective if soft constraints are encoded as additional objectives in the objective function.", "May require customization to effectively partition and schedule classes across time intervals."]
+    }
+  ],
+  "justification": "Given the problem's characteristics involving both hard (feasibility) and weighted importance for multiple goals, NSGAII stands out due to its inherent capability of dealing with soft constraints by adjusting weights in an objective function. Its generational nature also allows it better adaptability across partitions since different objectives can represent partitioned scheduling needs.\n\nSA is another strong candidate that could directly encode the problem's time-partitioning aspect into a single-objective optimization (with penalties or additional terms for constraint violations), allowing each class to be scheduled within its respective 30-minute window. This method would require careful tuning and likely custom encoding of constraints but offers simplicity in implementation.\n\nGiven this, NSGAII might need customization tailored towards the partitioning aspect with regard to overlapping classes across time partitions which SA could handle more straightforwardly by direct adaptation into a single-objective framework."
+}
+```
+
+==================== REPETICAO 6/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,622
+Tokens/segundo (eval): 106.24648013968061
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "GA",
+      "key_points": [{"point": "Genetic Algorithm (GA) is suitable for complex search spaces with many local optima."}, {"point": "Can handle soft constraints well through fitness functions."}]
+    },
+    {
+      "name": "DE",
+      "key_points": [{"point": "Differential Evolution (DE) excels at continuous optimization problems and can efficiently explore large, rugged landscapes."}, {"point": "Good for handling high-dimensional spaces due to its simple yet effective structure."}]
+    },
+    {
+      "name": "NSGAII",
+      "key_points": [{"point": "Non-dominated Sorting Genetic Algorithm II (NSGA-II) is a powerful multi-objective optimization algorithm that can also be adapted for single objectives with soft constraints by adjusting weights."}, {"point": "Effective in maintaining diversity among solutions, which helps to avoid premature convergence on local optima."}]
+    },
+    {
+      "name": "MOGA",
+      "key_points": [{"point": "Multi-Objective Genetic Algorithm (MOGA) is designed for problems with multiple objectives and can be adapted for single-objective optimization by focusing on the most important objective or combining them into a scalarized form using weights."}, {"point": "Supports soft constraints through fitness functions, making it adaptable to this problem's characteristics."}]
+    },
+    {
+      "name": "SPEA2",
+      "key_points": [{"point": "Strength Pareto Evolutionary Algorithm 2 (SPEA-II) is effective for multi-objective optimization but can be adapted for single objectives by focusing on the most significant objective or through scalarization."}, {"point": "Good at preserving diversity in solutions, which helps to explore a wider search space and avoid getting stuck in local optima. Suitable for problems with both hard constraints (to maintain feasibility) and soft ones (by adjusting weights)."}]
+    }
+  ],
+  "justification": "Given the problem's characteristics of having multiple objectives influenced by weighted soft constraints alongside fixed hard constraints, an algorithm that can handle multi-objective optimization is preferred to efficiently explore trade-offs. Genetic Algorithms like GA or SPEA-II are highly adaptable for such problems due to their ability to maintain diversity and avoid local optima traps through mechanisms inherent in the evolutionary process. Differential Evolution (DE) was considered next because of its robustness on continuous spaces, but given this problem's discrete nature related to class scheduling, it might not be as effective unless adapted specifically for discretization challenges. NSGA-II offers excellent multi-objective optimization capabilities and is designed with a focus that makes handling soft constraints through fitness functions quite efficient; however, SPEA-II was chosen slightly ahead due to its stronger emphasis on diversity preservation in the solution space when dealing simultaneously with hard and weighted soft objectives as indicated by problem data characteristics."
+}
+```
+
+==================== REPETICAO 7/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,431
+Tokens/segundo (eval): 104.38480308483989
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "jMetalClp",
+      "key_points": ["Supports mixed-integer programming", "Can handle soft constraints with penalty functions", "Has a time limit feature for partitions optimization"],
+      "justification": "Given the presence of hard and soft constraints, jMetalClp is suitable due to its ability to integrate linear relaxation methods that can transform problems into equivalent Mixed-Integer Programming (MIP) models. The MIP model allows handling both types of constraints effectively by using penalty functions for soft constraints within a mixed-integer context. Additionally, the time limit feature aligns with partitioning classes in 30-minute intervals as required."
+    },
+    {
+      "name": "jMetalCSA",
+      "key_points": ["Uses evolutionary algorithms suitable for discrete optimization", "Handles combinatorial search effectively and can be parallelized across partitions"],
+      "justification": "The problem's nature, involving the partitioning of classes into time slots in a large instance size (101 rooms), makes jMetalCSA an excellent choice. Its ability to handle complex landscapes with evolutionary strategies like crossover and mutation is ideal for discrete optimization problems such as this one where overlapping constraints exist across partitions."
+    },
+    {
+      "name": "jMetalMosek",
+      "key_points": ["Leverages commercial solvers", "Suitable for large-scale mixed-integer programming"],
+      "justification": "Considering the problem size (24748 classes), jMetalMosek's integration with advanced MIP solvers like Mosek can significantly enhance performance, especially when dealing with a high number of variables and constraints. This makes it particularly apt given its ability to solve large-scale problems efficiently."
+    },
+    {
+      "name": "jMetalCPS",
+      "key_points": ["Based on constructive heuristic methods", "Can handle soft constraint penalties effectively in partitions"],
+      "justification": "With a need for initial feasible solutions created by heuristics and considering the problem's partitioned nature, jMetalCPS can constructively search towards optimality. The capability to impose penalty functions directly within its framework allows it seamlessly manage both hard and soft constraints across multiple time-based partitions."
+    }
+  ],
+  "justification": "jMetalClp is chosen for solving this optimization task due to the problem's mixed-integer nature, with a combination of linear programming techniques that can effectively transform problems into MIP models. The algorithm supports penalty functions which are ideal given our soft constraints in place and their integration within an evolutionary framework (Mosek). Furthermore, it ensures feasible solutions through its inherent time limit features across partitions while maintaining efficient handling for large-scale discrete partitioned optimization tasks."
+}
+```
+
+==================== REPETICAO 8/20 ====================
+Sucesso: true
+JSON parseavel: false
+Tempo desta repeticao (segundos): 7,638
+Tokens/segundo (eval): 101.71706500326786
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "jMetalCI_MOEA_DTLZ",
+      "key_points": [{"point": "Handles multi-objective problems and can be adapted for single objective by aggregating objectives or using a weighted sum method."}],
+      "justification": "The jMetal CI-based MOEA with DTLZ test problem generation (jMetalCI_MOEA_DTLZ) is suitable because it provides mechanisms to handle multiple conflicting goals. Even though the current instance has only one objective, this algorithm can be adapted for single-objective optimization by aggregating objectives or using a weighted sum method. Additionally, its evolutionary approach and ability to deal with multi-dimensional search spaces make it apt for problems that might benefit from exploring various partitions independently before combining results (as suggested in partition statistics)."
+    },
+    {
+      "name": "jMetalGA_RealCodedPSO",
+      "key_points": [{"point": "Adaptable mutation strategies and real-coded representation suitable for continuous search spaces."}, {"point": "Personalized social structures of particles can effectively exploit the knowledge gained from previous iterations, useful in problems with repetitive partitions like this one."}],
+      "justification": "jMetal GA-based Real-Coded Particle Swarm Optimization (jMetalGA_RealCodedPSO) is suitable for optimization tasks that benefit from both global search capabilities and local exploitation of known good regions. It can effectively deal with constraints by adjusting particle positions according to feasibility criteria, making it appropriate given the presence of soft constraints in this instance's objective function."
+
+
+
+      "key_points": [{"point": "Designed specifically for handling a large number of classes efficiently using advanced parallelization strategies suitable for modern multi-core processors and distributed systems.",}],
+      "justification": "jMetal GA-based Non-dominated Sorting Genetic Algorithm II (NSGA-II) is well-suited because it provides an efficient way to handle complex optimization problems with multiple objectives. It can be adapted easily by setting up a single-objective problem or using weighted sums for soft constraints, making effective use of parallelization strategies essential in this instance's scenario due to high partition count and the need for independent solving across partitions."}]
+    }
+  ],
+  "justification": "Given that there is only one objective but multiple classes per time slot with varying numbers (from 1 to 72), an algorithm capable of efficiently handling large search spaces while also accommodating constraints, both soft and hard, would be most suitable. The instance size suggests a need for high-performance algorithms like NSGA-II due to its advanced parallelization capabilities which can leverage modern multi-core systems effectively.\n\njMetalCI-based MOEA with DTLZ is chosen first as it provides an excellent balance between exploration (via multiple objectives) and exploitation of the search space, making use of partition statistics indicating a need for handling diverse class sizes efficiently. Real-coded PSO follows closely because its ability to adapt mutation strategies based on feasibility conditions allows seamless integration into scenarios involving soft constraints.\n\njMetal GA with NSGA-II comes third as it excels in high-dimensional optimization problems and can handle large instance sizes effectively through advanced parallelization techniques, making this algorithm highly suitable for the problem's characteristics."
+}
+```
+
+==================== REPETICAO 9/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 4,913
+Tokens/segundo (eval): 102.080265547008
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NSGA-II",
+      "key_points": [{"point": "handles multiple objectives well, though this problem is single-objective."}],
+      "justification": "Although NSGA-II typically deals with multi-objective optimization problems (MOPs), its capability to handle soft constraints and provide a diverse set of solutions makes it suitable for our scenario where we have both hard and soft constraints. The initial feasible solution can be used as the starting point, which aligns well with this algorithm's requirements."
+    },
+    {
+      "name": "SMOPEX",
+      "key_points": [{"point": "efficient in solving mixed integer programming problems."}, {"point": "good for handling complex constraint structures such as those present here."}],
+      "justification": "Given the problem data, SMOPEX is suitable because it can handle both hard and soft constraints efficiently. It also provides good performance when dealing with partitioned solutions that must respect overlaps or consecutive class timings."
+    },
+    {
+      "name": "PSOX",
+      "key_points": [{"point": "effective for problems where a solution needs to be refined iteratively."}, {"point": "can handle soft constraints and improve feasibility over time."}],
+      "justification": "The PSOX algorithm is well-suited here because it can start with an initial feasible heuristic construction method-generated solution. This allows the problem's partitioned nature (30-minute intervals) to be addressed iteratively, refining solutions as more information becomes available across adjacent partitions."
+    }
+  ],
+  "Justification": "Considering that we have a combination of hard and soft constraints along with multiple independent time-partitioned executions needed for this scheduling optimization problem. The NSGA-II algorithm is primarily designed for MOPs but can manage our scenario's complexities effectively when combined with initial feasible solutions generated heuristically. SMOPEX offers efficient handling of mixed-integer programming problems that are common in constraint-heavy scenarios like ours, while PSOX focuses on iterative improvement which aligns well to partitioned execution requirements."
+}
+```
+
+==================== REPETICAO 10/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 3,419
+Tokens/segundo (eval): 101.81454429335479
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "Discrete Random Search (DRS)",
+      "key_points": [{"point": "Suitable for problems with discrete and combinatorial structures."}]
+    },
+    {
+      "name": "Particle Swarm Optimization (PSO)",
+      "key_points": [{"point": "Good at handling complex search spaces due to its swarm intelligence approach."}, {"point": "Can handle soft constraints effectively through adaptive parameter tuning."}]
+    },
+    {
+      "name": "Simulated Annealing (SA)",
+      "key_points": [{"point": "Effective for escaping local optima, thanks to the temperature-based acceptance criterion."}]
+    }
+  ],
+  "justification": "Given the problem's characteristics of having discrete classes and constraints that partition time into intervals with potential overlaps or consecutive dependencies between them, a combination of DRS due to its suitability in handling combinatorial problems like partitions scheduling; PSO for exploiting swarm intelligence capabilities which can adaptively manage soft constraint weights within their objective function as well as complex inter-partition relationships efficiently; SA is considered because it might provide an effective search strategy particularly when dealing with the partitioning and overlapping constraints, offering a way to escape local optima that simpler algorithms may not easily navigate. The instance size suggests significant complexity due to large numbers of rooms and classes which justifies using advanced metaheuristics capable of scaling up effectively."
+}
+```
+
+==================== REPETICAO 11/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 4,432
+Tokens/segundo (eval): 102.07336856213344
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NSGAII",
+      "key_points": [{"point": "Handles multi-objective optimization problems."}, {"point": "Can handle soft constraints by modifying the objective function."}],
+      "justification": null,
+      "description_in_portuguese_from_portugal": null
+    },
+    {
+      "name": "CuckooSearch",
+      "key_points": [{"point": "Good for discrete and continuous optimization problems."}, {"point": "Uses Levy flights which are useful in exploring the search space."}],
+      "justification": "Considering that partitions can be treated as separate sub-problems, Cuckoo Search could effectively explore different parts of the solution space independently. It also handles soft constraints by modifying objective functions and is suitable for problems with a complex landscape like this one involving multiple independent executions (partitions).",
+      "description_in_portuguese_from_portugal": null
+    },
+    {
+      "name": "ParticleSwarmOptimization",
+      "key_points": [{"point": "Simple to implement and can be used in parallel computation."}, {"point": "Suitable for continuous optimization problems, with some limitations on discrete variables."}],
+      "justification": "The Particle Swarm Optimization (PSO) algorithm could handle this problem's complexity by using an initial feasible solution. However, its use is not as clear compared to Cuckoo Search since it might struggle more when dealing directly with partitions and maintaining diversity across them.",
+      "description_in_portuguese_from_portugal": null
+    }
+  ],
+  "justification": "NSGAII was excluded because this problem involves single-objective optimization. The chosen algorithms (CuckooSearch, ParticleSwarmOptimization) are suitable for handling both discrete variables present in the partitioning and soft constraints embedded within an objective function modification scheme."
+}
+```
+
+==================== REPETICAO 12/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,136
+Tokens/segundo (eval): 98.83283143101472
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NSGA-II",
+      "key_points": ["Multi-objective optimization", "Pareto dominance based on non-domination rank and crowding distance"],
+      "justification": "Suitable for single-objective problems after integrating soft constraints into a weighted objective function."
+    },
+    {
+      "name": "MOEA/D",
+      "key_points": ["Decomposes the multi-objective problem", "Searches multiple points in the solution space with direction vectors"],
+      "justification": "Effective at finding Pareto-optimal solutions for problems that can be decomposed into simpler sub-problems."
+    },
+    {
+      "name": "MPSO",
+      "key_points": ["Multi-objective optimization using Particle Swarm Optimization", "Supports elitist selection and niching"],
+      "justification": "Useful when soft constraints are integrated as a weighted objective function, benefiting from the population-based approach of PSO."
+    },
+    {
+      "name": "GA",
+      "key_points": ["Genetic Algorithm for single-objective optimization with crossover", "Includes mutation operators and selection methods"],
+      "justification": "Can be adapted to handle soft constraints by integrating them into a fitness function, making it suitable for this problem after adaptation."
+    }
+  ],
+  "justification": "Given the nature of the problem as a single-objective one that can integrate multiple objectives through weighted sums (for soft constraints) and ensuring feasibility with hard constraints during solution creation/repair phases. The partitioned structure suggests an evolutionary multi-partition approach, making algorithms capable of handling decomposed problems suitable. NSGA-II is recommended for its well-established performance in balancing exploration/exploitation while maintaining diversity among solutions across partitions. MOEA/D complements this by efficiently searching within the divided problem space to find Pareto-optimal frontiers. MPSO and GA are considered as they can be adapted similarly, leveraging their respective mechanisms (particle swarm dynamics vs. genetic evolution) for exploring feasible regions defined by both soft constraints' weights in objective functions and hard constraint adherence during solution search phases."
+}
+```
+
+==================== REPETICAO 13/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 4,528
+Tokens/segundo (eval): 99.83492077701237
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "jMetalCS.MCPSO",
+      "key_points": [{"point": "Solves problems with soft and hard constraints."}],
+      "justification": "MCPSO (Multi-Context Particle Swarm Optimization) is suitable for this problem because it can handle both types of constraints effectively. It uses multiple particles to explore the search space, which helps in finding a feasible solution quickly that satisfies all constraint requirements while also optimizing soft objectives."
+    },
+    {
+      "name": "jMetalCS.LMO",
+      "key_points": [{"point": "Good for problems with non-linear objective functions."}],
+      "justification": "Local Minima Heuristic (LMO) is chosen as it can effectively handle the complex nature of this problem, which includes both linear and possibly some nonlinear aspects due to partition constraints. LMO uses a combination of local search techniques that are efficient in finding feasible solutions within specified time intervals."
+    },
+    {
+      "name": "jMetalCS.GASA",
+      "key_points": [{"point": "Can handle multi-constraint optimization problems."}],
+      "justification": "Gravitational Ant System (GASA) is another suitable choice as it integrates swarm intelligence with gravitational attraction principles, making it adept at navigating through the search space to meet both soft and hard constraints. This makes GASA a good fit for this complex scheduling problem."
+    }
+  ],
+  "justification": "Given that all three algorithms can handle multi-constraint optimization problems effectively (soft/hard), MCPSO is selected as primary due to its proven success in similar scenarios, followed by LMO and then GASA based on their ability to navigate the search space for feasible solutions within partition constraints. Each algorithm offers unique advantages related to constraint handling capabilities which are critical given this problem's characteristics."
+}
+```
+
+==================== REPETICAO 14/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 3,614
+Tokens/segundo (eval): 96.12358422137171
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NSGA-II",
+      "key_points": [{"point": "Handles multiple objectives efficiently and is capable of approximating the Pareto front."}],
+      "justification": "Given that this problem has a single objective but with constraints, NSGA-II can handle soft constraint integration into its fitness function effectively. It also allows for parallel processing which suits partitioned solving approaches as described in the instance size data."
+    },
+    {
+      "name": "ACO (Ant Colony Optimization)",
+      "key_points": [{"point": "Good at handling combinatorial problems and constraints through pheromone updates."}],
+      "justification": "The problem's nature with partitions suggests a need for an algorithm that can handle overlapping solutions. ACO is suitable as it naturally handles such scenarios using its probabilistic techniques, which aligns well with the partitioning approach of this optimization task."
+    },
+    {
+      "name": "DE (Differential Evolution)",
+      "key_points": [{"point": "Effective in handling noisy functions and constraints; good for high-dimensional problems."}],
+      "justification": "The instance size indicates a relatively large problem space, which DE can efficiently handle. Its robustness to various types of objective landscapes makes it apt for this optimization task with numerous partitions needing independent solutions that respect both hard and soft constraints."
+    }
+  ],
+  "Justification": null
+}
+```
+
+==================== REPETICAO 15/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,990
+Tokens/segundo (eval): 96.85348134741152
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "CMAES",
+      "key_points": [{"point": "Adaptive metaheuristic for continuous optimization problems."}, {"point": "Works well with complex, noisy objective functions and constraints."}],
+      "justification": "Given the problem's characteristics of having soft constraints in a non-linear context (partitions corresponding to groups of classes), CMA-ES is suitable due to its adaptive nature. It's good for handling noise which can come from overlapping class times across partitions."
+    },
+    {
+      "name": "MIES",
+      "key_points": [{"point": "Metaheuristic that combines the advantages of Evolutionary Algorithms and Local Search."}, {"point": "Good at escaping local optima, making it suitable for complex landscapes like those presented by partition constraints"}],
+      "justification": "The MIES algorithm can efficiently handle both soft constraint integration through its evolutionary strategies and hard ones due to its capability in maintaining feasible regions during the search process. Its combination of global exploration (Evolutionary Algorithms) with local exploitation makes it a strong candidate for this problem."
+    }
+  ],
+  "justification": null
+}
+```
+
+==================== REPETICAO 16/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,367
+Tokens/segundo (eval): 96.09160412621353
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "GSimpleLocalSearch",
+      "key_points": [{"point": "Suitable for small-scale problems with a limited number of soft constraints."}]
+    },
+    {
+      "name": "NSGAII",
+      "key_points": [{"point": "Good multi-objective optimization, not directly applicable here but useful as an alternative if multiple objectives are considered in the future."}, {"point": "Can handle many decision variables and maintains diversity among solutions."}]
+    }
+  ],
+  "justification": "Given that this is a single-objective problem with both hard constraints (ensuring feasibility) and soft constraints integrated into the objective function, an algorithm like GSimpleLocalSearch could be suitable for its simplicity in handling small-scale problems. NSGAII can handle multiple objectives if needed but was not chosen directly due to it being multi-criteria optimization."
+}
+```
+
+==================== REPETICAO 17/20 ====================
+Sucesso: true
+JSON parseavel: false
+Tempo desta repeticao (segundos): 5,805
+Tokens/segundo (eval): 88.32672112381097
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "CMAES",
+      "key_points": ["Adaptive", "Surrogate-based optimization for complex problems with noisy evaluations.", "Good balance between exploration and exploitation."],
+      "justification": "Given the problem's complexity, soft constraints integration into objective functions suggests a need for an adaptive search strategy that can handle noise in evaluation. CMA-ES (Covariance Matrix Adaptation Evolution Strategy) is well-suited to this as it adapts its covariance matrix based on past trials and maintains good balance between exploring new areas of the solution space and exploiting known high-performing regions."
+    },
+    {
+      "name": "DE",
+      "key_points": ["Simple, easy-to-implement algorithm", "Effective for a wide range of optimization problems.", "Has mechanisms to escape local optima."],
+      "justification": "The problem's discrete nature with many partitions and constraints may benefit from the Differential Evolution (DE) approach. DE is known for its simplicity in implementation while being effective across various types of continuous, nonlinear numerical functions which might be analogously applied here due to their ability to escape local optima."
+    },
+    {
+      "name": "GWO",
+      "key_points": ["Based on social hierarchies", "Works well with discrete and real-valued variables.", "Efficient in exploring the search space."],
+      "justification": "The Grey Wolf Optimizer (GWO) mimics wolf pack leadership hierarchy for hunting, which could effectively handle multiple partitions as it is capable of dealing both continuous and binary problems. Its exploration strategy may be particularly effective given that we are working with a discrete number of classes across various time slots."]
+    }
+  ],
+  "justification": "The chosen algorithms reflect the complexity levels inherent in this problem: CMA-ES for its adaptive nature suitable to handle noisy evaluations related to soft constraints; DE due to simplicity and effectiveness, which could be beneficial given that partitions are treated independently but must align with other classes. GWO provides a unique approach inspired by social hierarchies of wolves making it versatile enough for discrete problems like this one involving time partitioning in the context of scheduling or resource allocation."
+}
+```
+
+==================== REPETICAO 18/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,262
+Tokens/segundo (eval): 95.41943743295391
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "jMetal Sequential Simplex",
+      "key_points": [{"point": "Handles linear problems effectively."}, {"point": "Can deal with hard constraints using presolve steps and cuts for feasibility checks."}],
+      "justification": "Given the presence of both soft and hard constraints, jMetal's sequential simplex is suitable as it can efficiently handle mixed-integer programming through its ability to incorporate constraint handling mechanisms. It also benefits from an initial feasible solution provided by a heuristic construction method."
+    },
+    {
+      "name": "jMetal Evolution Strategies",
+      "key_points": [{"point": "Adaptable and robust for large-scale problems."}, {"point": "Can handle noisy objective functions through stochastic sampling methods."}],
+      "justification": "Evolution strategies are good at exploring complex, high-dimensional spaces. The algorithm's ability to work with soft constraints by adjusting weights in the fitness function makes it apt for this problem scenario."
+    },
+    {
+      "name": "jMetal PSO",
+      "key_points": [{"point": "Good convergence speed and simple implementation."}, {"point": "Can handle non-differentiable problems which may arise from discrete partitioning constraints."}],
+      "justification": "Particle Swarm Optimization (PSO) is chosen for its flexibility in handling various problem structures, especially when dealing with complex objective functions involving soft constraint adjustments. It's also well-suited to work within the given time partitions due to parallel execution capabilities."
+    },
+    {
+      "name": "jMetal GA",
+      "key_points": [{"point": "Highly versatile and can be adapted for a wide range of problems."}, {"point": "Good performance on continuous optimization tasks, especially when dealing with soft constraints by adjusting genetic representation parameters like mutation rates or crossover mechanisms that respect constraint conditions."}],
+      "justification": "Genetic Algorithm (GA) is selected due to its strong ability in handling complex search spaces and mixed-integer programming. The adaptability of GA makes it suitable for managing the partitioned nature of this problem while considering both soft constraints within fitness functions and hard constraints through repair mechanisms or penalty methods."
+    }
+  ],
+  "justification": "The chosen algorithms reflect a balance between their inherent characteristics, such as handling constraint types (hard vs. soft), suitability to parallelized partitions in solving time-bound problems like class scheduling with room availability issues, adaptability for mixed-integer programming challenges and the requirement of initial feasible solutions provided by heuristic methods."
+}
+```
+
+==================== REPETICAO 19/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,087
+Tokens/segundo (eval): 96.20214225943944
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "GA",
+      "key_points": [{"point": "Genetic Algorithm (GA) is suitable for complex search spaces and can handle multiple constraints."}]
+    },
+    {
+      "name": "ACO",
+      "key_points": [{"point": "Ant Colony Optimization (ACO) efficiently handles combinatorial optimization problems like this one with overlapping tasks in partitions."}]
+    }
+  ],
+  "justification": "Given the problem's characteristics, including partitioning by time intervals and constraints related to overlaps or consecutive classes across different rooms. GA is chosen for its ability to handle complex search spaces effectively over multiple iterations (partitions). ACO complements this choice as it efficiently tackles combinatorial optimization problems with overlapping tasks in partitions."
+}
+```
+
+==================== REPETICAO 20/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 4,620
+Tokens/segundo (eval): 92.42170970598673
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "DE",
+      "key_points": ["Discrete Evolutionary", "good for small problems with discrete variables", "can handle soft constraints efficiently"],
+      "justification": "The DE algorithm is suitable because it can directly manipulate a population of solutions, which aligns well with the problem's partitioned nature. It also has mechanisms to deal with both hard and soft constraints in an evolutionary manner."
+    },
+    {
+      "name": "LS",
+      "key_points": ["Local Search", "efficient for problems where good initial feasible solution is available"],
+      "justification": "Given that a heuristic construction method provides the starting point, LS can efficiently fine-tune this promising candidate by exploring its neighborhood. This could be beneficial given the problem's complex constraints and objective function modifications due to soft constraints."
+    },
+    {
+      "name": "MP-PSO",
+      "key_points": ["Metaheuristic with Population-based PSO", "good for problems requiring exploration of large search spaces"],
+      "key_points_2": ["can handle both discrete variables (classes) and continuous ones efficiently"],
+      "justification": "The problem's scale, characterized by a total number of partitions but varying classes per partition suggests MP-PSO could effectively explore the solution space. Its ability to manage diverse variable types is crucial given that each time partition solves independently with its constraints."
+    }
+  ],
+  "justification": "Given the complex nature involving both hard and soft constraint handling, along with discrete variables (classes) distributed over partitions of varying sizes, a combination or sequence using DE for initial exploration followed by LS to refine solutions seems prudent. MP-PSO can serve as an alternative when seeking broader explorations across independent partitioned problem instances."
+}
+```

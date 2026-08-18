@@ -1,0 +1,384 @@
+=== BENCHMARK: parameters ===
+Modelo: qwen2.5:7b
+Algoritmo selecionado: NSGA-II
+Timestamp: 2026-08-13T22:33:51.5808545
+Numero de repeticoes: 20
+Tempo TOTAL gasto neste modelo (segundos): 65,292
+Tempo MEDIO por prompt (segundos): 3,265
+
+--- PROMPT ENVIADA (igual em todas as repeticoes) ---
+ROLE:
+You are an expert in optimization problem modelling, metaheuristics, and the jMetal Java library.
+
+TASK:
+Analyze the problem data and select appropriate configuration parameters for the NSGA-II algorithm in jMetal 6.1.
+
+INSTRUCTIONS/REQUIREMENTS:
+- Answer in English.
+- Reply ONLY with valid JSON and no extra text.
+- The target algorithm is NSGA-II in jMetal 6.1.
+- The intended implementation uses SBX crossover and Polynomial Mutation.
+- Select appropriate values for the parameters in the following order:
+1. populationSize
+2. maxEvaluations
+3. crossoverProbability
+4. mutationProbability
+5. etaC
+6. etaM
+
+- The selected values must be coherent with NSGA-II.
+- The selected values must be coherent with NSGA-II, SBX crossover, and Polynomial Mutation.
+- Consider the problem data when choosing the parameter values.
+- Provide a brief justification for the selected configuration.
+- Do not invent parameters outside the requested list.
+- The parameter values should be suitable for practical execution on a local machine with very limited computational resources.
+- The response must be directly parseable by Jackson.
+- Reply ONLY with valid JSON and no extra text in the following format.
+{
+  "populationSize" : null,
+  "maxEvaluations" : null,
+  "crossoverProbability" : null,
+  "mutationProbability" : null,
+  "etaC" : null,
+  "etaM" : null,
+  "Justification" : ""
+}
+
+PROBLEM DATA:
+name: Primeiro Teste Oficial
+problem_type: null
+problem_subtype: null
+resolution_scope: null
+repeated_instance_strategy: null
+selected_algorithm: NSGA-II
+
+constraints_summary:
+{total=6, hard=2, soft=4, selected=[{id=room_exclusivity, goal=hard, importance=high}, {id=room_feature_mismatch, goal=soft, importance=high}, {id=room_capacity_sufficiency, goal=hard, importance=medium}, {id=consecutive_room_change, goal=soft, importance=high}, {id=student_relocation, goal=soft, importance=medium}, {id=capacity_waste, goal=soft, importance=low}]}
+
+selected_constraints:
+[{id=room_exclusivity, enabled=true, goal=hard, importance=high, label=Sala não pode ter duas aulas ao mesmo tempo}, {id=room_feature_mismatch, enabled=true, goal=soft, importance=high, label=Adequação das características da sala}, {id=room_capacity_sufficiency, enabled=true, goal=hard, importance=medium, label=Capacidade da sala suficiente}, {id=consecutive_room_change, enabled=true, goal=soft, importance=high, label=Evitar mudança de sala em aulas consecutivas}, {id=student_relocation, enabled=true, goal=soft, importance=medium, label=Minimizar deslocação dos estudantes}, {id=capacity_waste, enabled=true, goal=soft, importance=low, label=Minimizar desperdício de capacidade}]
+
+instance_characteristics:
+{total_classes=24748, selected_partition_statistics={partition_count=1334, average_classes_per_partition=18.55, min_classes_per_partition=1, max_classes_per_partition=72}}
+
+
+
+==================== REPETICAO 1/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 11,542
+Tokens/segundo (eval): 82.13788853397485
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20,
+  "etaM" : 20,
+  "Justification" : "For a problem with limited computational resources and the need to balance between hard constraints (room exclusivity, room capacity sufficiency) and soft ones (room feature mismatch, consecutive room change, student relocation, capacity waste), a population size of 100 and max evaluations of 50,000 ensure a reasonable exploration of the solution space. Crossover and mutation probabilities are set to standard values for NSGA-II with SBX crossover and Polynomial Mutation, while eta values are high to facilitate diversity in the population."
+}
+
+==================== REPETICAO 2/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,692
+Tokens/segundo (eval): 83.49258898336733
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20,
+  "etaM" : 20,
+  "Justification" : "For a problem of this size and complexity, with both hard and soft constraints, a population size of 100 is chosen to ensure sufficient diversity while keeping the computational load manageable. The maxEvaluations parameter is set high (50,000) to allow for thorough exploration. Crossover probability at 0.9 ensures effective combination of solutions, while mutation probability at 0.1 introduces necessary diversity. Both crossover and mutation use a large eta value to balance exploitation and exploration given the constraints."
+}
+
+==================== REPETICAO 3/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,697
+Tokens/segundo (eval): 83.26866740191839
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 15,
+  "etaM" : 20,
+  "Justification" : "For a problem with a large number of classes (24748), a population size of 100 is chosen to balance exploration and computational cost. Max evaluations are set high enough (50,000) to ensure good convergence while keeping within practical limits for local machine execution. Crossover probability and mutation probability values are standard choices that have proven effective in many applications. The values of etaC and etaM are selected to reflect a balance between exploration and exploitation appropriate for the problem's complexity."
+}
+
+==================== REPETICAO 4/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,671
+Tokens/segundo (eval): 85.94239732186396
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20,
+  "etaM" : 20,
+  "Justification" : "For a problem of this size, with multiple hard constraints (room_exclusivity and room_capacity_sufficiency), a population size of 100 provides a good balance between exploration and exploitation. Max evaluations are set to 50,000 to ensure sufficient exploration while keeping the computation manageable on limited resources. Crossover probability is high to encourage diverse solutions, while mutation probability is lower to maintain solution stability. Both eta values are set to higher values to allow for significant diversity in the population."
+}
+
+==================== REPETICAO 5/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,894
+Tokens/segundo (eval): 81.89257073523025
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 10000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20,
+  "etaM" : 20,
+  "Justification" : "For a problem with 24,748 classes and complex constraints (6 total, including 2 hard), a population size of 100 is reasonable to ensure diversity while keeping computational load manageable. A maximum of 10,000 evaluations balances exploration with practical execution time on limited resources. Crossover and mutation probabilities are set high for SBX crossover and Polynomial Mutation respectively, as they are key operators in NSGA-II. The value of eta parameters (20) is chosen to be relatively large, facilitating a good balance between local and global search."
+}
+
+==================== REPETICAO 6/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,617
+Tokens/segundo (eval): 83.44947897822762
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20.0,
+  "etaM" : 20.0,
+  "Justification" : "For a problem with limited computational resources, a population size of 100 and max evaluations set to 50,000 strike a balance between exploration and execution time. A high crossover probability (0.9) is chosen to promote diversity in the population while ensuring sufficient mixing through mutation (0.1). The values for etaC and etaM are kept relatively high to allow for significant variation within offspring during the SBX crossover and polynomial mutation processes."
+}
+
+==================== REPETICAO 7/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,724
+Tokens/segundo (eval): 81.7130973216312
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20.0,
+  "etaM" : 20.0,
+  "Justification" : "Given the problem's complexity with multiple constraints and the need for a balance between hard and soft constraints, a population size of 100 and maximum evaluations of 50,000 are chosen to ensure exploration while limiting resource usage. A high crossover probability (0.9) is selected to promote diversity, while mutation probability (0.1) ensures sufficient exploration. Both SBX crossover and Polynomial Mutation use an eta value of 20, which is appropriate for the problem's scale."
+}
+
+==================== REPETICAO 8/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,827
+Tokens/segundo (eval): 80.73036103053833
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 5000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 10.0,
+  "etaM" : 20.0,
+  "Justification" : "For a problem with limited computational resources and a moderate number of constraints, a population size of 100 and maximum evaluations of 5000 are chosen to balance exploration and exploitation. A high crossover probability (0.9) is set to facilitate the exchange of genetic material among solutions, while a low mutation probability (0.1) ensures that only selected individuals undergo small changes. The crossover and mutation parameters are tuned for SBX and Polynomial Mutation respectively, with values typical for balancing exploration and convergence."
+}
+
+==================== REPETICAO 9/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,404
+Tokens/segundo (eval): 76.27430334483668
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 10000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20.0,
+  "etaM" : 20.0,
+  "Justification" : "Selected values are suitable for a problem with limited computational resources, ensuring a balance between exploration and exploitation. Population size and maximum evaluations are chosen to provide a reasonable number of solutions while keeping computation time manageable. Crossover and mutation probabilities are typical values that promote diversity and convergence. Eta parameters are set high to ensure proper distribution of solutions."
+}
+
+==================== REPETICAO 10/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,453
+Tokens/segundo (eval): 75.62857295251561
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20,
+  "etaM" : 20,
+  "Justification" : "Given the limited computational resources, a population size of 100 and max evaluations set to 50,000 strike a balance between exploration and practical execution time. Crossover probability at 0.9 ensures good mixing of solutions while mutation probability at 0.1 maintains diversity. Both eta values are set high for robust handling of the constraints."
+}
+
+==================== REPETICAO 11/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,624
+Tokens/segundo (eval): 73.89150049160939
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 10.0,
+  "etaM" : 20.0,
+  "Justification" : "Selected parameters are optimized for a local machine with limited resources, ensuring a balance between exploration and exploitation. The population size is kept low to reduce computational load, while maxEvaluations is set higher to allow sufficient iterations. Crossover and mutation probabilities are typical values that provide good diversity and convergence in NSGA-II. Eta values are chosen to facilitate a smooth crossover and mutation process."
+}
+
+==================== REPETICAO 12/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,862
+Tokens/segundo (eval): 73.7822775732534
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 10000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 15.0,
+  "etaM" : 20.0,
+  "Justification" : "For a problem with medium to high importance constraints, a population size of 100 and maxEvaluations set to 10000 should provide a reasonable balance between exploration and exploitation. Crossover probability at 0.9 ensures good diversity while mutation probability at 0.1 maintains the necessary genetic variation. The values for etaC and etaM are chosen to be high, ensuring that the algorithm can effectively explore the solution space."
+}
+
+==================== REPETICAO 13/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,831
+Tokens/segundo (eval): 73.9851658891988
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 15.0,
+  "etaM" : 20.0,
+  "Justification" : "For a problem with medium to high importance constraints, a population size of 100 and max evaluations set at 50000 provide a balance between exploration and computational cost. Crossover probability at 0.9 and mutation probability at 0.1 are typical settings for ensuring effective search while preventing premature convergence. The crossover and mutation values (etaC and etaM) are chosen to be high enough to maintain diversity in the population."
+}
+
+==================== REPETICAO 14/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 3,056
+Tokens/segundo (eval): 74.40265366894714
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 10,
+  "etaM" : 20,
+  "Justification" : "For a problem of this scale with multiple hard and soft constraints, a population size of 100 is reasonable to explore the solution space adequately. The maximum evaluations are set to 50000 to ensure sufficient iterations for convergence while keeping it practical. A crossover probability of 0.9 and mutation probability of 0.1 are common settings that balance exploration and exploitation effectively. SBX with an eta value of 10 is suitable for continuous optimization problems, and a higher etaM value of 20 helps in maintaining diversity within the population."
+}
+
+==================== REPETICAO 15/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,750
+Tokens/segundo (eval): 76.98838636643204
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 5000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 15.0,
+  "etaM" : 20.0,
+  "Justification" : "For a problem of this size with limited computational resources, a population size of 100 and max evaluations set to 5000 is reasonable. Crossover probability at 0.9 and mutation probability at 0.1 are standard values that balance exploration and exploitation effectively. The values for etaC and etaM are chosen higher than the typical default values (20) as this problem involves a mix of hard and soft constraints, requiring a more robust search strategy."
+}
+
+==================== REPETICAO 16/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 2,700
+Tokens/segundo (eval): 75.05111864133812
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20,
+  "etaM" : 20,
+  "Justification" : "Given the limited computational resources, a population size of 100 and maxEvaluations set to 50000 provide a balance between exploration and exploitation while ensuring practical execution. A crossover probability of 0.9 encourages high diversity in offspring generation, and a mutation probability of 0.1 helps maintain genetic diversity. The values for etaC and etaM are chosen to be relatively large to allow significant variation during the search process."
+}
+
+==================== REPETICAO 17/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 3,159
+Tokens/segundo (eval): 73.72508894798972
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20,
+  "etaM" : 20,
+  "Justification" : "For a problem with 24,748 classes and 6 constraints (2 hard and 4 soft), a population size of 100 is reasonable to ensure diversity while keeping computational load manageable. The maxEvaluations are set to 50,000 based on typical local machine resources. Crossover probability of 0.9 and mutation probability of 0.1 are standard values that balance exploration and exploitation effectively. Both etaC and etaM at 20 ensure a good balance between the diversity and convergence during the search process."
+}
+
+==================== REPETICAO 18/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 3,215
+Tokens/segundo (eval): 69.80097303306957
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 10.0,
+  "etaM" : 20.0,
+  "Justification" : "For a problem of this size and complexity, with multiple hard constraints, a population size of 100 and maxEvaluations of 50000 are chosen to balance exploration and exploitation. Crossover probability (0.9) and mutation probability (0.1) are typical values for balancing diversity and convergence. The crossover and mutation parameters (etaC and etaM) are set high to ensure a good balance between exploration and exploitation, given the need to handle both hard and soft constraints."
+}
+
+==================== REPETICAO 19/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 3,033
+Tokens/segundo (eval): 69.35036557296543
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 20.0,
+  "etaM" : 20.0,
+  "Justification" : "A population size of 100 and maxEvaluations of 50,000 balance exploration and computational efficiency for a local machine. A crossover probability of 0.9 ensures high likelihood of crossover operations. Mutation probability at 0.1 provides sufficient genetic diversity while keeping the algorithm efficient. Both eta values are set to 20.0, which is typical for NSGA-II with SBX and Polynomial Mutation, promoting good convergence."
+}
+
+==================== REPETICAO 20/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 3,541
+Tokens/segundo (eval): 69.03233566418918
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize" : 100,
+  "maxEvaluations" : 50000,
+  "crossoverProbability" : 0.9,
+  "mutationProbability" : 0.1,
+  "etaC" : 15.0,
+  "etaM" : 20.0,
+  "Justification" : "Given the problem's complexity with 6 constraints, particularly the hard ones like room exclusivity and capacity sufficiency, a population size of 100 is balanced to explore diverse solutions while keeping computation manageable. The maxEvaluations limit at 50,000 balances between thorough exploration and practical computational limits. Crossover probability of 0.9 encourages high diversity in the offspring, and mutation probability of 0.1 ensures a fine balance for small adjustments. Both etaC and etaM are set higher to allow for significant diversity in the initial population and during the optimization process."
+}

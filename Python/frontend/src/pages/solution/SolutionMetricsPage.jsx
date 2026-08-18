@@ -164,12 +164,7 @@ export default function SolutionMetricsPage() {
           >
             Dados
           </NavLink>
-          <NavLink
-            to={`/problems/${id}/solutions/${solutionId}/schedule/full`}
-            style={styles.switcherButton}
-          >
-            Horário Completo
-          </NavLink>
+          
           <NavLink
             to={`/problems/${id}/solutions/${solutionId}/schedule/rooms`}
             style={styles.switcherButton}

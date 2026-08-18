@@ -63,7 +63,7 @@ public class ProblemExecutionOrchestratorService {
 
         String promptPath = "prompts/parameters-prompt.txt";
 
-        String problemData = problemDataBuilderService.buildExecutionProblemData(request);
+        String problemData = problemDataBuilderService.buildProblemData(request);
 
         String selectedAlgorithmName = request.getSelected_algorithm();
         AlgorithmMetadataProvider algorithmMetadata = algorithmMetadataRegistry.getByName(selectedAlgorithmName);
@@ -245,17 +245,7 @@ public class ProblemExecutionOrchestratorService {
     }
 
     private PartitionType resolvePartitionType(String value) {
-        if (value == null || value.isBlank()) {
-            return PartitionType.SEMESTER;
-        }
-
-        return switch (value.trim().toLowerCase()) {
-            case "semester" -> PartitionType.SEMESTER;
-            case "week" -> PartitionType.WEEK;
-            case "day" -> PartitionType.DAY;
-            case "start_half_hour" -> PartitionType.START_HALF_HOUR;
-            default -> throw new IllegalArgumentException("Unsupported partition type: " + value);
-        };
+        return PartitionType.START_HALF_HOUR;
     }
 
     @SuppressWarnings("unchecked")

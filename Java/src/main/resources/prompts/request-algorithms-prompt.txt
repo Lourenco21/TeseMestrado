@@ -9,6 +9,7 @@ INSTRUCTIONS/REQUIREMENTS:
 - Do not invent information that is not present in the problem data.
 - The chosen algorithms must exist in the jMetal Java library version 6.1.
 - The chosen algorithms must be sorted by order of suitability for the problem characteristics.
+- The chosen algorithms must be in their abbreviated names.
 - When possible, relate the algorithm choice to the problem characteristics.
 - You must select at least one algorithm, but you can select more if they are suitable for the problem.
 - For each selected algorithm, provide a brief list of key points for a user to choose one of the algorithms.

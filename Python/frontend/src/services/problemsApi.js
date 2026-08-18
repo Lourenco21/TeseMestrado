@@ -120,7 +120,7 @@ export async function requestProblemAlgorithms(problemId) {
 
 export async function executeProblemWithAlgorithm(problemId, executionConfig = {}) {
   const response = await fetch(
-    `http://127.0.0.1:8000/optimization_problems/${problemId}/execute/`,
+    `http://127.0.0.1:8000/optimization_problems/${problemId}/execute/`,//add ?benchmark=algorithms or ?benchmark=parameters at the end for the benchmark
     {
       method: "POST",
       headers: {

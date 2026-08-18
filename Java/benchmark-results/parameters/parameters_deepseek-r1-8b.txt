@@ -1,0 +1,384 @@
+=== BENCHMARK: parameters ===
+Modelo: deepseek-r1:8b
+Algoritmo selecionado: NSGA-II
+Timestamp: 2026-08-13T22:44:26.8285374
+Numero de repeticoes: 20
+Tempo TOTAL gasto neste modelo (segundos): 136,627
+Tempo MEDIO por prompt (segundos): 6,831
+
+--- PROMPT ENVIADA (igual em todas as repeticoes) ---
+ROLE:
+You are an expert in optimization problem modelling, metaheuristics, and the jMetal Java library.
+
+TASK:
+Analyze the problem data and select appropriate configuration parameters for the NSGA-II algorithm in jMetal 6.1.
+
+INSTRUCTIONS/REQUIREMENTS:
+- Answer in English.
+- Reply ONLY with valid JSON and no extra text.
+- The target algorithm is NSGA-II in jMetal 6.1.
+- The intended implementation uses SBX crossover and Polynomial Mutation.
+- Select appropriate values for the parameters in the following order:
+1. populationSize
+2. maxEvaluations
+3. crossoverProbability
+4. mutationProbability
+5. etaC
+6. etaM
+
+- The selected values must be coherent with NSGA-II.
+- The selected values must be coherent with NSGA-II, SBX crossover, and Polynomial Mutation.
+- Consider the problem data when choosing the parameter values.
+- Provide a brief justification for the selected configuration.
+- Do not invent parameters outside the requested list.
+- The parameter values should be suitable for practical execution on a local machine with very limited computational resources.
+- The response must be directly parseable by Jackson.
+- Reply ONLY with valid JSON and no extra text in the following format.
+{
+  "populationSize" : null,
+  "maxEvaluations" : null,
+  "crossoverProbability" : null,
+  "mutationProbability" : null,
+  "etaC" : null,
+  "etaM" : null,
+  "Justification" : ""
+}
+
+PROBLEM DATA:
+name: Primeiro Teste Oficial
+problem_type: null
+problem_subtype: null
+resolution_scope: null
+repeated_instance_strategy: null
+selected_algorithm: NSGA-II
+
+constraints_summary:
+{total=6, hard=2, soft=4, selected=[{id=room_exclusivity, goal=hard, importance=high}, {id=room_feature_mismatch, goal=soft, importance=high}, {id=room_capacity_sufficiency, goal=hard, importance=medium}, {id=consecutive_room_change, goal=soft, importance=high}, {id=student_relocation, goal=soft, importance=medium}, {id=capacity_waste, goal=soft, importance=low}]}
+
+selected_constraints:
+[{id=room_exclusivity, enabled=true, goal=hard, importance=high, label=Sala não pode ter duas aulas ao mesmo tempo}, {id=room_feature_mismatch, enabled=true, goal=soft, importance=high, label=Adequação das características da sala}, {id=room_capacity_sufficiency, enabled=true, goal=hard, importance=medium, label=Capacidade da sala suficiente}, {id=consecutive_room_change, enabled=true, goal=soft, importance=high, label=Evitar mudança de sala em aulas consecutivas}, {id=student_relocation, enabled=true, goal=soft, importance=medium, label=Minimizar deslocação dos estudantes}, {id=capacity_waste, enabled=true, goal=soft, importance=low, label=Minimizar desperdício de capacidade}]
+
+instance_characteristics:
+{total_classes=24748, selected_partition_statistics={partition_count=1334, average_classes_per_partition=18.55, min_classes_per_partition=1, max_classes_per_partition=72}}
+
+
+
+==================== REPETICAO 1/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 15,856
+Tokens/segundo (eval): 46.834377131361066
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 200,
+  "maxEvaluations": 1000000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "For this problem with 24,748 classes and 1,334 partitions, a population size of 200 is selected to balance diversity and computation time on limited resources. The maximum evaluations are set to 1,000,000 to allow sufficient exploration without excessive runtime. Crossover probability is high (0.9) to encourage combination of solutions, and mutation probability is moderate (0.1) to maintain diversity. EtaC (30) and etaM (100) are chosen for SBX and Polynomial Mutation respectively, with higher etaM to avoid over-mutation given the problem's constraints. These values are coherent with NSGA-II and its operators, ensuring efficient convergence and diversity maintenance on a local machine with limited resources."
+}
+
+==================== REPETICAO 2/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,291
+Tokens/segundo (eval): 43.22551886881332
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 200,
+  "maxEvaluations": 1000000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "The problem involves a large number of classes (24,748) and partitions (1,334), requiring efficient exploration. A population size of 200 balances diversity and computation time. Max evaluations at 1,000,000 ensures sufficient runs without excessive computation on limited resources. Crossover probability (0.9) and mutation probability (0.1) maintain a balance between exploration and exploitation. EtaC (30) and EtaM (100) provide aggressive recombination and mutation, suitable for handling constraints and complex search spaces. These values are coherent with NSGA-II and its operators, ensuring practical execution on a local machine with limited resources."
+}
+
+==================== REPETICAO 3/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,489
+Tokens/segundo (eval): 39.6118558737337
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 15.0,
+  "etaM": 50.0,
+  "Justification": "The problem involves a large number of classes (24748) and partitions (1334). NSGA-II with SBX crossover and Polynomial Mutation is chosen. A population size of 100 is selected to balance diversity and computation time on limited resources. Max evaluations set to 500000 ensures sufficient exploration without excessive runtime. Crossover probability 0.9 and mutation probability 0.1 are standard for maintaining diversity. EtaC=15.0 and EtaM=50.0 provide moderate diversity in offspring for both crossover and mutation, respectively, suitable for the problem's constraints and objectives."
+}
+
+==================== REPETICAO 4/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,722
+Tokens/segundo (eval): 37.71429128854085
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 50000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "Considering the large number of classes (24748) and partitions (1334), a population size of 100 is chosen to balance diversity and computational effort. The maximum evaluations are set to 50000 to limit the runtime on limited resources. A high crossover probability (0.9) is used with SBX to encourage exploration, and a moderate mutation probability (0.1) with Polynomial Mutation to maintain diversity. EtaC (30) and EtaM (100) are selected to provide a balance between exploration and exploitation, with higher etaM for mutation to handle the continuous nature of room capacities."
+}
+
+==================== REPETICAO 5/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,043
+Tokens/segundo (eval): 35.87549665140677
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "Considering the large instance size (24,748 classes) and the need for efficient exploration, a population size of 100 is chosen to balance diversity and computation. Max evaluations are set to 500,000 to allow sufficient runs without excessive time. Crossover probability is high (0.9) to encourage exploration via SBX, while mutation probability is low (0.1) to maintain diversity with Polynomial Mutation. EtaC (30) and etaM (100) are set to moderate values to control the crossover and mutation rates, ensuring convergence without overly aggressive changes. These settings are practical for limited computational resources."
+}
+
+==================== REPETICAO 6/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 7,245
+Tokens/segundo (eval): 31.96347628744763
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "Considering the large problem instance with 24,748 classes and the need to balance between exploration and exploitation, a population size of 100 is chosen to ensure diversity without excessive computational load. The maximum evaluations are set to 500,000 to allow sufficient runs for convergence on a limited resource machine. A high crossover probability (0.9) is selected to promote offspring diversity, while mutation probability (0.1) ensures individual mutation to escape local optima. EtaC (30) and etaM (100) are set to moderate the diversity in SBX and Polynomial Mutation, respectively, aligning with typical NSGA-II configurations for continuous spaces and ensuring a balance between exploration and exploitation."
+}
+
+==================== REPETICAO 7/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,818
+Tokens/segundo (eval): 34.85060851029456
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "Considering the problem instance with 24,748 classes and 1,334 partitions, a moderate population size of 100 is chosen to balance diversity and convergence. Max evaluations are set to 500,000 to allow sufficient exploration without excessive computation. High crossover probability (0.9) is used to encourage exploration via SBX, while mutation probability (0.1) ensures diversity. EtaC (30) and etaM (100) are set to moderate values to balance exploration and exploitation for SBX and Polynomial Mutation, respectively."
+}
+
+==================== REPETICAO 8/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,711
+Tokens/segundo (eval): 34.69874898540045
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 100000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 20,
+  "Justification": "The problem involves a large number of classes (24748) and partitions (1334), requiring efficient exploration. A population size of 100 is chosen for manageable memory usage on limited resources. Max evaluations of 100000 balances between thoroughness and computational feasibility. Crossover probability is set to 0.9 to encourage exploration, mutation at 0.1 for fine-tuning. EtaC and etaM are set to moderate values (30 and 20) to balance diversity and convergence for SBX and polynomial mutation."
+}
+
+==================== REPETICAO 9/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,792
+Tokens/segundo (eval): 34.2370109149374
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "Given the large number of classes (24748) and partitions (1334), a population size of 100 is chosen to balance diversity and computational cost. Max evaluations set to 500,000 ensures sufficient runs without excessive time. Crossover probability of 0.9 and mutation of 0.1 maintain a high crossover rate for exploration, with mutation ensuring individual exploration. EtaC=30 and EtaM=100 provide moderate diversity in offspring and mutation, suitable for the problem's constraints and limited resources."
+}
+
+==================== REPETICAO 10/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,469
+Tokens/segundo (eval): 34.51399507509148
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 100000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "The problem involves a large number of classes (24,748) and partitions (1,334), which requires a balance between exploration and exploitation. A population size of 100 is chosen to ensure diversity while keeping computational cost manageable. Max evaluations of 100,000 is set for limited computational resources. Crossover probability is high (0.9) to encourage combination of good solutions, and mutation probability is low (0.1) to maintain diversity. EtaC (30) and etaM (100) are set to moderate the intensity of SBX and Polynomial Mutation, respectively, to avoid premature convergence while exploring the search space effectively."
+}
+
+==================== REPETICAO 11/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,997
+Tokens/segundo (eval): 34.089825001605064
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 20,
+  "Justification": "Considering the large instance size (24748 classes) and the need for efficient exploration, a population size of 100 is selected to balance diversity and computation. Max evaluations are set to 500,000 to allow sufficient runs without excessive time. Crossover probability is high (0.9) to encourage exploration, while mutation probability is moderate (0.1) to maintain diversity. EtaC (30) and EtaM (20) are set to moderate values to avoid premature convergence, given the problem's constraints and the use of SBX and Polynomial Mutation."
+}
+
+==================== REPETICAO 12/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,682
+Tokens/segundo (eval): 33.915602278143524
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 200000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "Considering the large number of classes (24,748) and partitions (1,334), a moderate population size of 100 is sufficient to explore the solution space. The maximum evaluations are set to 200,000 to balance between computational effort and practical limits on a low-resource machine. A high crossover probability (0.9) is used to encourage recombination, while mutation probability (0.1) ensures diversity. Higher etaC (30) and etaM (100) values are chosen for SBX and Polynomial Mutation to promote diversity and avoid premature convergence, given the complexity of the constraints (e.g., room exclusivity, capacity issues)."
+}
+
+==================== REPETICAO 13/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,466
+Tokens/segundo (eval): 33.30778562122751
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 20,
+  "Justification": "The problem has a large number of classes (24,748) and partitions (1,334). Given the complexity, a population size of 100 is chosen to balance diversity and computational cost. Max evaluations set to 500,000 ensures sufficient exploration without excessive runtime. Crossover probability is high (0.9) to encourage exploration, and mutation probability is moderate (0.1) to maintain diversity. EtaC (30) and etaM (20) are set to moderate values to avoid overly disruptive or conservative changes, aligning with standard NSGA-II practices for SBX and polynomial mutation."
+}
+
+==================== REPETICAO 14/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 7,626
+Tokens/segundo (eval): 33.092888632542575
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 100000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "The problem involves a large number of classes (24,748) and partitions (1,334). To ensure diversity and convergence in NSGA-II with SBX and Polynomial Mutation, a population size of 100 is selected, which is a common starting point for complex problems. Max evaluations are set to 100,000 to balance between computational feasibility on a local machine with limited resources and sufficient runs for the evolutionary algorithm. Crossover probability is set to 0.9 to encourage exploration, while mutation probability is 0.1 to maintain diversity. EtaC (30) and etaM (100) are chosen to provide a moderate balance between exploration and exploitation for SBX and Polynomial Mutation, respectively, ensuring that the algorithm can handle the constraints effectively without excessive parameter values."
+}
+
+==================== REPETICAO 15/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,710
+Tokens/segundo (eval): 33.05484675949029
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 50000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "The configuration is tailored for the given problem with a large number of classes (24748) and partitions (1334). A population size of 100 ensures sufficient diversity without excessive memory usage. The maximum evaluations of 50000 balances runtime on limited resources. Crossover probability is set to 0.9 to favor exploration, while mutation at 0.1 maintains diversity. etaC=30 and etaM=100 control the distribution of offspring near parents (SBX) and mutation spread (Polynomial Mutation), respectively, ensuring effective search without overly disruptive changes. These values are standard for NSGA-II in jMetal and suitable for local execution."
+}
+
+==================== REPETICAO 16/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,743
+Tokens/segundo (eval): 34.20776126951967
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 200,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30.0,
+  "etaM": 100.0,
+  "Justification": "The problem involves a large number of classes (24748) and partitions (1334), requiring a balance between solution quality and computational efficiency. A population size of 200 is chosen to ensure diversity without excessive memory usage. Max evaluations at 500000 aligns with typical NSGA-II runs for complex problems, allowing sufficient exploration. Crossover probability is set to 0.9 to encourage exploration, while mutation at 0.1 ensures adequate perturbation. EtaC (30) and etaM (100) are selected to provide a moderate balance between exploration and exploitation for both SBX and polynomial mutation, given the constraints' importance levels."
+}
+
+==================== REPETICAO 17/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,706
+Tokens/segundo (eval): 31.783339210436136
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 1000000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 15.0,
+  "etaM": 50.0,
+  "Justification": "Given the large instance size (24,748 classes) and the need for efficient exploration, a population size of 100 is chosen to balance diversity and computation. Max evaluations set to 1,000,000 to limit runtime on limited resources. Crossover probability is high (0.9) to encourage exploration, while mutation is moderate (0.1) to maintain diversity. EtaC (15) and EtaM (50) are set to moderate values to avoid too aggressive or conservative parameter settings, ensuring a balance between exploration and exploitation for both SBX and Polynomial Mutation."
+}
+
+==================== REPETICAO 18/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 6,825
+Tokens/segundo (eval): 31.339054046624465
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 200000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30,
+  "etaM": 100,
+  "Justification": "Given the large number of classes (24,748) and partitions (1,334), a population size of 100 is appropriate to balance diversity and computational cost. The maximum evaluations are set to 200,000 to ensure adequate exploration without excessive runtime on limited resources. Crossover probability is set to 0.9 to favor SBX for generating new solutions, and mutation probability to 0.1 for Polynomial Mutation. etaC (30) and etaM (100) are chosen to control the distribution of offspring in the crossover and mutation, respectively, ensuring a balance between exploration and exploitation."
+}
+
+==================== REPETICAO 19/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 5,933
+Tokens/segundo (eval): 32.7403185093124
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30.0,
+  "etaM": 100.0,
+  "Justification": "The problem involves a large number of classes (24,748) and partitions (1,334), requiring efficient exploration. A population size of 100 balances diversity and computation. Max evaluations at 500,000 ensures sufficient runs without excessive time. Crossover probability of 0.9 favors exploration, mutation at 0.1 maintains diversity. EtaC=30 and EtaM=100 set moderate diversity in offspring, suitable for the problem's complexity on limited resources."
+}
+
+==================== REPETICAO 20/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 7,503
+Tokens/segundo (eval): 29.70877880586125
+--- RESPOSTA CRUA DO MODELO ---
+{
+  "populationSize": 100,
+  "maxEvaluations": 500000,
+  "crossoverProbability": 0.9,
+  "mutationProbability": 0.1,
+  "etaC": 30.0,
+  "etaM": 100.0,
+  "Justification": "The problem involves a large number of classes (24,748) and partitions (1,334), requiring a balance between exploration and exploitation. A population size of 100 is chosen to fit local machine constraints while providing sufficient diversity. Max evaluations set to 500,000 ensures reasonable progress without excessive computation. Crossover probability is high (0.9) to encourage exploration, mutation probability is moderate (0.1) to maintain diversity. EtaC (30) and EtaM (100) values are selected to provide a good balance for SBX and Polynomial Mutation, respectively, given the complexity of the constraints."
+}

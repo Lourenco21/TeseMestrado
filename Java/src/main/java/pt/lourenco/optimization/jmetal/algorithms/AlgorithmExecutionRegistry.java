@@ -15,7 +15,7 @@ public class AlgorithmExecutionRegistry {
     public AlgorithmExecutionRegistry(List<AlgorithmExecutor> executors) {
         this.executorsByKey = executors.stream()
                 .collect(Collectors.toMap(
-                        e -> e.getAlgorithmKey().toLowerCase(),
+                        e -> e.getAlgorithmKey().replaceAll("[^a-zA-Z0-9]", "").toLowerCase(),
                         Function.identity()
                 ));
     }
@@ -24,8 +24,8 @@ public class AlgorithmExecutionRegistry {
         if (algorithmName == null || algorithmName.isBlank()) {
             throw new IllegalArgumentException("Selected algorithm was not provided.");
         }
-
-        AlgorithmExecutor executor = executorsByKey.get(algorithmName.toLowerCase());
+        
+        AlgorithmExecutor executor = executorsByKey.get(algorithmName.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
 
         if (executor == null) {
             throw new IllegalArgumentException("Unsupported algorithm execution: " + algorithmName);

@@ -42,13 +42,21 @@ public class ConstraintSelectionMapper {
             String goal = rawMap.get("goal") == null ? null : String.valueOf(rawMap.get("goal"));
             String importance = rawMap.get("importance") == null ? null : String.valueOf(rawMap.get("importance"));
 
-            UserConstraintSelection selection = new UserConstraintSelection(
-                    id,
-                    ConstraintGoal.fromString(goal),
-                    ConstraintImportance.fromString(importance)
-            );
-
-            result.add(selection);
+            if(ConstraintGoal.fromString(goal)==ConstraintGoal.HARD){
+                UserConstraintSelection selection = new UserConstraintSelection(
+                        id,
+                        ConstraintGoal.fromString(goal),
+                        null
+                );
+                result.add(selection);
+            }else{
+                UserConstraintSelection selection = new UserConstraintSelection(
+                        id,
+                        ConstraintGoal.fromString(goal),
+                        ConstraintImportance.fromString(importance)
+                );
+                result.add(selection);
+            }
         }
 
         return result;

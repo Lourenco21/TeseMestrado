@@ -16,7 +16,7 @@ public class AlgorithmMetadataRegistry {
         System.out.println("Providers encontrados: " + providers.size());
         this.providersByKey = providers.stream()
                 .collect(Collectors.toMap(
-                        p -> p.getAlgorithmKey().toLowerCase(),
+                        p -> p.getAlgorithmKey().replaceAll("[^a-zA-Z0-9]", "").toLowerCase(),
                         Function.identity()
                 ));
     }
@@ -26,7 +26,7 @@ public class AlgorithmMetadataRegistry {
             throw new IllegalArgumentException("Selected algorithm was not provided.");
         }
 
-        AlgorithmMetadataProvider provider = providersByKey.get(algorithmName.toLowerCase());
+        AlgorithmMetadataProvider provider = providersByKey.get(algorithmName.replaceAll("[^a-zA-Z0-9]", "").toLowerCase());
 
         if (provider == null) {
             throw new IllegalArgumentException("Unsupported algorithm: " + algorithmName);

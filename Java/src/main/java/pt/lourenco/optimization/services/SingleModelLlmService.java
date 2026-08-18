@@ -15,7 +15,7 @@ import java.util.Map;
 @Service
 public class SingleModelLlmService {
 
-    private static final String DEFAULT_MODEL = "llama3.1:8b";
+    private static final String DEFAULT_MODEL = "qwen2.5:7b";
 
     private final OllamaClient ollamaClient;
     private final ObjectMapper objectMapper;

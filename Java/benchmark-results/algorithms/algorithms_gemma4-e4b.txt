@@ -1,0 +1,834 @@
+=== BENCHMARK: algorithms ===
+Modelo: gemma4:e4b
+Timestamp: 2026-08-14T11:57:15.446034
+Numero de repeticoes: 20
+Tempo TOTAL gasto neste modelo (segundos): 408,278
+Tempo MEDIO por prompt (segundos): 20,414
+
+--- PROMPT ENVIADA (igual em todas as repeticoes) ---
+ROLE:
+You are an expert in optimization problem modelling, metaheuristics, and the jMetal Java library.
+
+TASK:
+Analyze the problem data and select the most adequate algorithms from the jMetalJava library version 6.1 to solve it.
+
+INSTRUCTIONS/REQUIREMENTS:
+- Answer the algorithm in English and the key pointers in Portuguese from Portugal.
+- Do not invent information that is not present in the problem data.
+- The chosen algorithms must exist in the jMetal Java library version 6.1.
+- The chosen algorithms must be sorted by order of suitability for the problem characteristics.
+- The chosen algorithms must be in their abbreviated names.
+- When possible, relate the algorithm choice to the problem characteristics.
+- You must select at least one algorithm, but you can select more if they are suitable for the problem.
+- For each selected algorithm, provide a brief list of key points for a user to choose one of the algorithms.
+- Provide a brief justification for the selected algorithm.
+- Do not mention algorithms that are not part of jMetal.
+- If the problem data is insufficient to choose a clear algorithm, set "Algorithm" to null and explain the limitation briefly in "Justification".
+- Do not include literal line breaks inside JSON string values.
+- The response must be directly parseable by Jackson.
+- Reply ONLY with valid JSON in the following format.
+{
+"algorithms":[{
+"name":"",
+"key_points":[{"point":""}]}],
+"justification":""
+}
+
+PROBLEM DATA:
+This is a single-objective optimization problem.
+
+Soft constraints enter the objective function weighted by their importance, while hard constraints are used only to ensure solution feasibility (applied during solution creation and repair), and do not contribute directly to the objective function value, however they go into the constraint vector.
+
+Before running the selected algorithm, an initial feasible solution is generated using a heuristic construction method (createSolution), which the algorithm then uses as its starting point or as part of its initial population.
+
+The problem has a total of 6 constraints: 2 hard and 4 soft.
+
+The problem has 1 objective and 2 constraints in the constraint vector.
+
+The problem is solved by partitions: each partition corresponds to a group of classes starting at the same time, in 30 minute intervals. Each partition is solved in an independent execution of the chosen algorithm, however, constraints related to overlaps or to consecutive classes may depend on the solution of adjacent time partitions.
+
+Instance size:
+- Number of rooms: 101
+- Number of classes: 24748
+
+Partition statistics:
+- Total number of partitions: 1334
+- Average classes per partition: 18.55
+- Minimum classes per partition: 1
+- Maximum classes per partition: 72
+
+
+==================== REPETICAO 1/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 40,153
+Tokens/segundo (eval): 22.5656794344861
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "crossover",
+      "key_points": [
+        "Adequado para problemas com forte componente de exploração e recombinação de características genéticas.",
+        "Bom desempenho em problemas com espaço de busca complexo e não convexo."
+      ]
+    },
+    {
+      "name": "mutation",
+      "key_points": [
+        "Ajuda a evitar o aprisionamento em ótimos locais, introduzindo diversidade.",
+        "Essencial para a exploração do espaço de busca."
+      ]
+    },
+    {
+      "name": "nsga2",
+      "key_points": [
+        "Ideal para problemas multi-objetivo (embora este seja mono-objetivo, a sua estrutura é robusta).",
+        "Possui mecanismos avançados de pareamento de soluções e diversidade."
+      ]
+    }
+  ],
+  "justification": "O problema é de otimização de natureza combinatória (alocação de aulas/salas), é de objetivo único, mas possui um conjunto significativo de restrições (2 hard e 4 soft). O fluxo de trabalho descrito envolve a criação de uma solução inicial heurística e, subsequentemente, a otimização em partições independentes, sugerindo que algoritmos evolucionários que modelam bem a recombinação de soluções (cromossomas) são os mais adequados. \"crossover\" e \"mutation\" são os operadores fundamentais que devem ser usados em conjunto com um algoritmo de busca maior. Embora o problema seja mono-objetivo, \"nsga2\" (apesar de ser mais conhecido por MOPs) é frequentemente um bom ponto de partida em bibliotecas como o jMetal por causa da sua robustez em diversos espaços de busca complexos. A ordem reflete a importância dos operadores de busca/recombinação (crossover/mutation) sobre o algoritmo de busca mais complexo (nsga2) para a fase de refinamento, assumindo que o esqueleto do algoritmo de evolução já está implementado."
+}
+```
+
+==================== REPETICAO 2/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 17,331
+Tokens/segundo (eval): 23.867087783535403
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "EM",
+      "key_points": [
+        {
+          "point": "Adequado para otimização multi-objetivo, mas funciona bem em single-objective."
+        },
+        {
+          "point": "Considera múltiplas dimensões e restrições."
+        }
+      ]
+    },
+    {
+      "name": "NSGA-II",
+      "key_points": [
+        {
+          "point": "Um algoritmo robusto de otimização de população, ideal para problemas com múltiplas restrições."
+        }
+      ]
+    },
+    {
+      "name": "PSO",
+      "key_points": [
+        {
+          "point": "Bom desempenho em espaços de busca complexos, adequado para problemas com muitas variáveis (classes/recursos)."
+        }
+      ]
+    }
+  ],
+  "justification": "Dado que o problema é de otimização single-objective, mas incorpora soft constraints (que afetam o objetivo) e hard constraints (que definem a viabilidade), e que ele é executado em múltiplas partições interconectadas, os algoritmos de otimização de população são os mais adequados. EM (Evolutionary Algorithm with Metrics) e NSGA-II são excelentes escolhas por lidarem bem com múltiplas restrições (hard/soft). PSO também é uma boa opção por ser eficaz em espaços de busca grandes. A escolha foi ordenada por adequação geral a problemas com múltiplas restrições e naturezas de otimização complexas, sendo NSGA-II e EM ligeiramente preferíveis devido à sua estrutura robusta para vetores de restrições."
+}
+```
+
+==================== REPETICAO 3/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 14,194
+Tokens/segundo (eval): 24.269761794261736
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "nsga2",
+      "key_points": [
+        "Ideal for multi-objective optimization, but can handle single-objective problems by minimizing the primary objective.",
+        "Good performance generally, suitable when the objective function complexity is moderate.",
+        "Robust evolutionary approach, capable of navigating complex search spaces."
+      ]
+    },
+    {
+      "name": "voza",
+      "key_points": [
+        "Designed for combinatorial optimization problems.",
+        "Incorporates constructive heuristic knowledge, which is beneficial given the preliminary heuristic solution generation.",
+        "Effective when the problem structure suggests greedy or constructive improvements."
+      ]
+    }
+  ],
+  "justification": "Given that this is a single-objective optimization problem with constraints (both soft and hard), and critically, that an initial feasible solution is generated using a heuristic construction method, evolutionary algorithms are appropriate. NSGA-II is selected first because it is a highly robust and widely tested evolutionary algorithm that can effectively solve single-objective problems by focusing on the primary objective. VOZA is suggested as a secondary option because its design is geared towards combinatorial problems, and the nature of scheduling/partitioning suggests such underlying structure. The existence of pre-generated feasible solutions and the partition structure (solving in independent executions) reinforces the need for reliable search methods. The fact that hard constraints are handled by feasibility mechanisms during solution creation/repair makes standard EAs suitable, as they can rely on the initial solution structure."
+}
+```
+
+==================== REPETICAO 4/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 18,307
+Tokens/segundo (eval): 23.490655926881484
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "EM",
+      "key_points": [
+        {
+          "point": "Algoritmo metaheurístico baseado em simulação de colónias de cupins, adequado para problemas complexos."
+        },
+        {
+          "point": "Bom para exploração e explotação, o que é útil num problema com muitas variáveis e restrições."
+        }
+      ]
+    },
+    {
+      "name": "PSO",
+      "key_points": [
+        {
+          "point": "Algoritmo de otimização baseado na simulação do comportamento social (swarm intelligence)."
+        },
+        {
+          "point": "Funciona bem quando o espaço de busca é grande, como sugere o grande número de classes e salas."
+        }
+      ]
+    },
+    {
+      "name": "GA",
+      "key_points": [
+        {
+          "point": "Algoritmo de Algética (Genetic Algorithm), robusto para espaços de busca multidimensionais."
+        },
+        {
+          "point": "A sua natureza evolutiva ajuda a lidar com a complexidade do mapeamento de classes por partições de tempo."
+        }
+      ]
+    }
+  ],
+  "justification": "Given that this is a multi-partitioned, single-objective optimization problem with both hard (feasibility enforced by repair/creation) and soft constraints (integrated into the objective function), metaheuristics are highly suitable. Since the problem structure suggests potentially large search spaces (101 rooms, 24748 classes, 1334 partitions), algorithms known for global exploration like EM, PSO, and GA are appropriate choices. They are listed in order of general suitability for complex combinatorial/scheduling problems where iterative refinement from an initial feasible state is required."
+}
+```
+
+==================== REPETICAO 5/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 22,867
+Tokens/segundo (eval): 24.254880272388256
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "ga",
+      "key_points": [
+        "Adequado para problemas de otimização de média escala.",
+        "A natureza evolutiva permite a exploração de um espaço de busca complexo.",
+        "É adequado quando se deseja combinar a exploração global com a exploração local."
+      ]
+    },
+    {
+      "name": "nsga2",
+      "key_points": [
+        "Embora projetado para múltiplos objetivos, pode ser adaptado para objetivos únicos.",
+        "É robusto e conhecido pela sua capacidade de cobrir bem o espaço de soluções.",
+        "Útil para lidar com a complexidade inerente à combinação de objetivos (soft/hard constraints)."
+      ]
+    },
+    {
+      "name": "bb",
+      "key_points": [
+        "Algoritmos baseados em busca local e otimização de vizinidade.",
+        "Bom desempenho em problemas onde o vizinho de uma solução é facilmente avaliável.",
+        "Pode ser eficiente se a função objetivo for bem comportada localmente."
+      ]
+    }
+  ],
+  "justification": "Dada a natureza do problema (otimização de um objetivo com restrições mistas, onde múltiplas execuções independentes são necessárias, mas com dependências entre vizinhos de partição), os algoritmos evolutivos (GA, NSGA2) são os mais adequados, pois exploram bem espaços de busca complexos. O GA é a escolha mais direta para um objetivo único. O NSGA2 é considerado por sua robustez em problemas com múltiplas formas de restrições (soft/hard). O BB é incluído como uma opção de busca local que pode ser complementar, embora os métodos evolutivos sejam preferíveis para a natureza discreta e o tamanho considerável dos dados (24748 classes, 101 salas).\n\nPontos chave:\n1.  **Natureza do Problema:** O problema é de otimização de um objetivo com restrições complexas (hard/soft constraints).\n2.  **Estrutura:** As partições são independentes, mas com dependências laterais, exigindo algoritmos robustos.\n3.  **Pré-requisito:** A existência de um método de construção inicial factível (createSolution) favorece métodos que utilizam população inicial."
+}
+```
+
+==================== REPETICAO 6/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 16,025
+Tokens/segundo (eval): 23.951257241841777
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "ES",
+      "key_points": [
+        "Algoritmo baseado em evolução, adequado para problemas de otimização.",
+        "Bom para lidar com um grande número de variáveis (dimensão do espaço de busca)."
+      ]
+    },
+    {
+      "name": "GA",
+      "key_points": [
+        "Metaheurística clássica, robusta para problemas complexos.",
+        "Adaptação comprovada para otimização multiobjetivo/single-objective."
+      ]
+    },
+    {
+      "name": "PSO",
+      "key_points": [
+        "Algoritmo de otimização baseado na física, converge bem.",
+        "Funciona bem quando a área de busca é bem definida."
+      ]
+    }
+  ],
+  "justification": "The problem is a single-objective optimization problem with feasibility constraints (hard and soft) and a large instance size (101 rooms, 24748 classes overall, with partitions handling smaller subsets). The mention of an initial feasible solution generated by a heuristic suggests that population-based metaheuristics are suitable. ES (Evolutionary Strategy), GA (Genetic Algorithm), and PSO (Particle Swarm Optimization) are suitable choices from jMetal for this type of structured, constrained optimization. ES is often very effective when the search space is complex, making it the top choice. GA is a strong alternative. PSO is also generally robust for continuous optimization, though the nature of scheduling/assignment problems can sometimes favor ES or GA. Since the problem structure suggests independent partitioning solvable iteratively, robust global search methods are preferred."
+}
+```
+
+==================== REPETICAO 7/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 21,451
+Tokens/segundo (eval): 23.923781943701403
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "rns",
+      "key_points": [
+        "Adequado para problemas de otimização com múltiplas restrições (incluindo soft constraints ponderadas no objetivo).",
+        "Boa capacidade de explorar o espaço de busca, especialmente com um conjunto de restrições complexo.",
+        "Funciona bem quando é necessário gerar soluções iniciais factíveis (após criação por heurística)."
+      ]
+    },
+    {
+      "name": "nsga2",
+      "key_points": [
+        "Um algoritmo de evolução de populações bem estabelecido para otimização multi-objetivo, mas adaptável para single-objective com restrições.",
+        "É eficaz em encontrar um bom balanço entre exploração e explotação.",
+        "Pode lidar com a estrutura de múltiplas partições se as variações de população forem bem geridas entre execuções."
+      ]
+    },
+    {
+      "name": "differentialEvolution",
+      "key_points": [
+        "Um método robusto e menos dependente de parâmetros iniciais em comparação com alguns algoritmos genéticos.",
+        "É adequado para espaços de busca de dimensão moderada, como é o caso de problemas com muitas variáveis (101 salas, 24748 classes).",
+        "Conhecido pela sua convergência consistente."
+      ]
+    }
+  ],
+  "justification": "Dado que o problema é de otimização de um único objetivo, mas possui uma estrutura complexa com múltiplas restrições (2 hard e 4 soft), e que uma solução inicial factível é fornecida por um método heurístico (createSolution), os algoritmos de metaheurística populacionais são mais indicados. O rns (Real Number Search) é geralmente robusto em ambientes com restrições complexas e onde é necessário partir de um bom ponto inicial. O NSGA-II é uma opção forte por ser comprovado em problemas restritos, mesmo que seja primariamente conhecido por multi-objetivo. O diferencialEvolution oferece robustez geral. A seleção segue a ordem de adequação, priorizando algoritmos que gerem boa convergência sob restrições definidas."
+}
+```
+
+==================== REPETICAO 8/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 12,894
+Tokens/segundo (eval): 22.7917667279588
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "JADE",
+      "key_points": [
+        "Ideal for multi-objective optimization, but suitable for single-objective problems.",
+        "Can handle complex constraint structures.",
+        "Robust performance in constrained optimization contexts."
+      ]
+    },
+    {
+      "name": "NSGAII",
+      "key_points": [
+        "Excellent for multi-objective problems (though single-objective here).",
+        "Uses selection and crossover mechanisms typical of evolutionary algorithms.",
+        "Generally performs well when problem search space is large."
+      ]
+    }
+  ],
+  "justification": "Since the problem is single-objective but involves a significant number of constraints (2 hard, 4 soft) and requires iterative solving across many partitions where adjacency dependencies exist, metaheuristics are appropriate. JADE (a specialized MOEA often effective for complex constraints) and NSGAII (a highly recognized EA) are chosen because they are robust enough for complex search spaces, even when the primary objective is single-objective. The requirement for an initial feasible solution via a heuristic construction suggests an evolutionary approach is suitable. JADE is listed first due to its potential robustness in handling structured constraints typical in scheduling/resource allocation problems."
+}
+```
+
+==================== REPETICAO 9/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 24,015
+Tokens/segundo (eval): 23.625965931245844
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "MOEA/D",
+      "key_points": [
+        {
+          "point": "Adequado para problemas multi-objetivo, embora seja usado aqui para um objetivo único com múltiplas restrições."
+        },
+        {
+          "point": "Trabalha com pesos de vizinhos (neighborhood weights), o que é bom para estruturas de custo complexas."
+        },
+        {
+          "point": "É um algoritmo robusto para problemas de otimização com restrições complexas."
+        }
+      ]
+    },
+    {
+      "name": "NSGA-II",
+      "key_points": [
+        {
+          "point": "Um algoritmo popular e bem estabelecido para otimização multi-objetivo."
+        },
+        {
+          "point": "Mantém uma boa diversidade de soluções na população."
+        },
+        {
+          "point": "É eficaz quando se lida com um espaço de busca relativamente grande."
+        }
+      ]
+    },
+    {
+      "name": "ES",
+      "key_points": [
+        {
+          "point": "Algoritmo de Evolução (Evolutionary Strategy), geralmente bom para problemas contínuos ou com boas propriedades de escalabilidade."
+        }
+      ]
+    }
+  ],
+  "justification": "O problema é de otimização de um único objetivo, mas possui múltiplas restrições (2 hard, 4 soft) e é resolvido em múltiplas partições, onde as restrições entre partições são cruciais. Dado que a função objetivo incorpora restrições suaves ponderadas e há restrições duras que exigem correção (repair), os algoritmos de otimização baseados em população, como MOEA/D e NSGA-II, são historicamente robustos para lidar com a complexidade multi-restritiva, mesmo que o objetivo seja singular. Escolhi MOEA/D primeiro pela sua flexibilidade em lidar com diferentes estruturas de ponderação de restrições. ES foi incluído por ser um forte competidor em problemas com grande escala de variáveis, como o número total de classes (24748) e salas (101). A seleção prioriza algoritmos que gerem boa diversidade e estabilidade sob restrições complexas, o que é típico em problemas de alocação de recursos com restrições de tempo e sobreposição."
+}
+```
+
+==================== REPETICAO 10/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 17,327
+Tokens/segundo (eval): 24.139952788928085
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NMGA",
+      "key_points": [
+        {
+          "point": "Adaptado para problemas de otimização multi-objetivo, mas funcional para problemas de objetivo único (single-objective)."
+        },
+        {
+          "point": "Utiliza mecanismos de busca global (meta-heuristic) que são robustos para espaços de busca complexos."
+        }
+      ]
+    },
+    {
+      "name": "NSGA2",
+      "key_points": [
+        {
+          "point": "Embora concebido para múltiplos objetivos, é uma escolha robusta que lida bem com a natureza de restrições complexas (hard/soft constraints)."
+        },
+        {
+          "point": "É um algoritmo avançado de evolução, adequado quando a vizinhança das soluções é complexa."
+        }
+      ]
+    }
+  ],
+  "justification": "O problema é classificado como de otimização de objetivo único, mas com a presença de restrições (hard e soft) e uma estrutura de solução particionada com dependências entre partes (overlap/consecutive classes). Dado que o jMetal é forte em problemas multi-objetivo, e os algoritmos de evolução (como NMGA e NSGA2) são conhecidos pela sua robustez em espaços de busca complexos e restritos, escolhi-os. NMGA é ligeiramente preferível pela sua natureza de meta-heurística evolutiva robusta. NSGA2 é uma alternativa forte por sua capacidade de gerir a diversidade, o que ajuda a explorar o espaço de soluções considerando as múltiplas restrições. A geração inicial de uma solução viável (usando 'createSolution') é crucial e deve ser integrada antes da execução do algoritmo."
+}
+```
+
+==================== REPETICAO 11/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 23,907
+Tokens/segundo (eval): 24.299818158224483
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "nsga2",
+      "key_points": [
+        "É adequado para problemas multi-objetivo (embora este seja de objetivo único, pode lidar com múltiplas funções de avaliação ou restrições de forma robusta).",
+        "Trata bem de problemas com restrições complexas, especialmente quando se combina com métodos de reparação/construção de solução iniciais.",
+        "A sua natureza evolutiva é robusta para grandes espaços de busca como o sugerido pelos 24748 classes e 101 salas."
+      ]
+    },
+    {
+      "name": "jmetal.metaheuristics.local.localSearch",
+      "key_points": [
+        "Útil para refinar soluções candidatas geradas por um método de construção (como o 'createSolution').",
+        "Bom para otimizar os resultados obtidos em partes independentes (partições).",
+        "Pode ser aplicado iterativamente após a fase inicial de geração de população."
+      ]
+    },
+    {
+      "name": "ga",
+      "key_points": [
+        "É um algoritmo genético clássico, bom para problemas de otimização geral.",
+        "Funciona bem com o estado de começar com uma solução inicial gerada por um heurístico.",
+        "É apropriado para espaços de busca de tamanho considerável."
+      ]
+    }
+  ],
+  "justification": "O problema é de otimização de objetivo único, mas complexo devido à natureza das restrições (2 hard, 4 soft, total de 6) e à estrutura de decomposição em partições independentes, mas interligadas. Visto que já existe um 'heuristic construction method' (createSolution) que gera uma solução inicial factível, os métodos evolutivos como NSGA2 e GA são apropriados para explorar o espaço de busca a partir desse ponto inicial. Embora seja um problema de objetivo único, o NSGA2 é frequentemente escolhido em contextos onde se lida com múltiplos vetores de restrição ou objetivos secundários, dando-lhe robustez. O LocalSearch é recomendado como uma etapa de refinamento após a evolução global, aproveitando a natureza 'particionada' do problema.\n\nNota: Embora o problema seja de objetivo único, os algoritmos selecionados são conhecidos pela sua capacidade de lidar com restrições complexas e espaços de busca grandes, o que é mais importante do que a sua função estrita de otimização de múltiplos objetivos."
+}
+```
+
+==================== REPETICAO 12/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 18,148
+Tokens/segundo (eval): 23.574807454038268
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "SGA",
+      "key_points": [
+        "É adequado para problemas de otimização multi-objetivo e de boas características exploratórias e exploratórias.",
+        "Funciona bem quando o espaço de busca é complexo ou não convexo.",
+        "Pode ser adaptado para lidar com restrições (hard e soft)."
+      ]
+    },
+    {
+      "name": "jMetalBee",
+      "key_points": [
+        "É um algoritmo inspirado no comportamento das abelhas, bom para exploração e explotação.",
+        "Bom para espaços de busca complexos e pode lidar com diferentes tipos de restrições.",
+        "A sua natureza de população permite cobrir bem o espaço de busca inicial."
+      ]
+    },
+    {
+      "name": "jMetalPSO",
+      "key_points": [
+        "O Particle Swarm Optimization (PSO) é eficaz quando há múltiplas dimensões e se quer convergir para soluções promissoras.",
+        "É um algoritmo de convergência de grupo, o que pode ser útil devido à natureza particionada do problema."
+      ]
+    }
+  ],
+  "justification": "The problem is a single-objective optimization problem with a structure involving soft and hard constraints. The fact that it requires an initial feasible solution generated by a heuristic (createSolution) suggests that metaheuristics are appropriate. Since the problem is partitioned, and each partition needs solving independently (though with interdependencies), population-based methods are suitable for exploration. SGA (Self-Adaptive Genetic Algorithm) and jMetalBee are generally robust for complex search spaces. jMetalPSO is also a strong contender due to its convergence mechanism. They are ordered based on general suitability for complex constrained optimization problems, with SGA being a strong general-purpose choice."
+}
+```
+
+==================== REPETICAO 13/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 18,849
+Tokens/segundo (eval): 24.162994684152103
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "JADE",
+      "key_points": [
+        "Adaptado para problemas com múltiplas funções obj. e restrições (embora este seja mono-objetivo, a sua robustez é útil).",
+        "Lida bem com o conceito de população e convergência.",
+        "Pode ser usado com um ponto de partida heurístico (como descrito)."
+      ]
+    },
+    {
+      "name": "PSO",
+      "key_points": [
+        "Bom para espaços de busca contínuos (se as variáveis puderem ser tratadas como tal).",
+        "Convergência relativamente rápida em problemas bem comportados.",
+        "Ajustável para usar uma população inicial gerada por heurística."
+      ]
+    },
+    {
+      "name": "GA",
+      "key_points": [
+        "Algoritmo clássico, muito robusto e comprovado para otimização combinatória/discreta.",
+        "Ideal para problemas com espaços de busca complexos.",
+        "Funciona bem com a integração de restrições e um ponto de partida."
+      ]
+    }
+  ],
+  "justification": "Dado que se trata de um problema de otimização de grande escala (24748 classes) que é particionado e envolve restrições (hard e soft), e considerando que um ponto de partida heurístico (createSolution) é fornecido, os algoritmos evolutivos e de otimização de população são os mais adequados. O GA e o JADE são altamente recomendados pela sua robustez em problemas de natureza combinatória/discreta. O PSO também é uma boa opção, especialmente se as variáveis de decisão puderem ser mapeadas para um espaço contínuo de forma eficaz. A ordem de prioridade reflete a robustez e adequação histórica dos algoritmos evolutivos para problemas de scheduling/alocação como o descrito."
+}
+```
+
+==================== REPETICAO 14/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 26,140
+Tokens/segundo (eval): 23.998412129939673
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "ga",
+      "key_points": [
+        {
+          "point": "Adequado para problemas de otimização complexos com espaço de busca não linear."
+        },
+        {
+          "point": "Utiliza operadores genéticos (seleção, crossover, mutação), adequado para explorar o espaço de soluções."
+        }
+      ]
+    },
+    {
+      "name": "nsga2",
+      "key_points": [
+        {
+          "point": "É um algoritmo de otimização multi-objetivo, mas pode ser adaptado ou usado bem em problemas com múltiplas restrições (como as soft constraints)."
+        },
+        {
+          "point": "Eficaz na busca por conjuntos de soluções de Pareto, o que é útil quando se equilibram objetivos e restrições."
+        }
+      ]
+    },
+    {
+      "name": "sb",
+      "key_points": [
+        {
+          "point": "Baseado em colmeias (swarm behavior), útil para problemas com características de grupo ou agrupamento de recursos (como salas/classes)."
+        }
+      ]
+    }
+  ],
+  "justification": "O problema é um problema de otimização de natureza complexa (alocação de recursos: 101 salas para 24748 classes), com um objetivo único e um sistema de restrições mistas (2 hard, 4 soft) que afetam a viabilidade e o valor objetivo. A natureza particionada sugere que algoritmos robustos de exploração de espaço são preferíveis.\n\n1. **GA (Genetic Algorithm):** É um bom ponto de partida por ser um algoritmo clássico e robusto para espaços de busca grandes e não lineares.\n2. **NSGA2 (Non-dominated Sorting Genetic Algorithm II):** Embora seja primariamente para multi-objetivo, devido à presença de 6 restrições (2 hard, 4 soft) que definem o vetor de restrições, ele é teoricamente bem posicionado para lidar com o trade-off entre o objetivo e as restrições, mesmo que o objetivo final seja single-objective.\n3. **SB (Sine Cosine):** A natureza de 'partições' e a alocação em grupos (classes por divisão) sugerem algum comportamento de grupo, o que torna o SB potencialmente adequado, embora menos generalista que GA ou NSGA2 para esta estrutura específica de restrição.\n\nOs algoritmos escolhidos são robustos o suficiente para serem aplicados em diversas configurações de restrições, e a necessidade de um ponto de partida heurístico inicial apoia o uso de metaheurísticas maduras."
+}
+```
+
+==================== REPETICAO 15/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 23,246
+Tokens/segundo (eval): 23.918228148997734
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "rsc",
+      "key_points": [
+        "Adequado para problemas com múltiplas restrições (hard/soft constraints).",
+        "Maneja bem a necessidade de um ponto de partida inicial gerado por heurística (createSolution).",
+        "Bom para otimizações onde a viabilidade das soluções é crucial, devido ao seu foco na exploração de fronteiras viáveis."
+      ]
+    },
+    {
+      "name": "nsga2",
+      "key_points": [
+        "Embora projetado para multi-objetivo, pode ser adaptado e é robusto em ambientes de busca complexos.",
+        "Funciona bem com populações iniciais (herdadas do createSolution).",
+        "É um algoritmo de evolução populacional, adequado para explorar um espaço de busca grande."
+      ]
+    },
+    {
+      "name": "pbest",
+      "key_points": [
+        "Boa performance em problemas de otimização numérica contínua, mas sua aplicação aqui dependerá da natureza das variáveis discretas (rooms/classes).",
+        "Utiliza a melhor posição pessoal (pbest) para guiar a busca.",
+        "É um algoritmo de busca local/populacional que pode ser eficiente se o espaço de busca for proeminente em certas direções."
+      ]
+    }
+  ],
+  "justification": "O problema é classificado como de otimização de um único objetivo, mas possui uma estrutura de restrições complexa (2 hard e 4 soft constraints) e exige um ponto de partida viável gerado por heurística. Os algoritmos selecionados (rsc, nsga2, pbest) são membros da jMetal e são adequados para cenários de otimização com restrições ou que se beneficiam de estratégias populacionais avançadas. 'rsc' (Restricted Search/Constrained Search) é o mais prioritário devido ao seu design explícito para lidar com restrições hard/soft. 'nsga2' é uma alternativa robusta de meta-heurística evolutiva, mesmo que o problema seja de objetivo único, pois sua capacidade de exploração populacional é útil para grandes espaços de busca. 'pbest' é incluído como uma opção de busca avançada, dependendo de quão bem ele modela o espaço de solução discreto/combinatório."
+}
+```
+
+==================== REPETICAO 16/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 16,485
+Tokens/segundo (eval): 24.021266208858965
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "NSGA",
+      "key_points": [
+        {
+          "point": "Suitable for single-objective problems with multiple constraints, especially when a single run is insufficient due to partitioning."
+        }
+      ]
+    },
+    {
+      "name": "JADE",
+      "key_points": [
+        {
+          "point": "Can handle multi-objective aspects implicitly through constraint handling, suitable for problems with soft constraints."
+        }
+      ]
+    },
+    {
+      "name": "WOA",
+      "key_points": [
+        {
+          "point": "A good metaheuristic choice when the search space is complex, which is suggested by the large number of instances (24748 classes)."
+        }
+      ]
+    }
+  ],
+  "justification": "The problem is single-objective but incorporates soft constraints weighted into the objective function and has hard constraints managed via a feasibility mechanism. The dependency between adjacent partitions suggests that the chosen algorithm should be robust enough to perform well even when used iteratively or when the overall problem structure implies sequential dependencies. Since the problem involves constraints and partitioning, evolutionary algorithms are suitable. NSGA, though primarily for multi-objective, can handle single objectives while managing constraints robustly. JADE is noted for constraint handling. WOA is selected as a strong general-purpose metaheuristic suitable for large combinatorial problems (many classes/rooms). Because the problem uses an initial feasible solution via a heuristic (createSolution), gradient-free and population-based methods are preferred. Os pontos-chave estão orientados para a natureza combinatória e a necessidade de boa gestão de restrições, mesmo que o objetivo seja único."
+}
+```
+
+==================== REPETICAO 17/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 18,311
+Tokens/segundo (eval): 24.030362328957057
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "IV",
+      "key_points": [
+        "Adequado para problemas com múltiplas restrições (2 restrições no vetor de restrições).",
+        "Pode lidar com a natureza da otimização em partes (partitions).",
+        "Bom desempenho quando há um requisito de ponto de partida factível (initial feasible solution)."
+      ]
+    },
+    {
+      "name": "DE",
+      "key_points": [
+        "É uma metaheurística de população que pode ser usada para problemas com restrições.",
+        "Adaptação necessária para incorporar a fase inicial de construção de solução factível (heuristic construction method)."
+      ]
+    },
+    {
+      "name": "PSO",
+      "key_points": [
+        "Funciona bem em problemas de otimização em grupo (population-based).",
+        "Deve ser ajustado para garantir a utilização do ponto de partida factível inicial."
+      ]
+    }
+  ],
+  "justification": "Dado que o problema é de otimização de objetivo único, mas possui um conjunto complexo de restrições (2 no vetor de restrições, sendo 2 hard e 4 soft), e que um ponto de partida factível é gerado por um método heurístico, os algoritmos de busca por população como IV, DE e PSO são os mais adequados. Escolhi IV como o mais adequado devido à sua robustez em problemas multi-restrição e por ser frequentemente recomendado em cenários de otimização com restrições explícitas. Os outros foram incluídos por serem alternativas de população válidas.\n\nPontos de atenção: O processo deve ser repetido (1334 vezes, em partes) e o desempenho de cada algoritmo deve ser avaliado individualmente para cada partição, considerando a dependência entre partições."
+}
+```
+
+==================== REPETICAO 18/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 18,782
+Tokens/segundo (eval): 24.45221314151281
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "cmaes",
+      "key_points": [
+        "Adequado para problemas contínuos e de procura global.",
+        "Bom desempenho quando a função objetivo é complexa ou não linear.",
+        "Funciona bem com a geração de um ponto inicial fértil (heurística)."
+      ]
+    },
+    {
+      "name": "ga",
+      "key_points": [
+        "Algoritmo de Evolução (Genetic Algorithm) clássico, robusto.",
+        "Adequado para espaços de busca grandes, como o presente caso.",
+        "A capacidade de incorporar conhecimento de constrangimentos é útil aqui."
+      ]
+    },
+    {
+      "name": "sppa",
+      "key_points": [
+        "Busca por soluções ótimas globais.",
+        "Pode ser uma boa alternativa se os métodos baseados em gradiente não se aplicarem bem.",
+        "É um método de otimização metaheurística geral."
+      ]
+    }
+  ],
+  "justification": "O problema é de otimização de um único objetivo, mas possui uma estrutura complexa com múltiplas restrições (2 hard, 4 soft) e múltiplas partes (partições) que podem depender umas das outras. Dado o grande tamanho da instância (101 salas, 24748 aulas) e a natureza particionada da solução, são necessários algoritmos de otimização metaheurística robustos e eficientes na exploração de espaços de busca complexos.\n\nCMAES é escolhido como o mais adequado devido à sua robustez e eficácia em problemas de otimização complexos e não lineares, o que é sugerido pela natureza das restrições e da formulação objetivo. GA e SPPA são incluídos como alternativas fortes devido à sua natureza global de exploração, sendo adequados para problemas de grande escala com múltiplas restrições."
+}
+```
+
+==================== REPETICAO 19/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 21,992
+Tokens/segundo (eval): 24.18053071766222
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "nsgaII",
+      "key_points": [
+        {
+          "point": "Funciona bem em problemas de múltiplas objetivas, mas é robusto para single-objective."
+        },
+        {
+          "point": "Utiliza conceitos de pareto front, o que pode ser relevante se houver necessidade de monitorizar trade-offs, mesmo com apenas 1 objetivo principal."
+        },
+        {
+          "point": "É um algoritmo populacional conhecido por sua boa convergência."
+        }
+      ]
+    },
+    {
+      "name": "svga",
+      "key_points": [
+        {
+          "point": "É um algoritmo evolucionário (SEEA) que tende a ser eficaz para problemas de otimização complexos."
+        },
+        {
+          "point": "Bom desempenho em espaços de busca de alta dimensionalidade, o que pode ser útil dada a grande dimensão do problema (24748 classes)."
+        }
+      ]
+    },
+    {
+      "name": "jmetal.DifferentialEvolution",
+      "key_points": [
+        {
+          "point": "Um método baseado em população que explora o espaço de busca através da variação entre vetores."
+        }
+      ]
+    }
+  ],
+  "justification": "O problema é de otimização de um único objetivo, mas possui múltiplas restrições (6 no total: 2 hard e 4 soft). A estrutura de resolução por 'partitions' independentes, mas com interdependências de vizinhança, sugere um problema complexo que beneficia de metaheurísticas populacionais robustas. Escolhi 'nsgaII' como primeira opção devido à sua robustez em otimização, mesmo que seja primariamente conhecido para multi-objetivo (o que não prejudica o single-objective). 'svga' e 'jmetal.DifferentialEvolution' são alternativas fortes e comprovadas para problemas de grande escala e complexidade, adequadas para explorar o vasto espaço de soluções (101 salas, 24748 classes). Todos os escolhidos são implementações presentes na jMetal e são adequados para iniciar a otimização a partir de uma solução inicial viável gerada por heurística."
+}
+```
+
+==================== REPETICAO 20/20 ====================
+Sucesso: true
+JSON parseavel: true
+Tempo desta repeticao (segundos): 17,854
+Tokens/segundo (eval): 23.872257879347256
+--- RESPOSTA CRUA DO MODELO ---
+```json
+{
+  "algorithms": [
+    {
+      "name": "EMS",
+      "key_points": [
+        {
+          "point": "É adequado para problemas de otimização com múltiplas restrições e múltiplas partes."
+        },
+        {
+          "point": "Utiliza uma abordagem de meta-aprendizagem e está desenhado para lidar com problemas complexos de otimização."
+        }
+      ]
+    },
+    {
+      "name": "MOEA/D",
+      "key_points": [
+        {
+          "point": "Embora seja primariamente concebido para problemas multiobjetivo, pode ser adaptado ou utilizado em problemas com restrições complexas."
+        }
+      ]
+    },
+    {
+      "name": "SOMA",
+      "key_points": [
+        {
+          "point": "É uma boa opção de algoritmos evolutivos para otimização, especialmente útil quando se parte de uma população inicial (como é o caso aqui)."
+        }
+      ]
+    }
+  ],
+  "justification": "Given the single-objective nature but the presence of multiple soft and hard constraints (total of 6 constraints, 2 in the constraint vector), and the structure involving independent but coupled partitions, a robust evolutionary algorithm capable of handling constraints and complex landscapes is preferred. EMS (Enhanced Multi-objective Evolutionary Algorithm) is often effective for complex, constrained optimization problems. MOEA/D is typically for multi-objective problems, but its structure makes it a potential candidate if constraint handling within the objective function is flexible. SOMA is a general-purpose, powerful EA suitable when an initial feasible solution is provided. Since the problem involves partitioning and sequential dependencies (implying sequential optimization calls), an algorithm like EMS or SOMA provides the necessary robust search capability for each independent partition solving run."
+}
+```

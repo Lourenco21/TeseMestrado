@@ -1,0 +1,241 @@
+class ProblemExecuteView(APIView):
+    JAVA_BACKEND_URL = "http://localhost:8080/api/problems/execute"
+    # Endpoints de benchmark expostos pelo LlmBenchmarkController.
+    JAVA_BENCHMARK_ALGORITHMS_URL = "http://localhost:8080/benchmark/request-algorithms"
+    JAVA_BENCHMARK_PARAMETERS_URL = "http://localhost:8080/benchmark/request-parameters"
+
+    VALID_RESOLUTION_SCOPES = {
+        "semester",
+        "week",
+        "day",
+        "start_half_hour",
+    }
+
+    VALID_REPEATED_INSTANCE_STRATEGIES = {
+        "reuse_solution",
+        "generate_new",
+    }
+
+    def post(self, request, problem_id, *args, **kwargs):
+        # --- NOVO: deteta se é um pedido de benchmark, e para qual prompt. ---
+        # Vem do frontend como query param ou no body, ex:
+        #   POST /problems/123/execute/?benchmark=parameters
+        #   POST /problems/123/execute/?benchmark=algorithms
+        benchmark_mode = request.query_params.get("benchmark") or request.data.get("benchmark")
+
+        try:
+            problem_draft = ProblemDraft.objects.get(pk=problem_id)
+        except ProblemDraft.DoesNotExist:
+            return Response(
+                {"error": "Problem draft not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        resolution_scope = "start_half_hour"
+        repeated_instance_strategy = "generate_new"
+        selected_algorithm_name = request.data.get("selected_algorithm")
+
+        if resolution_scope not in self.VALID_RESOLUTION_SCOPES:
+            return Response(
+                {"error": "resolution_scope inválido."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if resolution_scope == "semester":
+            repeated_instance_strategy = None
+        elif repeated_instance_strategy not in self.VALID_REPEATED_INSTANCE_STRATEGIES:
+            return Response(
+                {"error": "repeated_instance_strategy inválido para o nível selecionado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Em modo "algorithms" ainda não há algoritmo escolhido — não exigir.
+        if not benchmark_mode == "algorithms" and not selected_algorithm_name:
+            return Response(
+                {"error": "É obrigatório indicar o algoritmo selecionado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        if not problem_draft.uploaded_schedule:
+            return Response(
+                {"error": "O problema não tem ficheiro de horário associado."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        missing_fields = []
+
+        if not problem_draft.name:
+            missing_fields.append("name")
+        if not problem_draft.problem_family:
+            missing_fields.append("problem_family")
+        if not problem_draft.problem_subtype:
+            missing_fields.append("problem_subtype")
+        if not problem_draft.mapping_data:
+            missing_fields.append("mapping_data")
+        if not problem_draft.uploaded_schedule_id:
+            missing_fields.append("uploaded_schedule")
+        if not problem_draft.selected_constraints:
+            missing_fields.append("selected_constraints")
+
+        if missing_fields:
+            return Response(
+                {
+                    "error": "O problema ainda não está pronto para execução.",
+                    "missing_fields": missing_fields,
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            df = load_schedule_dataframe(problem_draft.uploaded_schedule.file.path)
+
+            df = apply_room_feature_resolution(
+                df,
+                problem_draft.mapping_data,
+                problem_draft.room_feature_resolution or {},
+            )
+
+            r_df = load_schedule_dataframe(problem_draft.uploaded_rooms_file.file.path)
+
+            mapping = (problem_draft.mapping_data or {}).get("mapping", {}) or {}
+
+            analysis = analyze_schedule_dataframe(df, mapping, resolution_scope)
+            constraints_summary = build_constraints_summary(
+                problem_draft.selected_constraints or []
+            )
+
+            payload = {
+                "problem_id": problem_draft.id,
+                "name": problem_draft.name,
+                "selected_algorithm": selected_algorithm_name,
+                "constraints_summary": constraints_summary,
+                "selected_constraints": problem_draft.selected_constraints or [],
+                "room_feature_resolution": problem_draft.room_feature_resolution or {},
+                "resolved_requested_room_features": (
+                    df["_resolved_requested_room_features"].tolist()
+                    if "_resolved_requested_room_features" in df.columns
+                    else []
+                ),
+                "instance_characteristics": {
+                    "total_classes": int(len(df)),
+                    "selected_partition_statistics": analysis["selected_partition_statistics"],
+                },
+                "total_rooms": int(len(r_df)),
+                "schedule_id": problem_draft.uploaded_schedule_id,
+                "rooms_id": getattr(problem_draft, "rooms_file_id", None),
+                "mapping_data": problem_draft.mapping_data,
+                "rooms_mapping_data": getattr(problem_draft, "rooms_mapping_data", None),
+            }
+
+        except Exception as exc:
+            return Response(
+                {
+                    "error": "Não foi possível preparar o payload de execução.",
+                    "details": str(exc),
+                    "trace": traceback.format_exc(),
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # --- NOVO: escolhe o URL de destino em função do modo. ---
+        if benchmark_mode == "algorithms":
+            target_url = self.JAVA_BENCHMARK_ALGORITHMS_URL
+        elif benchmark_mode == "parameters":
+            target_url = self.JAVA_BENCHMARK_PARAMETERS_URL
+        else:
+            target_url = self.JAVA_BACKEND_URL
+
+        try:
+            java_response = requests.post(
+                target_url,
+                json=payload,
+                timeout=(30, 6000),
+            )
+        except requests.exceptions.RequestException as exc:
+            return Response(
+                {
+                    "error": "Não foi possível contactar o backend Java.",
+                    "details": str(exc),
+                    "payload_preview": payload,
+                },
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+        try:
+            java_data = java_response.json()
+        except ValueError:
+            java_data = {"raw_response": java_response.text}
+
+        if not java_response.ok:
+            return Response(
+                {
+                    "error": "O backend Java respondeu com erro na execução.",
+                    "java_status_code": java_response.status_code,
+                    "java_response": java_data,
+                    "payload_preview": payload,
+                },
+                status=status.HTTP_502_BAD_GATEWAY
+            )
+
+        # --- NOVO: em modo benchmark, devolve o resumo diretamente. ---
+        # Não cria Solution nem CSV — a resposta do benchmark tem uma forma
+        # completamente diferente (resumo por modelo, não uma solução final).
+        if benchmark_mode in ("algorithms", "parameters"):
+            return Response(
+                {
+                    "message": f"Benchmark '{benchmark_mode}' executado com sucesso.",
+                    "payload_sent": payload,
+                    "benchmark_results": java_data,
+                },
+                status=status.HTTP_200_OK
+            )
+
+        try:
+            solution = Solution.objects.create(
+                problem=problem_draft,
+                status="completed",
+                algorithm_used=java_data.get("algorithm_used", selected_algorithm_name),
+                used_parameters=java_data.get("used_parameters", {}),
+                partition_type=java_data.get("partition_type", ""),
+                reuse_solution=bool(java_data.get("reuse_solution", False)),
+                constraint_values=java_data.get("constraint_values", {}),
+                penalty_summary=java_data.get("penalty_summary", {}),
+                partition_count=int(java_data.get("partition_count", 0) or 0),
+                execution_time_seconds=float(java_data.get("execution_time_seconds", 0.0)),
+            )
+
+            schedule_rows = java_data.get("schedule", [])
+            csv_content = build_schedule_csv_content(schedule_rows)
+
+            if csv_content:
+                filename = (
+                    f"problem-{problem_draft.id}-solution-{solution.id}-"
+                    f"{slugify(solution.algorithm_used or 'algorithm')}.csv"
+                )
+                solution.schedule_file.save(filename, csv_content, save=True)
+
+            serialized_solution = SolutionDetailSerializer(
+                solution,
+                context={"request": request}
+            ).data
+
+        except Exception as exc:
+            return Response(
+                {
+                    "error": "A execução foi concluída, mas não foi possível guardar a solução.",
+                    "details": str(exc),
+                    "java_response": java_data,
+                    "trace": traceback.format_exc(),
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+        return Response(
+            {
+                "message": "Execução enviada com sucesso para o backend Java.",
+                "payload_sent": payload,
+                "java_response": java_data,
+                "solution": serialized_solution,
+            },
+            status=status.HTTP_200_OK
+        )

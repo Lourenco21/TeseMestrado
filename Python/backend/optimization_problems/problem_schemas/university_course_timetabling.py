@@ -9,7 +9,7 @@ PROBLEM_SCHEMA = {
             "description": "Nome ou identificador da unidade curricular.",
             "required": True,
             "data_type": "string",
-            "aliases": ["unidade curricular", "uc", "cadeira", "disciplina", "course", "subject"],
+            "aliases": ["unidade curricular", "uc", "cadeira", "unidade de execução", "disciplina", "course", "subject"],
         },
         {
             "key": "curso",
@@ -51,7 +51,7 @@ PROBLEM_SCHEMA = {
             "data_type": "string",
             "aliases": [
                 "caracteristicas pedidas para sala",
-                "características pedidas para sala",
+                "características da sala pedida",
                 "requisitos sala",
                 "room requirements",
                 "requested room features",

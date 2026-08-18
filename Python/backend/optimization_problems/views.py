@@ -649,7 +649,7 @@ class ProblemSendToJavaView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(30,6000),
+                timeout=(30,100000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -799,7 +799,7 @@ class ProblemRequestAlgorithmsView(APIView):
             java_response = requests.post(
                 self.JAVA_BACKEND_URL,
                 json=payload,
-                timeout=(30,6000),
+                timeout=(30,100000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -870,6 +870,9 @@ def build_schedule_csv_content(schedule_rows):
 
 class ProblemExecuteView(APIView):
     JAVA_BACKEND_URL = "http://localhost:8080/api/problems/execute"
+    # Endpoints de benchmark expostos pelo LlmBenchmarkController.
+    JAVA_BENCHMARK_ALGORITHMS_URL = "http://localhost:8080/benchmark/request-algorithms"
+    JAVA_BENCHMARK_PARAMETERS_URL = "http://localhost:8080/benchmark/request-parameters"
 
     VALID_RESOLUTION_SCOPES = {
         "semester",
@@ -884,6 +887,12 @@ class ProblemExecuteView(APIView):
     }
 
     def post(self, request, problem_id, *args, **kwargs):
+        # --- NOVO: deteta se é um pedido de benchmark, e para qual prompt. ---
+        # Vem do frontend como query param ou no body, ex:
+        #   POST /problems/123/execute/?benchmark=parameters
+        #   POST /problems/123/execute/?benchmark=algorithms
+        benchmark_mode = request.query_params.get("benchmark") or request.data.get("benchmark")
+
         try:
             problem_draft = ProblemDraft.objects.get(pk=problem_id)
         except ProblemDraft.DoesNotExist:
@@ -910,7 +919,8 @@ class ProblemExecuteView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
-        if not selected_algorithm_name:
+        # Em modo "algorithms" ainda não há algoritmo escolhido — não exigir.
+        if not benchmark_mode == "algorithms" and not selected_algorithm_name:
             return Response(
                 {"error": "É obrigatório indicar o algoritmo selecionado."},
                 status=status.HTTP_400_BAD_REQUEST
@@ -955,6 +965,8 @@ class ProblemExecuteView(APIView):
                 problem_draft.room_feature_resolution or {},
             )
 
+            r_df = load_schedule_dataframe(problem_draft.uploaded_rooms_file.file.path)
+
             mapping = (problem_draft.mapping_data or {}).get("mapping", {}) or {}
 
             analysis = analyze_schedule_dataframe(df, mapping, resolution_scope)
@@ -965,8 +977,6 @@ class ProblemExecuteView(APIView):
             payload = {
                 "problem_id": problem_draft.id,
                 "name": problem_draft.name,
-                "resolution_scope": resolution_scope,
-                "repeated_instance_strategy": repeated_instance_strategy,
                 "selected_algorithm": selected_algorithm_name,
                 "constraints_summary": constraints_summary,
                 "selected_constraints": problem_draft.selected_constraints or [],
@@ -980,14 +990,12 @@ class ProblemExecuteView(APIView):
                     "total_classes": int(len(df)),
                     "selected_partition_statistics": analysis["selected_partition_statistics"],
                 },
-                "problem_type": problem_draft.problem_family,
-                "problem_subtype": problem_draft.problem_subtype,
+                "total_rooms": int(len(r_df)),
                 "schedule_id": problem_draft.uploaded_schedule_id,
                 "rooms_id": getattr(problem_draft, "rooms_file_id", None),
                 "mapping_data": problem_draft.mapping_data,
                 "rooms_mapping_data": getattr(problem_draft, "rooms_mapping_data", None),
             }
-            print(payload)
 
         except Exception as exc:
             return Response(
@@ -999,11 +1007,19 @@ class ProblemExecuteView(APIView):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+        # --- NOVO: escolhe o URL de destino em função do modo. ---
+        if benchmark_mode == "algorithms":
+            target_url = self.JAVA_BENCHMARK_ALGORITHMS_URL
+        elif benchmark_mode == "parameters":
+            target_url = self.JAVA_BENCHMARK_PARAMETERS_URL
+        else:
+            target_url = self.JAVA_BACKEND_URL
+
         try:
             java_response = requests.post(
-                self.JAVA_BACKEND_URL,
+                target_url,
                 json=payload,
-                timeout=(30, 6000),
+                timeout=(30, 100000),
             )
         except requests.exceptions.RequestException as exc:
             return Response(
@@ -1029,6 +1045,19 @@ class ProblemExecuteView(APIView):
                     "payload_preview": payload,
                 },
                 status=status.HTTP_502_BAD_GATEWAY
+            )
+
+        # --- NOVO: em modo benchmark, devolve o resumo diretamente. ---
+        # Não cria Solution nem CSV — a resposta do benchmark tem uma forma
+        # completamente diferente (resumo por modelo, não uma solução final).
+        if benchmark_mode in ("algorithms", "parameters"):
+            return Response(
+                {
+                    "message": f"Benchmark '{benchmark_mode}' executado com sucesso.",
+                    "payload_sent": payload,
+                    "benchmark_results": java_data,
+                },
+                status=status.HTTP_200_OK
             )
 
         try:
